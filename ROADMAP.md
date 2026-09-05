@@ -8,6 +8,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] two-pass hypothesis generation + independent causal verification
 - [x] hypothesis ledger where the model cannot self-confirm
 - [x] strict separation between `verified` fix and `confirmed` root-cause hypothesis
+- [x] deterministic false-fix state-machine benchmark for weak baselines, missing mutation and failure replacement
 - [x] source windows, blame/history and causal commit candidates
 - [x] repeated reproduction statistics, normalized failure signatures and failure-transition classification
 - [x] workspace freshness fingerprint with NUL-delimited Git status parsing and product-private `.codex-debug` exclusion
@@ -16,6 +17,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] self-digested Debug Receipt binding evidence/investigation/ledger/verification/patch state/lineage
 - [x] inert unified-diff proposal + Git-native path parsing + deterministic stale-workspace/apply gates
 - [x] persisted patch re-authorization requiring supported causal verification
+- [x] protected control-plane/secret/generated/vendor patch paths fail closed by default
 - [x] bounded private patch snapshots + drift-safe rollback + symlink/junction/hardlink rejection
 - [x] GDB/LLDB fixed-command core symbolization with auto-load/network-symbol hardening
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority
@@ -33,13 +35,12 @@ The first line is architecture-first. Marketplace publication is not the milesto
 ## Required before active promotion
 
 - [ ] recorded live-model RCA corpus with root-cause precision and insufficient-evidence negatives
-- [ ] false-fix and patch-applicability benchmark across real repositories
+- [ ] live-model false-fix and patch-applicability benchmark across real repositories
 - [ ] verified-fix rate and regression-escape metric on broader executable fixtures
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
 - [ ] end-to-end real core fixture with matching symbols on supported host platforms
 - [ ] stronger ELF/map/source symbolization for embedded firmware
 - [ ] deep Android bugreport and Linux kernel symbol resolution fixtures
-- [ ] protected/generated/vendor path policy beyond current hard boundaries
 - [ ] explicit model behavioral canary where credentials are available
 - [ ] reproducible VSIX build plus Consumer CI Receipt
 - [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow
