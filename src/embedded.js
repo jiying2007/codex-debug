@@ -1,0 +1,8 @@
+'use strict';
+const {freeze}=require('./contracts');
+const CFSR_BITS=Object.freeze([[0,'IACCVIOL'],[1,'DACCVIOL'],[3,'MUNSTKERR'],[4,'MSTKERR'],[5,'MLSPERR'],[7,'MMARVALID'],[8,'IBUSERR'],[9,'PRECISERR'],[10,'IMPRECISERR'],[11,'UNSTKERR'],[12,'STKERR'],[13,'LSPERR'],[15,'BFARVALID'],[16,'UNDEFINSTR'],[17,'INVSTATE'],[18,'INVPC'],[19,'NOCP'],[24,'UNALIGNED'],[25,'DIVBYZERO']]);
+const HFSR_BITS=Object.freeze([[1,'VECTTBL'],[30,'FORCED'],[31,'DEBUGEVT']]);
+function parseRegister(text,name){const re=new RegExp(`\\b${name}\\s*[:=]\\s*(0x[0-9a-fA-F]+|\\d+)`,'i'),m=String(text||'').match(re);if(!m)return null;const value=Number.parseInt(m[1],m[1].toLowerCase().startsWith('0x')?16:10);return Number.isFinite(value)?value>>>0:null;}
+function flags(value,bits){if(value===null)return [];return bits.filter(([bit])=>(value&(2**bit))!==0).map(([,name])=>name);}
+function decodeCortexMFault(text){const registers={cfsr:parseRegister(text,'CFSR'),hfsr:parseRegister(text,'HFSR'),bfar:parseRegister(text,'BFAR'),mmfar:parseRegister(text,'MMFAR'),pc:parseRegister(text,'PC'),lr:parseRegister(text,'LR'),sp:parseRegister(text,'SP')};const present=Object.values(registers).some(v=>v!==null);if(!present&&!/(?:HardFault|BusFault|UsageFault|MemManage)/i.test(String(text||'')))return null;return freeze({architecture:'cortex-m',registers,cfsrFlags:flags(registers.cfsr,CFSR_BITS),hfsrFlags:flags(registers.hfsr,HFSR_BITS),faultAddressValid:Boolean(registers.cfsr!==null&&(registers.cfsr&(1<<15))),memAddressValid:Boolean(registers.cfsr!==null&&(registers.cfsr&(1<<7)))});}
+module.exports={CFSR_BITS,HFSR_BITS,parseRegister,decodeCortexMFault};

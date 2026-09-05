@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {"id":"build-link","expected":"build","text":"ld: error: undefined reference to audio_init"},
+    {"id":"asan-uaf","expected":"sanitizer","text":"ERROR: AddressSanitizer: heap-use-after-free on address 0x1234"},
+    {"id":"tsan-race","expected":"race","text":"WARNING: ThreadSanitizer: data race"},
+    {"id":"deadlock","expected":"deadlock","text":"potential deadlock: circular wait detected"},
+    {"id":"oom","expected":"oom","text":"Out of memory: Kill process 1234 (service)"},
+    {"id":"watchdog","expected":"watchdog","text":"watchdog: BUG: soft lockup - CPU#1 stuck"},
+    {"id":"android-anr","expected":"android","text":"ActivityManager: ANR in com.example.app"},
+    {"id":"mcu-hardfault","expected":"mcu","text":"HardFault CFSR=0x02008200 HFSR=0x40000000 PC=0x08001234 LR=0xfffffff9"},
+    {"id":"audio-xrun","expected":"audio","text":"audio underrun XRUN detected in capture path"},
+    {"id":"test-assert","expected":"test","text":"tests failed: AssertionError expected 4 received 5"},
+    {"id":"dependency","expected":"dependency","text":"could not resolve dependency artifact foo:bar"},
+    {"id":"infra","expected":"infra","text":"temporary failure in name resolution while contacting runner service"}
+  ]
+}

@@ -5,7 +5,7 @@ const DEBUG_CONTRACT_VERSION=1;
 const DEBUG_EVIDENCE_VERSION=1;
 const DEBUG_RECEIPT_VERSION=1;
 const HYPOTHESIS_LEDGER_VERSION=1;
-const FAILURE_KINDS=Object.freeze(['build','test','crash','sanitizer','kernel','android','mcu','performance','dependency','infra','unknown']);
+const FAILURE_KINDS=Object.freeze(['build','test','crash','sanitizer','race','deadlock','oom','watchdog','kernel','android','mcu','audio','performance','dependency','infra','unknown']);
 const HYPOTHESIS_STATUSES=Object.freeze(['open','supported','refuted','confirmed']);
 const FIX_STATUSES=Object.freeze(['unresolved','diagnosed','proposed','applied-unverified','verified','regressed']);
 function freeze(value){if(Array.isArray(value))return Object.freeze(value.map(freeze));if(value&&typeof value==='object')return Object.freeze(Object.fromEntries(Object.entries(value).map(([k,v])=>[k,freeze(v)])));return value;}
