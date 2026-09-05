@@ -1,0 +1,4 @@
+'use strict';const test=require('node:test');const assert=require('node:assert/strict');const {parseAndroid,parseKernel,parseRtos}=require('../src/platform-evidence');
+test('parses Android tombstone identity and frames',()=>{const r=parseAndroid("ABI: 'arm64'\npid: 123, tid: 456, name: AudioThread\nsignal 11 (SIGSEGV), code 1\nAbort message: 'boom'\n#00 pc 00001234 /system/lib64/libx.so (foo+8)");assert.equal(r.abi,'arm64');assert.equal(r.signal.name,'SIGSEGV');assert.equal(r.frames[0].symbol,'foo+8');});
+test('parses kernel panic and call trace',()=>{const r=parseKernel('Kernel panic - not syncing: fatal\nCall Trace:\n foo+0x1/0x20 [mod]\n bar+0x2/0x30\n');assert.equal(r.panic,'fatal');assert.equal(r.callTrace[0].symbol,'foo');});
+test('parses RTOS task/stack evidence',()=>{const r=parseRtos('Current task: audio_task\nSP=0x20001000\nstack overflow detected');assert.equal(r.task,'audio_task');assert.match(r.stackSignal,/stack overflow/i);});
