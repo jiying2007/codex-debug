@@ -1,4 +1,4 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');const {parseArgs}=require('../src/args');
-test('parses explicit authority separately',()=>{const a=parseArgs(['--command','npm test','--apply','--verify-command','npm run regression','--deterministic-only']);assert.equal(a.command,'npm test');assert.equal(a.apply,true);assert.equal(a.verifyCommand,'npm run regression');assert.equal(a.deterministicOnly,true);});
-test('rejects unknown flags',()=>assert.throws(()=>parseArgs(['--magic']),/Unknown argument/));
+test('parses explicit authority and repetition separately',()=>{const a=parseArgs(['--command','npm test','--repro-runs','3','--apply','--verify-command','npm run regression','--verify-runs','5','--deterministic-only']);assert.equal(a.command,'npm test');assert.equal(a.reproRuns,3);assert.equal(a.apply,true);assert.equal(a.verifyCommand,'npm run regression');assert.equal(a.verifyRuns,5);assert.equal(a.deterministicOnly,true);});
+test('rejects unknown flags and failure kinds',()=>{assert.throws(()=>parseArgs(['--magic']),/Unknown argument/);assert.throws(()=>parseArgs(['--kind','imaginary']),/Unsupported failure kind/);assert.throws(()=>parseArgs(['--repro-runs','21']),/1\.\.20/);});

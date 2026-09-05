@@ -1,0 +1,4 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const {summarizeSeries}=require('../src/reproduction');const {verificationStatus}=require('../src/debug');
+function r(code,duration=10){return {command:'x',exitCode:code,signal:'',timedOut:false,durationMs:duration,stdout:code?'fatal error: boom':'ok',stderr:''};}
+test('reproduction summary distinguishes stable and weak flaky baseline',()=>{const stable=summarizeSeries([r(1),r(1),r(1)]),weak=summarizeSeries([r(1),r(0),r(0)]);assert.equal(stable.stableFailure,true);assert.equal(stable.failures,3);assert.equal(weak.stableFailure,true);assert.equal(weak.failures,1);assert.equal(verificationStatus(weak,summarizeSeries([r(0),r(0),r(0)]),true),'passed-unbound');assert.equal(verificationStatus(stable,summarizeSeries([r(0),r(0),r(0)]),true),'passed');});
