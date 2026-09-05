@@ -1,0 +1,3 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const {formatDebugReport}=require('../src/report');
+test('report shows status and coverage gaps',()=>{const md=formatDebugReport({sessionId:'dbg-x',fixStatus:'diagnosed',evidence:{kind:'crash',git:{head:'abc'},parsed:{signals:['SIGSEGV']},digest:'d'},investigation:{rootCause:'lifetime bug',confidence:.8,hypotheses:[],coverageGaps:['no core'],verificationPlan:[]},ledger:{entries:[]},verification:{status:'not-run'},receipt:{debugFingerprint:'f'}});assert.match(md,/lifetime bug/);assert.match(md,/no core/);});

@@ -1,0 +1,3 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const {makeSessionId,createDebugReceipt,validateReceipt}=require('../src/contracts');
+test('receipt binds evidence and investigation',()=>{const evidence={digest:'a'.repeat(64),git:{head:'deadbeef'},source:{label:'fixture'},workspace:'x'},investigation={rootCause:'bad lifetime',confidence:.8,hypotheses:[],verificationPlan:[]},sessionId=makeSessionId(evidence.digest,'2026-01-01T00:00:00.000Z'),receipt=createDebugReceipt({sessionId,evidence,investigation,ledger:{},verification:{status:'not-run'},fixStatus:'diagnosed',createdAt:'2026-01-01T00:00:00.000Z'});assert.equal(validateReceipt(receipt).fixStatus,'diagnosed');assert.match(receipt.debugFingerprint,/^[0-9a-f]{64}$/);});
