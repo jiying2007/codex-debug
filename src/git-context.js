@@ -1,0 +1,8 @@
+'use strict';
+
+const {execFileSync}=require('node:child_process');
+const {freeze}=require('./contracts');
+function git(args,cwd,{allowFailure=false,maxBuffer=2*1024*1024}={}){try{return execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer}).trim();}catch(error){if(allowFailure)return '';throw Object.assign(new Error(`git ${args[0]} failed: ${String(error.stderr||error.message).trim().slice(0,500)}`),{code:'EGIT'});}}
+function collectGitContext(workspace,{includeHistory=true}={}){const root=git(['rev-parse','--show-toplevel'],workspace,{allowFailure:true});if(!root)return freeze({root:'',head:'',dirty:false,changedPaths:[],recentCommits:[]});const head=git(['rev-parse','HEAD'],root,{allowFailure:true});const status=git(['status','--porcelain=v1','--untracked-files=no'],root,{allowFailure:true});const changedPaths=status.split(/\r?\n/).filter(Boolean).map(line=>line.slice(3).replace(/^"|"$/g,'')).slice(0,200);let recentCommits=[];if(includeHistory){const raw=git(['log','-n','20','--date=iso-strict','--pretty=format:%H%x09%ad%x09%s'],root,{allowFailure:true});recentCommits=raw.split(/\r?\n/).filter(Boolean).map(line=>{const [sha,date,...subject]=line.split('\t');return {sha,date,subject:subject.join('\t').slice(0,300)};});}return freeze({root,head,dirty:Boolean(status),changedPaths,recentCommits});}
+function collectFileHistory(workspace,file,{max=12}={}){const raw=git(['log','-n',String(max),'--pretty=format:%H%x09%ad%x09%s','--date=iso-strict','--',file],workspace,{allowFailure:true});return freeze(raw.split(/\r?\n/).filter(Boolean).map(line=>{const [sha,date,...subject]=line.split('\t');return {sha,date,subject:subject.join('\t').slice(0,300)};}));}
+module.exports={git,collectGitContext,collectFileHistory};

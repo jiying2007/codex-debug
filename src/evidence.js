@@ -1,0 +1,10 @@
+'use strict';
+
+const fs=require('node:fs');
+const path=require('node:path');
+const {compactFailureLog,classifyFailureDeterministically}=require('./codex-safe-core/diagnosis-platform');
+const {DEBUG_EVIDENCE_VERSION,freeze,stableDigest}=require('./contracts');
+const {parseFailure}=require('./parsers');
+function readBoundedFile(file,maxBytes=8*1024*1024){const stat=fs.statSync(file);if(!stat.isFile())throw Object.assign(new Error('Failure evidence path must be a regular file.'),{code:'EEVIDENCEFILE'});if(stat.size>maxBytes)throw Object.assign(new Error(`Failure evidence exceeds ${maxBytes} byte limit.`),{code:'EEVIDENCELIMIT'});return fs.readFileSync(file,'utf8');}
+function buildDebugEvidence({text='',source={},kind='auto',workspace=process.cwd(),git={},commandResult=null,maxCompactBytes=128*1024}={}){const raw=String(text||'');if(!raw.trim())throw Object.assign(new Error('No failure evidence supplied.'),{code:'ENOFAILUREEVIDENCE'});const compact=compactFailureLog(raw,{maxBytes:maxCompactBytes,maxLines:700,contextLines:3}),deterministic=classifyFailureDeterministically(raw),parsed=parseFailure(raw,{kind});const sourceMeta={type:String(source.type||'text'),label:String(source.label||source.path||'inline').slice(0,512)};const command=commandResult?{commandDigest:stableDigest(String(commandResult.command||'')),exitCode:commandResult.exitCode,signal:commandResult.signal||'',timedOut:Boolean(commandResult.timedOut),durationMs:Number(commandResult.durationMs||0)}:null;const base={version:DEBUG_EVIDENCE_VERSION,workspace:path.resolve(workspace),source:sourceMeta,kind:parsed.kind,deterministic,parsed,compact,git:{head:String(git.head||''),root:String(git.root||''),dirty:Boolean(git.dirty),changedPaths:(git.changedPaths||[]).slice(0,200),recentCommits:(git.recentCommits||[]).slice(0,20)},command};return freeze({...base,digest:stableDigest({workspace:base.workspace,source:sourceMeta,kind:parsed.kind,rawDigest:compact.digest,git:base.git,command})});}
+module.exports={readBoundedFile,buildDebugEvidence};
