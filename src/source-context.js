@@ -1,0 +1,11 @@
+'use strict';
+
+const fs=require('node:fs');
+const path=require('node:path');
+const {execFileSync}=require('node:child_process');
+const {freeze,stableDigest}=require('./contracts');
+function inside(root,target){const rel=path.relative(root,target);return rel&&!rel.startsWith('..')&&!path.isAbsolute(rel)?rel.replace(/\\/g,'/'):rel===''?'':null;}
+function git(args,cwd){try{return execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','ignore'],maxBuffer:512*1024}).trim();}catch{return '';}}
+function resolveFrameFile(root,file){const raw=String(file||'').trim();if(!raw)return null;const candidate=path.isAbsolute(raw)?path.resolve(raw):path.resolve(root,raw);const rel=inside(root,candidate);if(rel===null)return null;try{const stat=fs.statSync(candidate);if(!stat.isFile()||stat.size>1024*1024)return null;return {absolute:candidate,relative:rel||path.basename(candidate)};}catch{return null;}}
+function collectSourceContext(root,frames,{radius=10,maxFiles=12,maxBytes=96*1024}={}){if(!root)return freeze([]);const out=[],seen=new Set();let used=0;for(const frame of frames||[]){if(out.length>=maxFiles||used>=maxBytes)break;const resolved=resolveFrameFile(root,frame.file);if(!resolved||seen.has(resolved.relative))continue;seen.add(resolved.relative);const buffer=fs.readFileSync(resolved.absolute);if(buffer.includes(0))continue;const text=buffer.toString('utf8'),lines=text.split(/\r?\n/),line=Math.max(1,Number(frame.line||1)),start=Math.max(1,line-radius),end=Math.min(lines.length,line+radius);let snippet=lines.slice(start-1,end).map((v,i)=>`${start+i}: ${v}`).join('\n');const remaining=Math.max(0,maxBytes-used);if(Buffer.byteLength(snippet)>remaining)snippet=Buffer.from(snippet).subarray(0,remaining).toString('utf8');used+=Buffer.byteLength(snippet);const blame=line?git(['blame','--porcelain','-L',`${line},${line}`,'--',resolved.relative],root).split(/\r?\n/)[0]||'':'';const history=git(['log','-n','6','--date=iso-strict','--pretty=format:%H%x09%ad%x09%s','--',resolved.relative],root).split(/\r?\n/).filter(Boolean).slice(0,6);out.push(freeze({file:resolved.relative,line,start,end,text:snippet,digest:stableDigest(snippet),blame:blame.slice(0,160),history:history.map(v=>v.slice(0,500))}));}return freeze(out);}
+module.exports={inside,resolveFrameFile,collectSourceContext};

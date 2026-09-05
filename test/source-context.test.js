@@ -1,0 +1,3 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const os=require('node:os');const fs=require('node:fs');const path=require('node:path');const {collectSourceContext,resolveFrameFile}=require('../src/source-context');
+test('reads only bounded in-workspace source anchors',()=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-source-'));try{fs.mkdirSync(path.join(root,'src'));fs.writeFileSync(path.join(root,'src','a.c'),'one\ntwo\nthree\nfour\n');const c=collectSourceContext(root,[{file:'src/a.c',line:3}],{radius:1});assert.equal(c.length,1);assert.equal(c[0].file,'src/a.c');assert.match(c[0].text,/3: three/);assert.equal(resolveFrameFile(root,'../escape.c'),null);}finally{fs.rmSync(root,{recursive:true,force:true});}});
