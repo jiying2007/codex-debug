@@ -2,9 +2,9 @@
 
 ## Product boundary
 
-Codex Debug Safe owns interactive workspace failure investigation, explicit reproduction execution, platform/core/artifact evidence adaptation, hypothesis lifecycle, controlled patch validation/application, Safe Bisect orchestration, resumable verification and Debug Receipts. Safe Core owns runtime/provider/model routing, process safety primitives, log compaction/redaction, deterministic CI-style classification, test-impact ranking and Family governance primitives. Codex Diagnose Safe remains bounded and read-only.
+Codex Debug Safe owns interactive workspace failure investigation, explicit reproduction execution, platform/core/artifact evidence adaptation, hypothesis lifecycle, controlled patch validation/application/rollback, Safe Bisect orchestration, resumable verification and Debug Receipts. Safe Core owns runtime/provider/model routing, process safety primitives, log compaction/redaction, deterministic CI-style classification, test-impact ranking and Family governance primitives. Codex Diagnose Safe remains bounded and read-only.
 
-Debug is currently a **development Family consumer**. Development consumers inherit identity and governance but are intentionally filtered from production Family freshness/snapshot/release readiness until an explicit `active` promotion.
+Debug is currently a **development Family consumer**. Development consumers inherit identity and governance but are filtered from production Family freshness/snapshot/release readiness until an explicit `active` promotion.
 
 ## Pipeline
 
@@ -17,53 +17,46 @@ Evidence source
               ↓
 Evidence Engine
   ├─ byte bounds + Safe Core redaction/ANSI cleanup
-  ├─ significant-window compaction
-  ├─ failure taxonomy + platform parsers
-  ├─ Cortex-M / Android / kernel / RTOS summaries
+  ├─ deterministic taxonomy/platform parsers
   ├─ fixed-command GDB/LLDB symbolization
+  ├─ source/Git/test-impact context
   └─ content/evidence digests
               ↓
-Read-only repository evidence
-  ├─ Git HEAD + changed paths + content-state fingerprint
-  ├─ bounded source windows
-  ├─ blame/file history
-  ├─ causal commit candidates
-  └─ Safe Core test-impact candidates
-              ↓
-Phase 1: hypothesis generation
-  ├─ competing hypotheses
-  ├─ supporting/refuting evidence
-  ├─ causal anchors
-  └─ optional patch draft
+Phase 1: competing hypothesis generation
               ↓
 Phase 2: independent causal verification
-  ├─ supported / insufficient / contradicted root-cause assessment
-  ├─ hypothesis status updates
-  └─ accept/reject patch disposition
+  ├─ supported / insufficient / contradicted
+  └─ accept / reject / none patch disposition
               ↓
-Explicit authority boundary
-  ├─ apply checked patch
-  ├─ run verification
-  └─ optionally run historical code for Safe Bisect
+Explicit user authority boundary
+  ├─ run reproduction
+  ├─ run isolated historical candidates
+  ├─ apply checked + snapshotted patch
+  ├─ rollback unchanged recorded patch state
+  └─ run post-change verification
               ↓
 Observed before/after evidence
               ↓
-Hypothesis confirmation + Debug Receipt + local session lineage
+Fix verdict + optional hypothesis confirmation
+              ↓
+Append-only session lineage + self-digested Debug Receipt
 ```
 
 ## Three independent authorities
 
 1. **Evidence authority** — controller-observed data and deterministic parsers.
 2. **Model advisory authority** — hypotheses, explanations, patch proposals and verification plans.
-3. **User execution authority** — exact commands, historical execution and patch application.
+3. **User execution authority** — exact commands, historical execution, patch apply and rollback actions.
 
-Model output cannot create or inherit user execution authority.
+Model output cannot create or inherit user execution authority. A local Receipt is an integrity binding, not an authorization token.
 
 ## Causal semantics
 
-A recent commit, blame line or high model confidence is never proof. They remain candidates. A second-pass verifier may mark a mechanism `supported`, but runtime fix verification remains a separate state.
+A recent commit, blame line or high model confidence is never proof. A second-pass verifier may mark a mechanism `supported`, but runtime fix verification remains independent.
 
-Safe Bisect is also deliberately narrow: it validates a known-good endpoint, validates a reproducibly failing bad endpoint, then searches a bounded **first-parent path**. The result proves a failure transition for the supplied command. It does not prove an exact faulty line or causal mechanism. Mixed/flaky candidates stop the search as inconclusive.
+A successful before/after reproduction can prove that a workspace change resolves the observed failure while the root cause remains unconfirmed. Hypothesis state therefore follows `open/refuted/supported → confirmed`; only an already `supported` hypothesis may become `confirmed` after successful bound runtime verification.
+
+Safe Bisect is deliberately narrow: it proves a failure transition across a bounded **first-parent path** for one explicit reproduction command. It does not prove an exact faulty line or mechanism.
 
 ## Verification semantics
 
@@ -74,30 +67,58 @@ Safe Bisect is also deliberately narrow: it validates a known-good endpoint, val
 - `verified`: observed reproducible failing baseline + observed workspace content mutation + every bounded post-change run passing.
 - `regressed`: post-change verification fails after a mutation.
 
-`passed-unbound` is intentionally not a fix status: it records a green command that cannot be causally bound to a prior observed failure/mutation.
+`passed-unbound` is not a fix status. Runtime verification also records `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or `unbound` transition state.
 
-## Workspace state and session lineage
+## Workspace freshness
 
-Git context records HEAD plus a content-state fingerprint derived from changed tracked/untracked paths and their content hash/state. Verification compares this fingerprint with the baseline to establish that a mutation actually occurred; a model claim is irrelevant.
+Git context uses `git status --porcelain=v1 -z` so spaces, Unicode and rename records are interpreted without C-style quoting ambiguity. The state fingerprint binds HEAD plus changed path identities/content. Product-private `.codex-debug` state is excluded from this user-code observation domain.
 
-Sessions live under `<git-root>/.codex-debug/sessions/`. A stored session is revalidated against the receipt-bound evidence digest, investigation digest, ledger digest and verification digest before resume. A resumed session records parent session/fingerprint lineage. Local receipts are integrity bindings, not cryptographic signatures from a remote trust service.
+A persisted model patch cannot be applied when the current state fingerprint differs from the evidence-time fingerprint. Patch paths are parsed with Git-native `git apply --numstat -z`; rename/copy patches are currently rejected so rollback has an exact bounded path set.
+
+## Patch transaction and rollback
+
+Patch application is a transaction around validated paths:
+
+```text
+Git-native path parse
+  ↓
+deterministic protected-path checks
+  ↓
+git apply --check
+  ↓
+regular-file/symlink-parent/hardlink checks
+  ↓
+bounded private before snapshot
+  ↓
+git apply
+  ↓
+record exact post-state identity
+```
+
+Rollback first verifies **all** targets still match the recorded post-state, then stages restore bytes privately before modifying the workspace. Any user drift causes refusal. Filesystem races can still cause a partial restore; that state is explicitly reported rather than hidden.
+
+## Session and Receipt lineage
+
+Sessions live under `<git-root>/.codex-debug/sessions/` and are append-only. Session IDs include random entropy; a duplicate ID is never silently overwritten. Session directories/files reject symlink/junction/hardlink aliasing.
+
+A Debug Receipt binds evidence, investigation, hypothesis ledger, verification, patch state and parent lineage. It also contains a self-digest covering metadata such as model/codex version and timestamp. Resume/apply operations create child sessions with `parentSessionId` and `parentDebugFingerprint`; they do not mutate the parent session.
+
+These local digests detect stale/accidental mutation but are not a remote cryptographic signature. Deterministic business rules are rechecked separately: a persisted patch remains apply-eligible only when its investigation records `rootCauseAssessment=supported` and `patchDisposition=accept`.
 
 ## Debugger boundary
 
-Core symbolization uses fixed argument templates only. GDB disables user/system init files where supported, auto-load and debuginfod; LLDB disables user init and symbol-file script loading. `DEBUGINFOD_URLS` is cleared. The model cannot append debugger commands. Output is byte bounded before model context.
-
-## Artifact and platform adapters
-
-Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, text/map/tombstone compaction, Cortex-M fault registers, Android tombstone identity/frames, Linux kernel panic/Oops call traces and basic RTOS task/stack/assert signals. Raw binary/large artifact bodies are not embedded in the model prompt.
+Core symbolization uses fixed argument templates only. GDB disables init files, auto-load, debuginfod and history persistence; LLDB disables user init and symbol-file script loading. The model cannot append debugger commands. Output is byte bounded before model context.
 
 ## Safe Bisect boundary
 
-Historical code execution is inherently higher risk. CLI requires both an exact `--command` and `--allow-historical-execution`; VS Code adds a modal confirmation. Execution occurs in an isolated temporary clone, which is cleaned between candidate checkouts. No model output can enable this path.
+Historical code execution is higher risk. CLI requires both an exact `--command` and `--allow-historical-execution`; VS Code adds a modal confirmation. Every tested commit receives a fresh temporary clone and isolated HOME/global Git config. Common credential-like environment variables and SSH agent state are stripped before the historical command runs. This improves isolation between candidates but is **not an OS sandbox**.
 
-## Test selection
+## Artifact/platform adapters and test selection
 
-Debug reuses Safe Core `test-impact` to rank likely regression tests from changed/source paths and deterministic source references. These are evidence-backed **recommendations only**; they are not automatically executed and never confer `verified` state.
+Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, text/map/tombstone compaction, Cortex-M fault registers, Android tombstone identity/frames, Linux kernel panic/Oops call traces and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
+
+Debug reuses Safe Core `test-impact` to rank regression-test candidates. Recommendations are not automatically executed and never confer `verified` state.
 
 ## Remaining architecture work before active promotion
 
-The current baseline does not yet claim full minidump support, ELF/map-to-source symbolization for embedded firmware, deep Android bugreport parsing, full kernel symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, or a recorded model RCA benchmark. These remain promotion work rather than hidden assumptions.
+The development baseline still does not claim full minidump/Crashpad support, production ELF/map-to-source symbolization, deep Android bugreport parsing, full kernel symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded model RCA benchmark. These are explicit promotion work, not hidden assumptions.
