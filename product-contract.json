@@ -2,6 +2,7 @@
   "productContractVersion": 2,
   "productId": "codex-debug-safe",
   "productVersion": "0.1.0",
+  "lifecycle": "development",
   "safeCoreVersion": "4.17.0",
   "safeCoreCommit": "00403dd14877e978698c63d06f6dbdfe2ba9b8cc",
   "safeCoreMajorVersion": 4,

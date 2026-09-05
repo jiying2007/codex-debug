@@ -1,52 +1,49 @@
 # Codex Debug Safe Roadmap
 
-The first release line is intentionally architecture-first. Marketplace publication is not the milestone; verified debugging quality is.
+The first line is architecture-first. Marketplace publication is not the milestone; reproducible evidence, low false-fix rate and auditable authority boundaries are.
 
-## Track A — Evidence adapters
+## Implemented in the development baseline
 
-- GDB/LLDB core + minidump metadata
-- Linux kernel panic/Oops symbolized call traces
-- Android tombstone + bugreport adapters
-- MCU Cortex-M fault-register decoder and map/ELF symbolization
-- JUnit/SARIF/CTest/Pytest structured evidence
-- GitHub Actions/GitLab CI failed-job artifact ingestion
-- perf/Perfetto/heap/CPU regression evidence
-- audio dump metadata for AEC/NS/VAD/KWS pipelines
+- [x] bounded/redacted failure evidence and deterministic failure taxonomy
+- [x] two-pass hypothesis generation + independent causal verification
+- [x] hypothesis ledger where the model cannot self-confirm
+- [x] source windows, blame/history and causal commit candidates
+- [x] repeated reproduction statistics and normalized failure signatures
+- [x] workspace content-state mutation fingerprint
+- [x] strict `verified` contract requiring failing baseline + mutation + green post-change runs
+- [x] resumable receipt-bound sessions with lineage
+- [x] inert unified-diff proposal + deterministic apply gates
+- [x] GDB/LLDB fixed-command core symbolization with auto-load/network-symbol hardening
+- [x] bounded first-parent Safe Bisect with explicit historical-execution authority
+- [x] Safe Core test-impact regression-test candidates
+- [x] SARIF/JUnit/PCM16 WAV/Perfetto summaries
+- [x] Cortex-M fault register, Android tombstone, kernel panic/Oops and RTOS signal parsers
+- [x] deterministic classifier corpus and adversarial prompt/secret/patch/debugger gates
+- [x] CLI + VS Code command surfaces including core, bisect and session resume
+- [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
-## Track B — Causal verification
+## Required before active promotion
 
-- deterministic first-bad commit/bisect orchestration when a stable repro exists
-- source-line causal anchors and blame history
-- hypothesis-specific verification probes
-- before/after failure fingerprint equivalence
-- flaky reproduction statistics and confidence bounds
-- mutation/regression tests for proposed fixes
+- [ ] recorded model RCA corpus with root-cause precision and insufficient-evidence negatives
+- [ ] false-fix and patch-applicability benchmark
+- [ ] verified-fix rate and regression-escape metric on executable fixtures
+- [ ] token/context-bytes-per-incident benchmark and baseline
+- [ ] end-to-end real core fixture with matching symbols on supported host platforms
+- [ ] stronger ELF/map/source symbolization for embedded firmware
+- [ ] deep Android bugreport and Linux kernel symbol resolution fixtures
+- [ ] rollback/snapshot evidence for patch application
+- [ ] protected/generated/vendor path policy beyond current hard boundaries
+- [ ] explicit model behavioral canary where credentials are available
+- [ ] reproducible VSIX/package contract and Consumer CI Receipt
+- [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow
 
-## Track C — Repair safety
+## Later adapters
 
-- changed-line patch budget
-- protected/generated/vendor path policy
-- workspace snapshot/rollback receipt
-- staged-only patch mode
-- test-impact selection through Safe Core
-- explicit patch rejection reasons and coverage gaps
+- minidump/Breakpad/Crashpad
+- heap/profile/flamegraph evidence
+- Sentry/GitHub Actions/GitLab CI acquisition adapters
+- device transport adapters for Android/Linux/RTOS targets
+- audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
+- richer VS Code Evidence/Hypothesis tree views
 
-## Track D — Product surfaces
-
-- VS Code session/hypothesis tree view
-- local Debug Evidence report explorer
-- CLI resume/continue workflow
-- optional GitHub/GitLab adapters without embedding provider logic in Core
-- Family Suite integration while preserving standalone SKU
-
-## Track E — Quality platform
-
-- recorded crash/build/test/sanitizer/kernel/MCU corpus
-- root-cause precision and false-fix rate
-- patch applicability rate
-- verified-fix rate
-- token/context bytes per resolved incident
-- regression escape rate
-- adversarial prompt-injection corpus
-
-No metric is claimed until the corresponding recorded corpus and evaluator exist.
+No quality metric is claimed until the corresponding recorded corpus/evaluator exists.

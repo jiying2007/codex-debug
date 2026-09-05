@@ -2,60 +2,78 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Codex Debug Safe is the **evidence-driven debugging and fix-verification product** in the Codex Safe family. It starts from a concrete failure, builds bounded evidence, maintains an explicit hypothesis ledger, may propose a minimal textual patch, and only reports `verified` after an explicit verification command succeeds.
+Codex Debug Safe is the Codex Safe family product for **evidence-driven workspace debugging, causal verification, controlled repair, and observed fix verification**. It starts from a concrete failure and never treats model confidence as proof.
 
-It is intentionally broader than Codex Diagnose Safe. Diagnose remains the bounded, read-only CI/build/test diagnosis product; Debug is the interactive workspace investigation/repair loop.
+`codex-diagnose` remains the bounded, read-only CI/build/test diagnosis product. `codex-debug` owns the interactive workspace loop where reproduction, causal investigation, repair and post-change verification are explicitly separated.
 
-## First-version scope
+## Development lifecycle
 
-The initial architecture is deliberately broad rather than a narrow demo:
+The current product contract is `lifecycle: development`. Codex Safe Core registers Debug as a development consumer, so it can inherit Family identity/governance without participating in production Family freshness, snapshot or release readiness. Promotion to `active` is a future explicit contract change; this repository intentionally has no release workflow yet.
 
-- build/link failures;
-- unit/integration test failures;
-- native crashes and stack traces;
-- ASAN/TSAN/UBSAN/LSAN/Valgrind evidence;
-- Linux `dmesg`, panic/watchdog/lockup evidence;
-- Android `logcat`, ANR/tombstone evidence;
-- MCU HardFault/BusFault/UsageFault evidence;
-- dependency/infra failures;
-- performance/latency regression evidence;
-- local logs, selected editor text, stdin, or an explicit reproduction command;
-- Git HEAD/status/recent-history correlation;
-- model-backed causal hypotheses with explicit supporting/refuting evidence;
-- bounded unified-diff patch proposal;
-- opt-in patch application after deterministic validation;
-- explicit post-fix command verification;
-- immutable evidence/ledger/verification fingerprints in Debug Receipt v1;
+## First-version capability surface
+
+The first version is deliberately broad rather than a narrow demo:
+
+- build/link and unit/integration test failures;
+- native crashes, core dumps and bounded GDB/LLDB backtraces;
+- ASAN/TSAN/UBSAN/LSAN/Valgrind, race/deadlock/OOM/watchdog evidence;
+- Linux kernel panic/Oops/call-trace summaries;
+- Android logcat/ANR/tombstone identity, signal and native-frame summaries;
+- MCU Cortex-M HardFault/BusFault/UsageFault register decoding plus map/text evidence;
+- RTOS task/stack/assert signals;
+- dependency/infra and performance/latency evidence;
+- WAV acoustic metrics, SARIF, JUnit and Perfetto/Chrome trace summaries;
+- Git HEAD/status/content-state fingerprint, source snippets, blame/history and causal commit candidates;
+- Safe Core test-impact based regression-test candidates;
+- two-pass model investigation: hypothesis generation followed by independent causal verification;
+- bounded unified-diff proposal, inert by default;
+- explicit patch application only after deterministic validation;
+- repeated reproduction and verification statistics;
+- bounded first-parent Safe Bisect in an isolated temporary clone, only with explicit historical-execution authority;
+- resumable, evidence-bound local sessions and Debug Receipt v1;
 - CLI and VS Code surfaces over the same engine.
 
-## Safety invariant
+## Authority model
 
 ```text
-failure evidence (untrusted)
-       ↓
-redact / bound / parse / fingerprint
-       ↓
-Git read-only context
-       ↓
-model investigation (no tool authority)
-       ↓
-hypothesis ledger + optional patch proposal
-       ↓
-                     explicit user authority only
-                     ├─ --apply
-                     ├─ --command
-                     └─ --verify-command
-                              ↓
-                       deterministic verification
-                              ↓
-                         Debug Receipt
+failure / artifact / core dump                 UNTRUSTED DATA
+                ↓
+redact + bound + deterministic parse + digest
+                ↓
+read-only source / Git / history evidence
+                ↓
+model hypothesis generation                    ADVISORY ONLY
+                ↓
+independent causal verifier                     ADVISORY ONLY
+                ↓
+verifier-accepted patch proposal                INERT
+                ↓
+explicit user authority
+  ├─ execute reproduction command
+  ├─ execute historical command for Safe Bisect
+  ├─ apply checked patch
+  └─ execute verification command
+                ↓
+observed before/after evidence
+                ↓
+Debug Receipt
 ```
 
-Logs, source paths, stack traces, commit subjects, test output, and repository text are data, never instructions. A model response cannot execute a command, apply a patch, commit, push, merge, or authorize network access.
+Logs, source text, commit subjects, debugger output, artifact summaries, filenames and platform dumps are data, never instructions. The model cannot execute commands, apply a patch, commit, push, merge, retry CI, publish a release or self-promote a hypothesis to `confirmed`.
 
-`verified` is not a model verdict. It is produced only when the product observes the explicit verification command exit successfully.
+## What `verified` means
 
-## CLI
+A successful command alone is **not** a verified fix. `verified` requires all of the following:
+
+1. a failure was observed through an explicit reproduction command;
+2. the baseline was sufficiently reproducible (`1/1` failure, or at least two failures sharing one normalized failure signature for repeated runs);
+3. the product independently observes a workspace content-state mutation after that baseline;
+4. every bounded post-change verification run passes;
+5. the resumed/stored session still validates against its evidence, investigation, ledger and verification receipt bindings.
+
+A log file plus an unrelated green test is therefore `passed-unbound`, not `verified`.
+
+## Install for development
 
 ```bash
 git clone --recurse-submodules https://github.com/jiying2007/codex-debug.git
@@ -65,114 +83,117 @@ npm run ci
 npm link
 ```
 
-Investigate a log:
+## CLI examples
+
+Log or piped evidence:
 
 ```bash
 codex-debug --log build.log --markdown debug-report.md --output debug-session.json
-```
-
-Reproduce a failure, investigate it, apply a checked proposal, then rerun the same reproduction as verification:
-
-```bash
-codex-debug \
-  --command "npm test" \
-  --apply \
-  --markdown debug-report.md
-```
-
-Use a distinct verification command:
-
-```bash
-codex-debug \
-  --log crash.log \
-  --verify-command "npm run test:regression"
-```
-
-Deterministic-only triage never invokes a model:
-
-```bash
+adb logcat -d | codex-debug --kind android
 codex-debug --log sanitizer.log --deterministic-only
 ```
 
-Pipe evidence:
+Repeated reproduction:
 
 ```bash
-adb logcat -d | codex-debug --kind android
+codex-debug --command "npm test" --repro-runs 3
 ```
+
+Core dump using only fixed debugger commands:
+
+```bash
+codex-debug \
+  --core core.1234 \
+  --executable ./build/app \
+  --debugger auto
+```
+
+GDB is invoked with init-file loading, auto-load and debuginfod disabled; LLDB disables user init and symbol-file script loading. Debugger output is bounded before entering model context.
+
+Attach structured artifacts:
+
+```bash
+codex-debug --log failure.log \
+  --artifact sarif:reports/asan.sarif \
+  --artifact junit:reports/junit.xml \
+  --artifact perf:trace.json \
+  --artifact wav:capture.wav
+```
+
+Safe Bisect deliberately requires two separate pieces of authority: an exact user-entered reproduction command and `--allow-historical-execution`.
+
+```bash
+codex-debug \
+  --command "npm test -- --runInBand" \
+  --repro-runs 2 \
+  --bisect-good v1.2.0 \
+  --bisect-bad HEAD \
+  --allow-historical-execution
+```
+
+The implementation verifies the good endpoint passes and bad endpoint reproducibly fails, then binary-searches a bounded **first-parent** path in an isolated clone. Mixed/flaky evidence fails closed. A proven `firstBad` proves a failure transition for the supplied reproduction; it does not by itself prove the faulty line or mechanism.
+
+Resume after a manual or externally produced edit:
+
+```bash
+codex-debug \
+  --resume dbg-0123456789abcdef \
+  --verify-command "npm test" \
+  --verify-runs 5
+```
+
+Sessions are stored at the Git root under `.codex-debug/sessions/`, even when VS Code opens a repository subdirectory.
+
+## Patch policy
+
+A proposed patch is inert by default. `--apply` or the explicit VS Code apply command is required. Before application the patch must be textual, at most 256 KiB, repository-relative, free of path traversal and `.git` writes, avoid `src/codex-safe-core`, reject binary patches, and pass `git apply --check --whitespace=error-all`.
+
+Codex Debug Safe never commits, pushes, merges, opens PRs/MRs, retries pipelines or publishes releases.
 
 ## Failure kinds
 
 ```text
-build | test | crash | sanitizer | kernel | android | mcu |
-performance | dependency | infra | unknown
+build | test | crash | sanitizer | race | deadlock | oom | watchdog |
+kernel | android | mcu | audio | performance | dependency | infra | unknown
 ```
 
-`auto` is the default and uses deterministic pattern classification before any model call.
+`auto` uses deterministic classification before any model call. Failure-signature stability and reproduction sufficiency are tracked separately so a one-off flaky failure cannot become verified merely because later runs pass.
 
-## Hypothesis ledger
-
-The model may return only `open`, `supported`, or `refuted`. It cannot declare its own hypothesis `confirmed`. Confirmation is promoted by deterministic verification evidence.
-
-```text
-H1 supported  reset/process lifetime race
-H2 refuted    malformed input
-H3 open       stale decoder state
-        ↓
-explicit patch / user edit
-        ↓
-reproduction passes
-        ↓
-H1 confirmed
-```
-
-## Patch policy
-
-A proposed patch is inert by default. `--apply` is required to mutate the workspace. Before application the patch must:
-
-- be textual and bounded to 256 KiB;
-- contain repository-relative paths only;
-- reject path traversal and `.git` writes;
-- reject `src/codex-safe-core` mutation;
-- reject binary patches;
-- pass `git apply --check --whitespace=error-all`.
-
-Codex Debug Safe never commits, pushes, opens a PR/MR, merges, retries CI, or publishes a release.
-
-## VS Code
-
-The extension contributes:
+## VS Code commands
 
 - **Debug Selected Failure Evidence**
 - **Debug Failure Log File**
+- **Debug Core Dump**
 - **Debug Reproduction Command**
+- **Run Safe Bisect**
 - **Apply Last Proposed Patch**
 - **Verify Last Fix**
+- **Resume Debug Session and Verify**
+- **Show Debug Session**
 - **Check Debug Environment**
 - **Show Debug Output**
 
-Workspace trust is mandatory. Apply and verification remain separate explicit actions.
+Workspace trust is mandatory. Historical execution has an additional modal warning.
 
-## Token efficiency
+## Token and evidence efficiency
 
-Raw logs are not dumped blindly into the model. Safe Core performs deterministic ANSI/secret cleanup, significant-error window selection, duplicate folding, and byte bounding first. Debug then adds only bounded parsed frames, signals, changed paths, and recent commit metadata. The default model budget is 80k estimated tokens, configurable independently from the raw evidence byte limit.
+Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug then adds bounded parsed frames, platform summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, WAVs and trace files are never embedded directly into the model prompt.
 
 ## Family relationship
 
 ```text
 Codex Safe Core
-├── Codex Review Safe       change-risk judgment
-├── Codex Commit Safe       deterministic commit delivery
-├── Codex Change Safe       PR/MR delivery
-├── Codex Review Service    server-side review
-├── Codex Diagnose Safe     bounded read-only CI failure diagnosis
-└── Codex Debug Safe        interactive causal investigation + repair verification
+├── Review Safe       change-risk judgment
+├── Commit Safe       deterministic commit delivery
+├── Change Safe       PR/MR delivery
+├── Review Service    server-side review
+├── Diagnose Safe     bounded read-only CI failure diagnosis
+└── Debug Safe        workspace causal investigation + controlled repair + verification
 ```
 
-Debug consumes the same exact-pinned Safe Core runtime/provider/model-routing/diagnosis primitives as the rest of the family. Debug-specific mutation authority remains product-owned and explicit.
+Debug consumes an exact-pinned Safe Core runtime/provider/model-routing/diagnosis/test-impact surface. Debug-specific mutation and historical-execution authority remains product-owned.
 
-## Development status
-
-`0.1.0` is a development baseline, not a release claim. The repository is intentionally being built out before Marketplace publication. See [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [ROADMAP.md](ROADMAP.md).
+See [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [ROADMAP.md](ROADMAP.md).
 
 ## License
 
