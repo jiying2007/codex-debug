@@ -1,0 +1,4 @@
+'use strict';
+const {freeze}=require('./contracts');const {gitApply}=require('./patch');const {createWorkspaceSnapshot,finalizeWorkspaceSnapshot,writeWorkspaceSnapshot,restoreBeforeUnchecked}=require('./workspace-snapshot');
+function applyPatchWithSnapshot(patch,{root=process.cwd()}={}){const checked=gitApply(patch,{cwd:root,apply:false}),snapshot=createWorkspaceSnapshot(root,checked.paths);let applied=false;try{const result=gitApply(patch,{cwd:root,apply:true});applied=true;const finalized=finalizeWorkspaceSnapshot(root,snapshot);writeWorkspaceSnapshot(root,finalized);return freeze({...result,snapshotId:finalized.snapshotId,snapshotDigest:finalized.digest});}catch(error){if(applied){try{restoreBeforeUnchecked(root,snapshot);}catch(rollbackError){error.rollbackError=rollbackError.message;}}throw error;}}
+module.exports={applyPatchWithSnapshot};
