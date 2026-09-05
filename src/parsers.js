@@ -14,12 +14,12 @@ const PATTERNS=Object.freeze({
   audio:/(?:AEC|echo return loss|ERLE|VAD false|wake word|KWS|audio underrun|audio overrun|XRUN|clipping|beamform|noise suppression)/i,
   crash:/(?:segmentation fault|SIGSEGV|SIGABRT|access violation|core dumped|uncaught exception|\bpanic:)/i,
   performance:/(?:performance regression|latency regression|\btimeout\b|deadline missed|\bjank\b|slow frame|cpu regression|memory regression)/i,
-  test:/(?:tests? failed|\bFAILURES?\b|AssertionError|expected .* received|\bpytest\b|\bjunit\b|\bgtest\b|\bctest\b|\bjest\b)/i,
-  build:/(?:compilation terminated|undefined reference|linker command failed|fatal error:|error C\d{4}|cannot find symbol|BUILD FAILED)/i,
+  infra:/(?:no space left|network is unreachable|temporary failure in name resolution|connection reset|permission denied|runner lost|runner service|executor failed|service unavailable|connection timed out)/i,
   dependency:/(?:could not resolve|\bdependency\b|package .* not found|npm ERR!|No matching distribution found|artifact .* not found)/i,
-  infra:/(?:no space left|network is unreachable|temporary failure in name resolution|connection reset|permission denied|runner lost|executor failed)/i
+  build:/(?:compilation terminated|undefined reference|linker command failed|fatal error:|error C\d{4}|cannot find symbol|BUILD FAILED)/i,
+  test:/(?:tests? failed|test failures?|\bFAIL(?:ED)?\b[^\n]{0,120}\btest\b|AssertionError|expected .* received|\bpytest\b|\bjunit\b|\bgtest\b|\bctest\b|\bjest\b)/i
 });
-function detectFailureKind(text,requested='auto'){if(requested&&requested!=='auto')return requested;const s=String(text||'');for(const kind of ['race','sanitizer','deadlock','oom','watchdog','kernel','android','mcu','audio','crash','test','build','dependency','infra','performance'])if(PATTERNS[kind].test(s))return kind;return 'unknown';}
+function detectFailureKind(text,requested='auto'){if(requested&&requested!=='auto')return requested;const s=String(text||'');for(const kind of ['race','sanitizer','deadlock','oom','watchdog','kernel','android','mcu','audio','crash','infra','dependency','build','test','performance'])if(PATTERNS[kind].test(s))return kind;return 'unknown';}
 function extractFrames(text,max=50){const frames=[],seen=new Set();const lines=String(text||'').split(/\r?\n/);const regexes=[
   /(?:at\s+)?([^\s()]+)\s*\(([^():]+):(\d+)(?::\d+)?\)/,
   /\s+at\s+([\w.$<>]+)\(([^:()]+):(\d+)\)/,
