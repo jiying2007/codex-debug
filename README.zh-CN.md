@@ -66,6 +66,8 @@ verifier 接受的 patch                    仍然 inert
 
 因此“给一个 crash.log，再跑一个无关绿色测试”最多只是 `passed-unbound`。Runtime verification 还会记录 failure transition：`resolved`、`same-failure`、`different-failure`、`mixed-failure` 或 unbound。
 
+**修复进入 `verified` 并不自动等于根因 hypothesis 被确认。** `verified` 只证明工作区发生变化后，原先可重复的 failure 在绑定的验证中消失；只有已经被因果 verifier 标成 `supported` 的 hypothesis，才能在后续 runtime verification 成功后升级成 `confirmed`。因此 deterministic-only 模式可以证明“这个改动解决了故障”，但不会凭空制造“为什么解决”的根因结论。
+
 ## 常用 CLI
 
 ```bash
