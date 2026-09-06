@@ -20,6 +20,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] protected control-plane/secret/generated/vendor patch paths fail closed by default
 - [x] bounded private patch snapshots + drift-safe rollback + symlink/junction/hardlink rejection
 - [x] GDB/LLDB fixed-command core symbolization with auto-load/network-symbol hardening and host-path redaction
+- [x] real Linux native-core fixture (`cc -g` + GDB SIGSEGV + `generate-core-file`) validating `symbolizeCore()` against an actual core image
 - [x] Cortex-M PC/LR -> bounded linker-map symbol/offset resolution
 - [x] fixed-argv GNU/LLVM embedded addr2line ELF symbolization with safe `file:line` reuse in source/blame/history/test-impact
 - [x] real Linux ELF+DWARF fixture (`cc -g` + `nm` + `addr2line`) validating function/source resolution and path redaction
@@ -42,7 +43,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [ ] live-model false-fix and patch-applicability benchmark across real repositories
 - [ ] verified-fix rate and regression-escape metric on broader executable fixtures
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
-- [ ] end-to-end real native core fixture with matching symbols on supported host platforms
+- [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
 - [ ] real cross-toolchain Cortex-M ELF fixture + source-prefix remapping for external build roots
 - [ ] deep Android bugreport and Linux kernel symbol resolution fixtures
 - [ ] explicit model behavioral canary where credentials are available
