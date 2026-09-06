@@ -38,18 +38,21 @@ function runTransitionInRepo(root,item,{env=process.env}={}){
   assert.equal(fixedHead,item.fixedCommit,`fixed checkout mismatch for ${item.id}`);
   const fixed=runReproductionSeries(item.reproduction.command,{runs:item.reproduction.runs,cwd:root,timeoutMs:item.reproduction.timeoutMs,maxBuffer:4*1024*1024,env});
   assert.equal(fixed.summary.failures,0,`fixed commit still fails the exact reproduction for ${item.id}`);
-  return Object.freeze({caseId:item.id,repository:item.repository,badCommit:item.badCommit,fixedCommit:item.fixedCommit,commandDigest:stableDigest(item.reproduction.command),badSummary:bad.summary,fixedSummary:fixed.summary,badRepresentativeDigest:digestRepresentative(bad.representative),fixedRepresentativeDigest:digestRepresentative(fixed.representative),transitionDigest:stableDigest({caseId:item.id,badCommit:item.badCommit,fixedCommit:item.fixedCommit,command:item.reproduction.command,bad:bad.summary,fixed:fixed.summary})});
+  return Object.freeze({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef||'',badCommit:item.badCommit,fixedCommit:item.fixedCommit,commandDigest:stableDigest(item.reproduction.command),badSummary:bad.summary,fixedSummary:fixed.summary,badRepresentativeDigest:digestRepresentative(bad.representative),fixedRepresentativeDigest:digestRepresentative(fixed.representative),transitionDigest:stableDigest({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef||'',badCommit:item.badCommit,fixedCommit:item.fixedCommit,command:item.reproduction.command,bad:bad.summary,fixed:fixed.summary})});
 }
 function materializeHistoricalCase(item){
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-promotion-'));
-  const home=path.join(temp,'home'),repo=path.join(temp,'repo');
+  const home=path.join(temp,'home'),repo=path.join(temp,'repo'),anchor='refs/codex-debug/promotion-anchor';
   fs.mkdirSync(home,{recursive:true,mode:0o700});
   const env=isolatedHistoricalEnv(home);
   try{
     fs.mkdirSync(repo,{recursive:true});
     git(['init','-q'],repo,env);
     git(['remote','add','origin',item.repository],repo,env);
-    git(['fetch','--no-tags','--filter=blob:none','origin',item.fixedCommit,item.badCommit],repo,env);
+    git(['fetch','--no-tags','--filter=blob:none','origin',`${item.anchorRef}:${anchor}`],repo,env);
+    git(['cat-file','-e',`${item.badCommit}^{commit}`],repo,env);
+    git(['cat-file','-e',`${item.fixedCommit}^{commit}`],repo,env);
+    git(['merge-base','--is-ancestor',item.fixedCommit,anchor],repo,env);
     const parent=git(['rev-parse',`${item.fixedCommit}^`],repo,env);
     assert.equal(parent,item.badCommit,`fixedCommit must be a direct child of badCommit for ${item.id}`);
     const transition=runTransitionInRepo(repo,item,{env});
