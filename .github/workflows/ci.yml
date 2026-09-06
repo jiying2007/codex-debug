@@ -39,8 +39,14 @@ jobs:
           command -v arm-none-eabi-ld
           command -v arm-none-eabi-nm
           command -v arm-none-eabi-addr2line
+          command -v cc
+          command -v ld
+          command -v nm
+          command -v readelf
+          command -v addr2line
           gdb --version | head -n 1
           arm-none-eabi-addr2line --version | head -n 1
+          addr2line --version | head -n 1
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run ci
 
@@ -105,7 +111,7 @@ jobs:
           CI_RUN_ID: ${{ github.run_id }}
           CI_RUN_ATTEMPT: ${{ github.run_attempt }}
           CI_EVENT: ${{ github.event_name }}
-          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,real-native-core,real-cortex-m,android-buildid,kernel-system-map,kernel-kaslr,package-contract,reproducible-vsix
+          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,real-native-core,real-cortex-m,android-buildid,kernel-system-map,kernel-kaslr,kernel-module-buildid,package-contract,reproducible-vsix
         shell: bash
         run: |
           set -euo pipefail
