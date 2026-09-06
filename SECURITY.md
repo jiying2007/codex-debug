@@ -2,7 +2,7 @@
 
 ## Threat model
 
-Every failure input may be attacker controlled: logs, source snippets, commit subjects, filenames, test reports, SARIF/JUnit, core files, debugger output, platform dumps, performance traces and audio artifacts. Inputs may contain prompt injection, ANSI/control sequences, secrets, malicious paths, fake tool results, or instructions designed to gain execution authority.
+Every failure input may be attacker controlled: logs, source snippets, commit subjects, filenames, test reports, SARIF/JUnit, core files, ELF images, linker maps, debugger/symbolizer output, platform dumps, performance traces and audio artifacts. Inputs may contain prompt injection, ANSI/control sequences, secrets, malicious paths, malformed binary data, fake tool results, or instructions designed to gain execution authority.
 
 Historical repository code is also untrusted when Safe Bisect is used.
 
@@ -10,12 +10,13 @@ Historical repository code is also untrusted when Safe Bisect is used.
 
 - Model prompts label evidence and prior model output as untrusted data.
 - Safe Core performs ANSI cleanup and common credential redaction before model context construction.
-- Raw files and compact model evidence are independently byte bounded; raw core/WAV/performance artifacts are summarized rather than blindly embedded.
-- Model output has no command, debugger, network, patch-apply/rollback, commit, push, merge, release, CI-retry or publication authority.
+- Raw files and compact model evidence are independently byte bounded; raw core/ELF/map/WAV/performance artifacts are summarized rather than blindly embedded.
+- Model output has no command, debugger/symbolizer, network, patch-apply/rollback, commit, push, merge, release, CI-retry or publication authority.
 - Reproduction and verification commands execute only when explicitly supplied by the caller.
 - Historical execution additionally requires `--allow-historical-execution` or the VS Code modal approval path.
 - A persisted patch is usable only when the stored investigation still records `rootCauseAssessment=supported` and `patchDisposition=accept`; a locally recomputable Receipt is never treated as execution authority.
 - Patch paths reject traversal, absolute paths, `.git`, `.codex-debug`, binary patches and `src/codex-safe-core`; rename/copy patches are rejected by the current rollback contract. Git-native `--numstat -z` parsing is used for exact Unicode/space-containing paths.
+- GitHub workflow/control-plane paths, `.env`/key material and generated/vendor/build/dependency outputs are protected from model patch application by default.
 - `git apply --check --whitespace=error-all` is mandatory before mutation.
 - Applying a persisted patch requires the current workspace content-state fingerprint to match the evidence-time state; stale model patches fail closed.
 - Applied paths are privately snapshotted before mutation. Symlink/junction parents, symlink targets, non-regular files and hard-linked files are rejected.
@@ -39,6 +40,21 @@ A core file and its matching executable are untrusted native inputs to GDB/LLDB.
 
 This reduces attack surface but does not make a native debugger a sandbox. Analyze hostile core/executable pairs only on a machine/container with an appropriate trust boundary.
 
+## Embedded ELF / map symbolization hardening
+
+Firmware ELF and linker-map files are untrusted parser inputs. Embedded symbolization never executes firmware and never lets model output select addresses or append tool arguments.
+
+- only controller-parsed Cortex-M `PC` and `LR` values from the supplied failure evidence are eligible for symbolization;
+- linker-map parsing is deterministic, bounded, and returns nearest symbol + offset only;
+- ELF symbolization uses a fixed `addr2line -f -C -e ELF <PC/LR...>` template;
+- tool names are restricted to a fixed allowlist covering common `arm-none-eabi`, RISC-V GNU, LLVM and host addr2line binaries;
+- ELF/map inputs must be bounded regular non-symlink files;
+- symbolizer output is bounded and treated as untrusted evidence, not instructions;
+- `DEBUGINFOD_URLS` is cleared for addr2line execution;
+- `file:line` output is allowed to enter source/blame/history/test-impact only when existing workspace-bound source resolution accepts the path. Absolute debug paths outside the workspace are rejected rather than followed.
+
+ELF parsers are native tooling and may themselves contain vulnerabilities. Treat hostile firmware images like hostile core files and analyze them in an appropriate container/runner boundary when provenance is uncertain.
+
 ## Historical execution warning
 
 `--allow-historical-execution` authorizes the exact caller-supplied reproduction command to run against older repository content. Each tested commit gets a fresh temporary clone instead of reusing a candidate worktree. Historical commands receive an isolated HOME/global Git config and common credential-like environment variables (`TOKEN`, `SECRET`, `PASSWORD`, `API_KEY`, `PAT`, cloud credential variables and SSH agent state) are removed by default.
@@ -59,8 +75,8 @@ Session files are append-only and self-bound through the Debug Receipt. This pro
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger parsing, platform parsers and artifact parsers have deterministic/adversarial tests, but there is not yet a production-scale recorded model RCA corpus, OS sandbox for historical execution, full minidump stack, or deep platform symbol resolver. Those are explicit promotion gaps, not implied guarantees.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers have deterministic/adversarial tests, but there is not yet a production-scale recorded live-model RCA corpus, OS sandbox for historical execution, full minidump stack, or deep Android/kernel symbol resolver. Those are explicit promotion gaps, not implied guarantees.
 
 ## Reporting vulnerabilities
 
-Do not include real API keys, private logs, proprietary source, production core dumps or customer data in public issues. Provide minimized sanitized fixtures.
+Do not include real API keys, private logs, proprietary source, production core dumps, firmware images or customer data in public issues. Provide minimized sanitized fixtures.
