@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "codex-debug-promotion-corpus",
+  "promotionEligible": false,
+  "provenance": "reviewed-historical-fixes",
+  "policy": {
+    "minimumCases": 12,
+    "minimumRepositories": 3,
+    "minimumFailureKinds": 4,
+    "minimumInsufficientCases": 3
+  },
+  "cases": [
+    {
+      "id": "codex-debug-model-eval-record-digest-20260906",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-debug.git",
+      "anchorRef": "refs/pull/11/head",
+      "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
+      "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+      "failureKind": "test",
+      "reproduction": {
+        "command": "node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": ["record digest", "fixture"],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "f8104b28f67dd75d7b0a2a6a1ae42cec645c126d7e623af4e6e1c49ac2467eca",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+        "files": ["quality/model-eval-contract-results.json"],
+        "summary": "The contract fixture stored a non-canonical recordDigest; the evaluator correctly rejected it until the fixture digest was recomputed with the product's canonical JavaScript stable digest."
+      },
+      "groundTruthDigest": "ce45ae021fdf819db10bfbdad1dd01c763050d647311c7668fa38c79ba2d7efa"
+    }
+  ]
+}

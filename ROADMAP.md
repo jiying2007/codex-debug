@@ -53,6 +53,10 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] development-only Consumer Evidence artifact containing VSIX, Receipt and checksums with read-only GitHub permissions and no publication surface
 - [x] Model Evaluation Record v1 with digest-bound corpus expectations, self-digested records, two-pass model/runtime/usage evidence and deterministic RCA/insufficient/false-fix metrics
 - [x] manual read-only live synthetic model canary with protected-credential fail-closed behavior, SHA-pinned actions, `promotionEligible=false` and no repository/publication authority
+- [x] Promotion Corpus v1 readiness floor: at least 12 reviewed cases, 3 repositories, 4 failure kinds and 3 insufficient-evidence negatives before `promotionEligible=true` can validate
+- [x] first real historical promotion case bound to persistent PR ref + exact bad/fix SHA + direct-parent fix + exact reproduction + digest-bound ground truth; controller must prove bad fails and fixed passes before model evaluation
+- [x] promotion historical execution uses isolated HOME/Git/npm config and an allowlisted environment so historical code cannot inherit model/GitHub credentials; model credentials stay in the separate Codex execution authority
+- [x] package / package-lock / product-contract development identity is now gated as one version (`0.1.2` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
@@ -60,6 +64,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [ ] recorded live-model RCA corpus with root-cause precision and insufficient-evidence negatives
 - [ ] live-model false-fix and patch-applicability benchmark across real repositories
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
+- [ ] promotion corpus reaches its reviewed diversity floor and is explicitly switched to `promotionEligible=true`
 - [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
 - [ ] broader Cortex-M corpus across GCC/LLVM firmware layouts, optimized/LTO builds and vendor linker scripts
 - [ ] broader Android bugreport/tombstone corpus across ABIs/APEX/vendor layouts and module sets
@@ -76,4 +81,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. No live-model quality metric is claimed until the corresponding recorded promotion-eligible corpus/evaluator exists.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. A reviewed historical harness is also not a live quality result by itself. No promotion-grade live-model metric is claimed until the promotion corpus is explicitly eligible and protected live records satisfy the evaluator gates.

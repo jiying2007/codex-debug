@@ -1,0 +1,45 @@
+name: Promotion Corpus Qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledge_historical_execution:
+        description: I acknowledge reviewed historical repository code will execute without an OS sandbox
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 1
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require explicit historical-execution authority
+        if: ${{ !inputs.acknowledge_historical_execution }}
+        shell: bash
+        run: |
+          echo 'Historical corpus qualification executes reviewed old repository code and is not an OS sandbox. Explicit acknowledgement is required.' >&2
+          exit 2
+      - name: Validate reviewed corpus contract
+        run: node scripts/promotion-corpus.js quality/promotion-corpus.json
+      - name: Prove historical bad-to-fix transitions
+        run: node scripts/promotion-qualify.js --output PROMOTION_CORPUS_QUALIFICATION.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-debug-promotion-corpus-qualification-${{ github.sha }}-${{ github.run_id }}
+          path: PROMOTION_CORPUS_QUALIFICATION.json
+          if-no-files-found: error
+          retention-days: 14
