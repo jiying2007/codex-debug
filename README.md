@@ -18,7 +18,7 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 - Linux kernel panic/Oops/call-trace, Android ANR/tombstone, Cortex-M fault-register and RTOS task/stack evidence;
 - deterministic Cortex-M `PC/LR -> symbol` resolution from bounded linker maps and fixed-argv GNU/LLVM embedded `addr2line`; external firmware DWARF paths can be safely remapped into workspace source through bounded source-prefix mappings;
 - Android tombstone `pc -> local ELF source` resolution only after exact tombstone/local-ELF BuildId match;
-- Linux kernel RIP/call-trace `address -> System.map symbol+offset` evidence, with loadable-module frames left unresolved unless module-specific symbols are supplied in a future adapter;
+- Linux kernel runtime RIP/call-trace -> link-time `System.map` evidence only after a KASLR slide is proven from `Kernel Offset` or explicit `--kernel-kaslr-slide`; loadable-module frames remain unresolved without module-specific symbols;
 - SARIF, JUnit, WAV acoustic metrics and Perfetto/Chrome trace summaries;
 - Git HEAD/status/content-state fingerprint, bounded source windows, blame/history and causal commit candidates;
 - Safe Core test-impact based regression-test candidates;
@@ -28,6 +28,8 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 - bounded **first-parent** Safe Bisect with a fresh isolated clone per candidate, only with explicit historical-execution authority;
 - evidence-bound append-only sessions and self-digested Debug Receipt lineage;
 - drift-safe patch snapshots and rollback;
+- executable fix-quality benchmark with zero false-verification/regression-replacement escape gates;
+- reproducible development VSIX + Safe Core Consumer CI Receipt artifact;
 - CLI and VS Code surfaces over the same engine.
 
 ## Authority model
@@ -119,12 +121,19 @@ If a tombstone frame has `BuildId: ...`, Codex Debug Safe extracts the BuildId f
 Linux kernel `System.map` evidence:
 
 ```bash
+# Preferred: the log itself contains "Kernel Offset: 0x... from 0x..."
 codex-debug \
   --log kernel-oops.log \
   --kernel-system-map ./symbols/System.map
+
+# Older/sanitized logs: the caller must explicitly bind the known slide.
+codex-debug \
+  --log kernel-oops.log \
+  --kernel-system-map ./symbols/System.map \
+  --kernel-kaslr-slide 0x0
 ```
 
-Kernel RIP/PC and call-trace addresses remain hexadecimal strings and are resolved deterministically to the nearest lower base-kernel symbol. Frames tagged with `[module]` are reported as `module-map-required`; the base `System.map` is never used to fake a module resolution.
+`System.map` contains link-time addresses while an Oops commonly reports runtime addresses after KASLR relocation. Codex Debug Safe therefore refuses exact base-kernel symbol resolution unless the slide is **proven**. A supported `Kernel Offset: 0xHEX from 0xBASE` line is parsed as controller evidence; otherwise the caller may explicitly supply `--kernel-kaslr-slide 0xHEX`. If both exist they must match or the operation fails with `EKASLRMISMATCH`. Runtime addresses are retained, the proven slide is subtracted with 64-bit `BigInt` arithmetic, and the normalized link-time address is then looked up in `System.map`. Without a proven slide the result is `kaslr-unproven`, not a guessed symbol. Frames tagged with `[module]` remain `module-map-required` regardless of slide.
 
 Structured evidence:
 
