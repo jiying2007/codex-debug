@@ -21,6 +21,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] persisted patch re-authorization requiring supported causal verification, covered at the real apply entrypoint
 - [x] protected control-plane/secret/generated/vendor patch paths fail closed by default
 - [x] bounded private patch snapshots + drift-safe rollback + symlink/junction/hardlink rejection
+- [x] rollback operations persist as append-only child sessions with parent fingerprint, snapshot/path/digest/state-fingerprint lineage, patch-state rollback binding and a new Debug Receipt
+- [x] executable rollback lineage E2E proving `proposed -> applied-unverified -> verified -> rollback child(proposed)`, duplicate-snapshot refusal, tamper detection and no false child on drift
 - [x] GDB/LLDB fixed-command core symbolization with auto-load/network-symbol hardening and host-path redaction
 - [x] real Linux native-core fixture (`cc -g` + GDB SIGSEGV + `generate-core-file`) validating `symbolizeCore()` against an actual core image
 - [x] Cortex-M PC/LR -> bounded linker-map symbol/offset resolution
@@ -43,8 +45,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] deterministic classifier corpus and adversarial prompt/secret/patch/debugger gates
 - [x] deterministic context-byte/compaction efficiency benchmark in CI
 - [x] deterministic workflow action pin gate with non-zero coverage assertion
-- [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback and rollback-drift refusal
-- [x] CLI surfaces for native, embedded, Android and kernel symbol evidence; VS Code embedded source-prefix remap, session resume, bisect, apply and rollback
+- [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback, receipt-bound rollback lineage and rollback-drift refusal
+- [x] CLI surfaces for native, embedded, Android and kernel symbol evidence; VS Code embedded source-prefix remap, session resume, bisect, apply and receipt-bound rollback
 - [x] package-content contract excluding tests, quality internals, workflows and `.codex-debug` private state
 - [x] reproducible development VSIX gate: exact VSCE 3.9.2, normalized source mtimes, two independent packages required to have identical SHA-256
 - [x] Safe Core Consumer CI Receipt binding exact CI source SHA, Core pin/digests, Node contract and completed suite lineage
