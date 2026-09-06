@@ -88,8 +88,9 @@ test('promotion workflows are manual read-only and require historical execution 
     const workflow=fs.readFileSync(path.join(root,file),'utf8');
     assert.match(workflow,/workflow_dispatch:/);
     assert.match(workflow,/permissions:\s*\n\s+contents:\s*read\b/);
-    assert.match(workflow,/allow_historical_execution/);
-    assert.match(workflow,/I_UNDERSTAND_HISTORICAL_CODE_WILL_EXECUTE_WITHOUT_OS_SANDBOX/);
+    assert.match(workflow,/acknowledge_historical_execution/);
+    assert.match(workflow,/!inputs\.acknowledge_historical_execution/);
+    assert.match(workflow,/not an OS sandbox/i);
     for(const forbidden of [/\bcontents:\s*write\b/i,/\bid-token:\s*write\b/i,/\bnpm\s+publish\b/i,/\bvsce\s+publish\b/i,/\bgh\s+release\b/i,/\bgit\s+push\b/i])assert.doesNotMatch(workflow,forbidden);
   }
   const live=fs.readFileSync(path.join(root,'promotion-model-eval.yml'),'utf8');
