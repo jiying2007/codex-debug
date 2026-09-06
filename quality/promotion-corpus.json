@@ -20,7 +20,7 @@
       "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
       "failureKind": "test",
       "reproduction": {
-        "command": "node --test test/model-evaluation.test.js",
+        "command": "node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"",
         "runs": 1,
         "timeoutMs": 120000
       },
