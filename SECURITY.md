@@ -43,6 +43,8 @@ A core file and its matching executable are untrusted native inputs to GDB/LLDB.
 - debugger output is bounded before being retained or sent to a model;
 - workspace source prefixes are converted to relative paths, core/executable paths are reduced to basenames, and HOME prefixes are redacted before debugger output enters evidence/model context.
 
+A real Linux CI fixture compiles a DWARF-enabled crashing binary, drives it to SIGSEGV under GDB, creates an actual core with `generate-core-file`, and requires `symbolizeCore()` to recover the crash function/source while preserving host-path redaction. Linux runners must provide both `cc` and `gdb`; the fixture does not silently skip missing tooling.
+
 This reduces attack surface but does not make a native debugger a sandbox. Analyze hostile core/executable pairs only on a machine/container with an appropriate trust boundary.
 
 ## Embedded ELF / map symbolization hardening
@@ -83,7 +85,7 @@ Session files are append-only and self-bound through the Debug Receipt. This pro
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers have deterministic/adversarial tests, but there is not yet a production-scale recorded live-model RCA corpus, OS sandbox for historical execution, full minidump stack, real native core corpus, Cortex-M cross-toolchain corpus, or deep Android/kernel symbol resolver. Those are explicit promotion gaps, not implied guarantees.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers have deterministic/adversarial tests plus one real Linux native-core fixture, but there is not yet a production-scale recorded live-model RCA corpus, OS sandbox for historical execution, broad native core/minidump corpus, Cortex-M cross-toolchain corpus, or deep Android/kernel symbol resolver. Those are explicit promotion gaps, not implied guarantees.
 
 ## Reporting vulnerabilities
 
