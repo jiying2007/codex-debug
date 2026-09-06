@@ -37,6 +37,62 @@
         "summary": "The contract fixture stored a non-canonical recordDigest; the evaluator correctly rejected it until the fixture digest was recomputed with the product's canonical JavaScript stable digest."
       },
       "groundTruthDigest": "ce45ae021fdf819db10bfbdad1dd01c763050d647311c7668fa38c79ba2d7efa"
+    },
+    {
+      "id": "codex-debug-infra-precedence-20260905",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-debug.git",
+      "anchorRef": "refs/pull/1/head",
+      "badCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
+      "fixedCommit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+      "failureKind": "infra",
+      "reproduction": {
+        "command": "node -e \"const {detectFailureKind}=require('./src/parsers');const k=detectFailureKind('Tests failed: runner service unavailable');if(k!=='infra'){console.error(k);process.exit(1)}\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": ["infra", "service unavailable"],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "9281f16c8a42d33cfdf95c7a426b64cb32a48ae4fcc295ae11ea27752ec0af6c",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+        "files": ["src/parsers.js"],
+        "summary": "Failure classification checked generic test wording before causal infrastructure signals; the fix moved infra precedence ahead of test and added runner/service-unavailable patterns."
+      },
+      "groundTruthDigest": "fa550be424b76d729f82e5ec4acc572aed9bbe2322752936e0925a7430001482"
+    },
+    {
+      "id": "safe-core-actions-list-marker-20260906",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
+      "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
+      "failureKind": "build",
+      "reproduction": {
+        "command": "node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\n  - uses: actions/checkout@v4\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": ["uses", "unpinned"],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "7e751cb1c6070d340d6a41ce5343c957f518627d56e09d1c3d37942684d7c5ce",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "825dcce16ba4862639ba3a17ebd413d75044070a",
+        "files": ["scripts/verify-actions-pins.js"],
+        "summary": "The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."
+      },
+      "groundTruthDigest": "4e14e2245292950d94eaae7db5d2ac7be520829dcaf05ef5732bb27be2589323"
     }
   ]
 }
