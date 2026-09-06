@@ -18,7 +18,8 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 - Linux kernel panic/Oops/call-trace, Android ANR/tombstone, Cortex-M fault-register and RTOS task/stack evidence;
 - deterministic Cortex-M `PC/LR -> symbol` resolution from bounded linker maps and fixed-argv GNU/LLVM embedded `addr2line`; external firmware DWARF paths can be safely remapped into workspace source through bounded source-prefix mappings;
 - Android tombstone `pc -> local ELF source` resolution only after exact tombstone/local-ELF BuildId match;
-- Linux kernel runtime RIP/call-trace -> link-time `System.map` evidence only after a KASLR slide is proven from `Kernel Offset` or explicit `--kernel-kaslr-slide`; loadable-module frames remain unresolved without module-specific symbols;
+- Linux kernel runtime RIP/call-trace -> link-time `System.map` evidence only after a KASLR slide is proven from `Kernel Offset` or explicit `--kernel-kaslr-slide`;
+- loadable kernel-module `function+offset -> local .ko source` only when the failure log carries the module BuildId and it exactly matches an explicitly supplied module ELF;
 - SARIF, JUnit, WAV acoustic metrics and Perfetto/Chrome trace summaries;
 - Git HEAD/status/content-state fingerprint, bounded source windows, blame/history and causal commit candidates;
 - Safe Core test-impact based regression-test candidates;
@@ -133,7 +134,17 @@ codex-debug \
   --kernel-kaslr-slide 0x0
 ```
 
-`System.map` contains link-time addresses while an Oops commonly reports runtime addresses after KASLR relocation. Codex Debug Safe therefore refuses exact base-kernel symbol resolution unless the slide is **proven**. A supported `Kernel Offset: 0xHEX from 0xBASE` line is parsed as controller evidence; otherwise the caller may explicitly supply `--kernel-kaslr-slide 0xHEX`. If both exist they must match or the operation fails with `EKASLRMISMATCH`. Runtime addresses are retained, the proven slide is subtracted with 64-bit `BigInt` arithmetic, and the normalized link-time address is then looked up in `System.map`. Without a proven slide the result is `kaslr-unproven`, not a guessed symbol. Frames tagged with `[module]` remain `module-map-required` regardless of slide.
+`System.map` contains link-time addresses while an Oops commonly reports runtime addresses after KASLR relocation. Codex Debug Safe therefore refuses exact base-kernel symbol resolution unless the slide is **proven**. A supported `Kernel Offset: 0xHEX from 0xBASE` line is parsed as controller evidence; otherwise the caller may explicitly supply `--kernel-kaslr-slide 0xHEX`. If both exist they must match or the operation fails with `EKASLRMISMATCH`. Runtime addresses are retained, the proven slide is subtracted with 64-bit `BigInt` arithmetic, and the normalized link-time address is then looked up in `System.map`. Without a proven slide the result is `kaslr-unproven`, not a guessed symbol.
+
+Kernel module local symbols are a separate identity domain from the base kernel:
+
+```bash
+codex-debug \
+  --log kernel-oops.log \
+  --kernel-module-symbol my_driver=./symbols/my_driver.ko
+```
+
+A same-name `.ko` is **not** enough. The failure evidence must contain a module frame with a build-id, such as the kernel `%pSb/%pBb` style `module_fault+0x4/0x40 [my_driver <build-id>]`. Debug first runs fixed `readelf -n` against the explicitly supplied local module ELF and requires an exact BuildId match. Missing log identity is `module-build-id-required`; mismatch is `module-build-id-mismatch`. Only after identity succeeds may fixed host `nm` locate the exact logged function and fixed host `addr2line` resolve `function+offset`. A resolved module source then passes the same workspace containment before it can enter source/blame/history/test-impact. Local absolute symbol-file paths are not retained in model evidence.
 
 Structured evidence:
 
@@ -204,7 +215,7 @@ Workspace trust is mandatory. Historical execution and rollback/apply mutation s
 
 ## Token and evidence efficiency
 
-Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug adds only bounded parsed frames, platform/symbol summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, ELF images, linker maps, System.map files, WAVs and trace files are never embedded directly. The deterministic CI benchmark currently enforces a compact/prompt-byte budget before any live-model token claim is made.
+Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug adds only bounded parsed frames, platform/symbol summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, ELF images, linker maps, System.map/module ELF files, WAVs and trace files are never embedded directly. The deterministic CI benchmark currently enforces a compact/prompt-byte budget before any live-model token claim is made.
 
 ## Family relationship
 

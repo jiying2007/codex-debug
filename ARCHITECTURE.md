@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-Codex Debug Safe owns interactive workspace failure investigation, explicit reproduction execution, platform/core/firmware/artifact evidence adaptation, hypothesis lifecycle, controlled patch validation/application/rollback, Safe Bisect orchestration, resumable verification and Debug Receipts. Safe Core owns runtime/provider/model routing, process safety primitives, log compaction/redaction, deterministic CI-style classification, test-impact ranking and Family governance primitives. Codex Diagnose Safe remains bounded and read-only.
+Codex Debug Safe owns interactive workspace failure investigation, explicit reproduction execution, platform/core/firmware/artifact evidence adaptation, hypothesis lifecycle, controlled patch validation/application/rollback, Safe Bisect orchestration, resumable verification and Debug Receipts. Safe Core owns runtime/provider/model routing, process-safety primitives, log compaction/redaction, deterministic CI-style classification, test-impact ranking and Family governance primitives. Codex Diagnose Safe remains bounded and read-only.
 
 Debug is currently a **development Family consumer**. Development consumers inherit identity and governance but are filtered from production Family freshness/snapshot/release readiness until an explicit `active` promotion.
 
@@ -12,10 +12,11 @@ Debug is currently a **development Family consumer**. Development consumers inhe
 Evidence source
   ├─ file / stdin / editor selection
   ├─ explicit reproduction command
-  ├─ core + executable
+  ├─ native core + executable
   ├─ Cortex-M fault + linker map / ELF
   ├─ Android tombstone + matching BuildId ELF
-  ├─ kernel Oops/panic + System.map + KASLR slide evidence
+  ├─ kernel Oops/panic + System.map + proven KASLR slide
+  ├─ kernel module frame + logged BuildId + explicit local module ELF
   └─ SARIF / JUnit / WAV / perf / tombstone
               ↓
 Evidence Engine
@@ -24,7 +25,8 @@ Evidence Engine
   ├─ fixed-command GDB/LLDB symbolization
   ├─ PC/LR -> map/ELF symbol + safe file:line source resolution
   ├─ Android BuildId check -> fixed addr2line only on exact identity
-  ├─ kernel runtime address + proven KASLR slide -> link-time System.map evidence
+  ├─ base-kernel runtime address + proven KASLR slide -> link-time System.map evidence
+  ├─ module log BuildId == local ELF BuildId -> exact nm symbol + logged offset -> addr2line
   ├─ source/Git/test-impact context
   └─ content/evidence digests
               ↓
@@ -56,34 +58,23 @@ Append-only session lineage + self-digested Debug Receipt
 
 Model output cannot create or inherit user execution authority. A local Receipt is an integrity binding, not an authorization token.
 
-## Causal semantics
+## Causal and verification semantics
 
 A recent commit, blame line, symbolized address or high model confidence is never proof. A second-pass verifier may mark a mechanism `supported`, but runtime fix verification remains independent.
 
 A successful before/after reproduction can prove that a workspace change resolves the observed failure while the root cause remains unconfirmed. Hypothesis state therefore follows `open/refuted/supported → confirmed`; only an already `supported` hypothesis may become `confirmed` after successful bound runtime verification.
 
-Safe Bisect is deliberately narrow: it proves a failure transition across a bounded **first-parent path** for one explicit reproduction command. It does not prove an exact faulty line or mechanism.
+Fix states are `unresolved`, `diagnosed`, `proposed`, `applied-unverified`, `verified`, and `regressed`. `verified` requires an observed reproducible failing baseline, an independently observed workspace mutation, and every bounded post-change run passing. `passed-unbound` is not a fix status. Runtime verification separately records `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or `unbound` failure transition.
 
-## Verification semantics
+Safe Bisect is deliberately narrow: it proves a failure transition across a bounded **first-parent** path for one explicit reproduction command. It does not prove an exact faulty line or mechanism.
 
-- `unresolved`: no supported causal conclusion.
-- `diagnosed`: investigation exists but is not a verified fix.
-- `proposed`: a causal-verifier-accepted patch is available.
-- `applied-unverified`: product-observed patch mutation exists without bound green verification.
-- `verified`: observed reproducible failing baseline + observed workspace content mutation + every bounded post-change run passing.
-- `regressed`: post-change verification fails after a mutation.
-
-`passed-unbound` is not a fix status. Runtime verification also records `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or `unbound` transition state.
-
-## Workspace freshness
+## Workspace freshness, patch transaction and rollback
 
 Git context uses `git status --porcelain=v1 -z` so spaces, Unicode and rename records are interpreted without C-style quoting ambiguity. The state fingerprint binds HEAD plus changed path identities/content. Product-private `.codex-debug` state is excluded from this user-code observation domain.
 
-A persisted model patch cannot be applied when the current state fingerprint differs from the evidence-time fingerprint. Patch paths are parsed with Git-native `git apply --numstat -z`; rename/copy patches are currently rejected so rollback has an exact bounded path set. Control-plane, secret, generated, dependency, vendor and build-output paths are fail-closed for model application.
+A persisted model patch cannot be applied when the current state fingerprint differs from the evidence-time fingerprint. Patch paths are parsed with Git-native `git apply --numstat -z`; rename/copy patches are currently rejected so rollback has an exact bounded path set. Control-plane, secret, generated, dependency, vendor and build-output paths fail closed for model application.
 
-## Patch transaction and rollback
-
-Patch application is a transaction around validated paths:
+Patch application is a transaction:
 
 ```text
 Git-native path parse
@@ -92,7 +83,7 @@ deterministic protected-path checks
   ↓
 git apply --check
   ↓
-regular-file/symlink-parent/hardlink checks
+regular-file / symlink-parent / hardlink checks
   ↓
 bounded private before snapshot
   ↓
@@ -101,47 +92,71 @@ git apply
 record exact post-state identity
 ```
 
-Rollback first verifies **all** targets still match the recorded post-state, then stages restore bytes privately before modifying the workspace. Any user drift causes refusal. Filesystem races can still cause a partial restore; that state is explicitly reported rather than hidden.
+Rollback verifies **all** targets still match the recorded post-state before restoring anything. User drift causes refusal. A filesystem race that causes partial restoration is explicitly reported rather than hidden.
 
-## Session and Receipt lineage
+## Session and Debug Receipt lineage
 
-Sessions live under `<git-root>/.codex-debug/sessions/` and are append-only. Session IDs include random entropy; a duplicate ID is never silently overwritten. Session directories/files reject symlink/junction/hardlink aliasing.
+Sessions live under `<git-root>/.codex-debug/sessions/` and are append-only. Session IDs include random entropy; duplicate IDs are never silently overwritten. Session directories/files reject symlink/junction/hardlink aliasing.
 
-A Debug Receipt binds evidence, investigation, hypothesis ledger, verification, patch state and parent lineage. It also contains a self-digest covering metadata such as model/codex version and timestamp. Resume/apply operations create child sessions with `parentSessionId` and `parentDebugFingerprint`; they do not mutate the parent session.
+A Debug Receipt binds evidence, investigation, hypothesis ledger, verification, patch state and parent lineage and self-digests its metadata. Resume/apply operations create child sessions with `parentSessionId` and `parentDebugFingerprint`; they do not mutate the parent. Local digests detect stale/accidental mutation but are not remote signatures. Persisted patches remain apply-eligible only when deterministic business rules still show `rootCauseAssessment=supported` and `patchDisposition=accept`.
 
-These local digests detect stale/accidental mutation but are not a remote cryptographic signature. Deterministic business rules are rechecked separately: a persisted patch remains apply-eligible only when its investigation records `rootCauseAssessment=supported` and `patchDisposition=accept`.
-
-## Debugger boundary
+## Debugger and embedded symbol boundaries
 
 Core symbolization uses fixed argument templates only. GDB disables init files, auto-load, debuginfod and history persistence; LLDB disables user init and symbol-file script loading. The model cannot append debugger commands. Output is byte bounded before model context.
 
-## Embedded symbol boundary
-
-Cortex-M fault parsing exposes only controller-observed `PC/LR` addresses to symbol resolution. A bounded linker-map parser can resolve the nearest symbol and offset without external execution. When an ELF is explicitly supplied, the controller selects only a fixed allowlisted `addr2line` binary and emits a fixed `-f -C -e ELF PC LR` argument shape. Raw ELF/map bytes never enter the model prompt.
-
-ELF `file:line` output is treated as untrusted evidence and converted to source frames only through the existing workspace-bound source resolver. `--source-prefix-map OLD=TARGET` can reinterpret external firmware build paths only when OLD is absolute and TARGET stays in the workspace; the mapping never grants file-read authority. Accepted embedded source frames reuse the same source snippet, blame/history, causal-candidate and test-impact pipeline as native stack frames.
+Cortex-M fault parsing exposes only controller-observed `PC/LR` addresses. A bounded linker-map parser resolves nearest symbol + offset. Explicit ELF symbolization uses only fixed allowlisted `addr2line -f -C -e ELF <PC/LR...>` invocation. `--source-prefix-map OLD=TARGET` may reinterpret external build paths only when OLD is absolute and TARGET stays inside the workspace; it never grants source-read authority. Accepted `file:line` values reuse the workspace-contained source/blame/history/test-impact pipeline.
 
 ## Android symbol boundary
 
-Android tombstone frames may be paired with explicit local symbol ELFs using `MODULE=ELF` mappings. A frame reaches source resolution only when the tombstone BuildId exists and exactly matches a BuildId extracted from the local ELF by fixed `readelf -n`. Missing/mismatched identity leaves the frame unresolved and does not invoke addr2line.
+Android tombstone frames may be paired with explicit local symbol ELFs using `--android-symbol MODULE=ELF`. A frame reaches source resolution only when the tombstone BuildId exists and exactly matches a BuildId extracted from the local ELF by fixed `readelf -n`. Missing/mismatched identity leaves the frame unresolved and does not invoke addr2line.
 
-After identity success, the frame PC is passed through fixed `addr2line -f -C -e ELF <pc>`. Resulting `file:line` data is still untrusted and enters source/Git/test-impact only through workspace containment. Retained evidence stores local ELF basename, size and SHA-256 digest rather than its absolute host path.
+After identity success, the frame PC is passed through fixed `addr2line -f -C -e ELF <pc>`. Resulting `file:line` remains untrusted and enters source/Git/test-impact only through workspace containment. Retained evidence stores local ELF basename, size and SHA-256 digest rather than its absolute host path.
 
-## Kernel symbol boundary
+## Kernel symbol boundary: two independent identity domains
 
-Kernel text parsing preserves RIP/PC and call-trace addresses as hexadecimal strings, so 64-bit addresses never round through JavaScript `Number`. A base-kernel `System.map` is a **link-time address map**, while an Oops may contain KASLR-shifted runtime addresses.
+Kernel symbol evidence intentionally separates **base-kernel identity** from **loadable-module identity**. Neither proof can substitute for the other.
 
-The controller therefore resolves a base-kernel symbol only after the KASLR slide is proven. The slide may come from a deterministic `Kernel Offset: 0x...` record in the supplied log or from explicit `--kernel-kaslr-slide 0xHEX`. If both sources exist they must match exactly; disagreement fails closed with `EKASLRMISMATCH`. Runtime addresses are normalized with `BigInt` subtraction and evidence retains `runtimeAddress`, `linkAddress`, `slide` and `slideSource` separately. If no slide is proven, base-kernel frames are `kaslr-unproven` and no nearest-symbol lookup is performed. A caller that knows KASLR is disabled must explicitly supply `--kernel-kaslr-slide 0x0` unless the log itself proves zero offset.
+### Base kernel: System.map + proven KASLR slide
 
-A loadable-module frame such as `foo+0x10/0x20 [vendor_mod]` is deliberately **not** resolved through the base-kernel map; it is marked `module-map-required`. Current kernel evidence proves only identity-covered base-kernel mappings and does not claim module ELF/map identity coverage yet.
+Kernel RIP/PC and call-trace addresses are retained as hexadecimal strings so 64-bit addresses never round through JavaScript `Number`. `System.map` is a link-time map while Oops addresses may be KASLR-shifted runtime addresses.
+
+The controller resolves a base-kernel symbol only after the KASLR slide is proven. Proof may come from deterministic `Kernel Offset: 0x... from 0x...` evidence or explicit `--kernel-kaslr-slide 0xHEX`. If both exist they must match exactly or the operation fails with `EKASLRMISMATCH`. Runtime addresses are normalized with `BigInt` subtraction and evidence retains `runtimeAddress`, `linkAddress`, `slide` and `slideSource` separately. Without proof, base-kernel frames are `kaslr-unproven` and no nearest-symbol lookup occurs. A known-disabled KASLR configuration still requires explicit `0x0` unless the log proves zero.
+
+### Loadable modules: logged BuildId + explicit local ELF
+
+A loadable-module frame is never resolved through base-kernel `System.map`. Legacy tags such as `foo+0x10/0x20 [vendor_mod]` remain unresolved and are reported as `module-build-id-required` when a local module ELF is supplied, or `module-map-required` when no module symbol mapping exists.
+
+Identity-bearing kernel `%pSb/%pBb`-style tags such as `foo+0x10/0x20 [vendor_mod <build-id>]` may be paired with repeatable `--kernel-module-symbol MODULE=ELF` mappings. Resolution is allowed only through this fail-closed chain:
+
+```text
+logged module + logged BuildId
+  ↓
+explicit MODULE=ELF mapping
+  ↓
+fixed readelf -n extracts local ELF BuildId
+  ↓
+exact BuildId equality
+  ↓
+fixed host nm finds the exact logged function symbol
+  ↓
+local relocatable symbol address + logged function offset
+  ↓
+fixed host addr2line
+  ↓
+workspace-contained file:line
+```
+
+Missing logged BuildId is `module-build-id-required`; mismatched identity is `module-build-id-mismatch`; missing local mapping is `module-symbol-file-missing`; an exact function miss is not replaced with a nearest-symbol guess. Only `buildIdMatch=true` and `status=resolved` module locations can enter source snippets, blame/history, causal candidates or test-impact. Retained module metadata contains basename/size/SHA-256 identity, not an absolute host path.
+
+A real Linux CI fixture builds an actual relocatable `.ko`-style ELF with `cc -g -c` and `ld -r --build-id=sha1`, then proves the production path `readelf → nm → function+offset → addr2line → workspace source`. The same fixture requires mismatch and missing-build-id cases to remain unresolved.
 
 ## Safe Bisect boundary
 
-Historical code execution is higher risk. CLI requires both an exact `--command` and `--allow-historical-execution`; VS Code adds a modal confirmation. Every tested commit receives a fresh temporary clone and isolated HOME/global Git config. Common credential-like environment variables and SSH agent state are stripped before the historical command runs. This improves isolation between candidates but is **not an OS sandbox**.
+Historical code execution is higher risk. CLI requires both an exact `--command` and `--allow-historical-execution`; VS Code adds a modal confirmation. Every tested commit receives a **fresh temporary clone**, isolated HOME/global Git config, and common credential-like environment variables plus SSH agent state are stripped before the historical command runs. This is **not an OS sandbox**.
 
 ## Artifact/platform adapters and test selection
 
-Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, Cortex-M fault registers + map/ELF symbols, Android tombstone identity/frames + BuildId-bound local ELF symbols, KASLR-aware Linux kernel panic/Oops call traces + base-kernel System.map symbols, and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
+Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, Cortex-M fault registers + map/ELF symbols, Android BuildId-bound local ELF symbols, KASLR-aware Linux base-kernel System.map symbols, BuildId-bound loadable-module ELF source symbols, and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
 
 Debug reuses Safe Core `test-impact` to rank regression-test candidates. Recommendations are not automatically executed and never confer `verified` state.
 
@@ -164,7 +179,7 @@ Safe Core Consumer CI Receipt
   ├─ exact CI source SHA
   ├─ Core gitlink + version + runtime/governance digests
   ├─ Node support contract
-  └─ completed suite lineage
+  └─ completed suite lineage, including kernel-kaslr and kernel-module-buildid
   ↓
 SHA256SUMS
   ↓
@@ -175,4 +190,4 @@ The job uses read-only GitHub permissions and is part of the top-level CI Gate. 
 
 ## Remaining architecture work before active promotion
 
-The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, kernel module-specific ELF/map identity handling, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded live-model RCA benchmark. The final active Family governance/ruleset and immutable release chain also remain explicit promotion work.
+The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, broad compressed/stripped/split-debug kernel module corpora across architectures, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded live-model RCA benchmark. Final Family governance/ruleset and immutable release chain remain explicit promotion work.

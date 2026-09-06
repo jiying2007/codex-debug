@@ -1,0 +1,74 @@
+'use strict';
+
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {execFileSync,spawnSync}=require('node:child_process');
+const {symbolizePlatform}=require('../src/platform-symbols');
+const {buildDebugEvidence}=require('../src/evidence');
+const {collectGitContext}=require('../src/git-context');
+
+function exists(cmd) {
+  return spawnSync('sh',['-lc',`command -v ${cmd}`],{stdio:'ignore'}).status===0;
+}
+
+function buildId(elf) {
+  const out=execFileSync('readelf',['-n',elf],{encoding:'utf8'});
+  const m=out.match(/Build ID:\s*([0-9a-f]+)/i);
+  assert.ok(m,'fixture module has no GNU BuildId');
+  return m[1].toLowerCase();
+}
+
+test('real relocatable module resolves symbol+offset only after exact logged BuildId match',{skip:process.platform!=='linux'},()=>{
+  for(const tool of ['cc','ld','nm','readelf','addr2line'])assert.equal(exists(tool),true,`Linux module symbol fixture requires ${tool}`);
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-kmod-real-'));
+  try {
+    fs.mkdirSync(path.join(root,'src'),{recursive:true});
+    const source=path.join(root,'src','module_fixture.c');
+    const obj=path.join(root,'module_fixture.o');
+    const ko=path.join(root,'my_driver.ko');
+    fs.writeFileSync(source,'__attribute__((noinline)) int module_fault(int x) { int y = x + 1; return y * 3; }\nint module_entry(int x) { return module_fault(x); }\n','utf8');
+    execFileSync('git',['init','-q'],{cwd:root});
+    execFileSync('git',['config','user.name','fixture'],{cwd:root});
+    execFileSync('git',['config','user.email','fixture@example.invalid'],{cwd:root});
+    execFileSync('git',['add','src/module_fixture.c'],{cwd:root});
+    execFileSync('git',['commit','-qm','fixture source'],{cwd:root});
+    execFileSync('cc',['-g','-O0','-c',source,'-o',obj],{cwd:root,stdio:'pipe'});
+    execFileSync('ld',['-r','--build-id=sha1',obj,'-o',ko],{cwd:root,stdio:'pipe'});
+
+    const id=buildId(ko);
+    const oops=`BUG: module fixture\nCall Trace:\n [<ffffffffa2000010>] module_fault+0x4/0x40 [my_driver ${id}]\n\n`;
+    const symbols=symbolizePlatform({text:oops,kernelModuleSymbolSpecs:[`my-driver=${ko}`],cwd:root});
+    const row=symbols.kernelModules.resolutions[0];
+    assert.equal(row.status,'resolved');
+    assert.equal(row.buildIdMatch,true);
+    assert.equal(row.expectedBuildId,id);
+    assert.equal(row.actualBuildId,id);
+    assert.equal(row.function,'module_fault');
+    assert.equal(row.symbolOffsetHex,'0x4');
+    assert.ok(row.location.startsWith('src/module_fixture.c:1'),`unexpected module source location: ${row.location}`);
+    assert.match(row.relativeAddress,/^0x[0-9a-f]+$/);
+    assert.equal(JSON.stringify(symbols).includes(ko),false,'local module absolute path leaked into retained evidence');
+
+    const evidence=buildDebugEvidence({text:oops,source:{type:'file',label:'oops.log'},workspace:root,git:collectGitContext(root),platformSymbols:symbols});
+    assert.equal(evidence.kind,'kernel');
+    assert.ok(evidence.sourceContext.some(x=>x.file==='src/module_fixture.c'&&/module_fault/.test(x.text)),'verified module source did not bind into source context');
+
+    const wrong=`${id.slice(0,-1)}${id.endsWith('0')?'1':'0'}`;
+    const mismatch=symbolizePlatform({text:oops.replace(id,wrong),kernelModuleSymbolSpecs:[`my_driver=${ko}`],cwd:root}).kernelModules.resolutions[0];
+    assert.equal(mismatch.status,'module-build-id-mismatch');
+    assert.equal(mismatch.function,undefined);
+    assert.equal(mismatch.location,undefined);
+    assert.equal(mismatch.actualBuildId,id);
+
+    const noIdOops=oops.replace(' '+id+']',']');
+    const noId=symbolizePlatform({text:noIdOops,kernelModuleSymbolSpecs:[`my_driver=${ko}`],cwd:root}).kernelModules.resolutions[0];
+    assert.equal(noId.status,'module-build-id-required');
+    assert.equal(noId.function,undefined);
+    assert.equal(noId.actualBuildId,undefined);
+  } finally {
+    fs.rmSync(root,{recursive:true,force:true});
+  }
+});
