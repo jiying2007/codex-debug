@@ -63,7 +63,8 @@ test('real relocatable module resolves symbol+offset only after exact logged Bui
     assert.equal(mismatch.location,undefined);
     assert.equal(mismatch.actualBuildId,id);
 
-    const noId=symbolizePlatform({text:oops.replace(` ${id}]`,']`),kernelModuleSymbolSpecs:[`my_driver=${ko}`],cwd:root}).kernelModules.resolutions[0];
+    const noIdOops=oops.replace(' '+id+']',']');
+    const noId=symbolizePlatform({text:noIdOops,kernelModuleSymbolSpecs:[`my_driver=${ko}`],cwd:root}).kernelModules.resolutions[0];
     assert.equal(noId.status,'module-build-id-required');
     assert.equal(noId.function,undefined);
     assert.equal(noId.actualBuildId,undefined);
