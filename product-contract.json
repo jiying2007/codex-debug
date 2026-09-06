@@ -1,7 +1,7 @@
 {
   "productContractVersion": 2,
   "productId": "codex-debug-safe",
-  "productVersion": "0.1.7",
+  "productVersion": "0.1.8",
   "lifecycle": "development",
   "safeCoreVersion": "4.17.5",
   "safeCoreCommit": "d8ae46fb84787939f6ecf7632ccf8a52b37188fb",

@@ -77,19 +77,19 @@ This is still only a corpus/evidence-availability fact. No live-model insufficie
 
 Current structural readiness is:
 
-- reviewed cases: `6/12`;
+- reviewed cases: `8/12`;
 - repositories: `4/3`;
 - failure kinds: `4/4`;
 - insufficient-evidence variants: `3/3`;
-- model-evaluation views: `9`.
+- model-evaluation views: `11`.
 
-The only structural readiness gap is therefore `cases 6/12`. The corpus remains `promotionEligible=false`. Six additional unique reviewed historical transitions are still required, and structural readiness alone does not establish live RCA precision, live insufficient-evidence accuracy, false-fix rate, patch applicability, or token efficiency.
+The only structural readiness gap is therefore `cases 8/12`. The corpus remains `promotionEligible=false`. Four additional unique reviewed historical transitions are still required, and structural readiness alone does not establish live RCA precision, live insufficient-evidence accuracy, false-fix rate, patch applicability, or token efficiency.
 
 ## Continuous Promotion Provenance
 
 Ordinary pull-request and main CI run a read-only `Promotion Provenance` gate. It fetches only reviewed Git refs and inspects Git commit/tree metadata to prove each unique bad/fix pair exists in the anchored history, the fix is the direct child of the bad commit, and declared ground-truth files are touched by the reviewed fix.
 
-Promotion Provenance intentionally sees **6 historical transitions, not 9 evaluation views**. Insufficient variants do not create additional provenance transitions.
+Promotion Provenance intentionally sees **8 historical transitions, not 11 evaluation views**. Insufficient variants do not create additional provenance transitions.
 
 `Promotion Provenance` does not checkout or execute historical repository code, does not run reproduction commands, and does not receive model/API credentials. It is provenance evidence only; it is not `Promotion Corpus Qualification` and cannot prove bad-fails/fixed-passes behavior by itself.
 
@@ -127,9 +127,9 @@ Currently allowed statements include:
 
 - Model Evaluation Record v1 exists and is deterministically tested.
 - Promotion Corpus v2 and summary-only insufficient-evidence projection are implemented and fail closed.
-- Six unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose, and Codex Change.
+- Eight unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose, and Codex Change.
 - Three authentic insufficient variants are attached to real transitions without inflating the reviewed-case floor.
-- Current structural coverage is `6/12` cases, `4/3` repositories, `4/4` failure kinds, `3/3` insufficient variants, and `9` evaluation views.
+- Current structural coverage is `8/12` cases, `4/3` repositories, `4/4` failure kinds, `3/3` insufficient variants, and `11` evaluation views.
 - Continuous CI proves reviewed Git provenance without executing historical code.
 
 The following statements are **not** allowed until corresponding artifacts exist:
