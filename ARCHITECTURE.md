@@ -143,6 +143,34 @@ Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Per
 
 Debug reuses Safe Core `test-impact` to rank regression-test candidates. Recommendations are not automatically executed and never confer `verified` state.
 
+## Development Consumer Evidence pipeline
+
+The CI has a separate Consumer Evidence job that runs only after the full OS/Node matrix and security job succeed:
+
+```text
+validated CI source SHA
+  ↓
+normalize package-input mtimes to commit epoch
+  ↓
+VSCE 3.9.2 package A + package B
+  ↓
+require SHA256(A) == SHA256(B)
+  ↓
+inspect VSIX runtime/private-surface contract
+  ↓
+Safe Core Consumer CI Receipt
+  ├─ exact CI source SHA
+  ├─ Core gitlink + version + runtime/governance digests
+  ├─ Node support contract
+  └─ completed suite lineage
+  ↓
+SHA256SUMS
+  ↓
+short-retention GitHub Actions artifact
+```
+
+The job uses read-only GitHub permissions and is part of the top-level CI Gate. It does not tag, publish, attest as a formal release, or upload to Marketplace/GitHub Releases. This establishes development package/receipt evidence while keeping `lifecycle=development` outside the production Family release path.
+
 ## Remaining architecture work before active promotion
 
-The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, KASLR-aware kernel/module symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, reproducible VSIX/Consumer CI evidence, or a production recorded live-model RCA benchmark. These are explicit promotion work, not hidden assumptions.
+The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, KASLR-aware kernel/module symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded live-model RCA benchmark. The final active Family governance/ruleset and immutable release chain also remain explicit promotion work.

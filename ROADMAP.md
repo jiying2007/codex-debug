@@ -41,6 +41,9 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback and rollback-drift refusal
 - [x] CLI surfaces for native, embedded, Android and kernel symbol evidence; VS Code embedded source-prefix remap, session resume, bisect, apply and rollback
 - [x] package-content contract excluding tests, quality internals, workflows and `.codex-debug` private state
+- [x] reproducible development VSIX gate: exact VSCE 3.9.2, normalized source mtimes, two independent packages required to have identical SHA-256
+- [x] Safe Core Consumer CI Receipt binding exact CI source SHA, Core pin/digests, Node contract and completed suite lineage
+- [x] development-only Consumer Evidence artifact containing VSIX, Receipt and checksums with read-only GitHub permissions and no publication surface
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
@@ -54,7 +57,6 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [ ] broader Android bugreport/tombstone corpus across ABIs/APEX/vendor layouts and module sets
 - [ ] kernel module-specific map/ELF handling plus broader architecture/KASLR-aware kernel symbol corpus
 - [ ] explicit model behavioral canary where credentials are available
-- [ ] reproducible VSIX build plus Consumer CI Receipt
 - [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow
 
 ## Later adapters
