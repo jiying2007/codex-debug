@@ -19,7 +19,7 @@ on:
         default: ''
         type: string
       promotion_mode:
-        description: Require the reviewed corpus to satisfy all promotion-readiness gates
+        description: Require qualification, reviewed admission policy, and promotion-eligible live evidence
         required: true
         default: false
         type: boolean
@@ -35,7 +35,7 @@ permissions:
 jobs:
   promotion-model-eval:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 60
     env:
       OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
       CODEX_DEBUG_MODEL: ${{ inputs.model }}
@@ -80,8 +80,14 @@ jobs:
           }
           npm install --global "@openai/codex@${CODEX_VERSION}"
           codex --version
-      - name: Validate reviewed promotion corpus
-        run: node scripts/promotion-corpus.js quality/promotion-corpus.json
+      - name: Validate reviewed promotion corpus and admission policy
+        run: |
+          node scripts/promotion-corpus.js quality/promotion-corpus.json
+          node scripts/promotion-admission.js --policy quality/promotion-admission-policy.json --validate-policy-only
+      - name: Qualify historical transitions for this exact evaluation run
+        run: |
+          node scripts/promotion-qualify.js --output PROMOTION_CORPUS_QUALIFICATION.json
+          test -s PROMOTION_CORPUS_QUALIFICATION.json
       - name: Record historical live-model evaluation
         env:
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
@@ -111,12 +117,24 @@ jobs:
             process.exit(2);
           }
           NODE
+      - name: Bind qualification, live metrics, and promotion admission policy
+        env:
+          PROMOTION_MODE: ${{ inputs.promotion_mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--policy quality/promotion-admission-policy.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --output PROMOTION_ADMISSION.json)
+          if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-eligible); fi
+          node scripts/promotion-admission.js "${args[@]}"
+          test -s PROMOTION_ADMISSION.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codex-debug-promotion-model-eval-${{ github.sha }}-${{ github.run_id }}
           path: |
+            PROMOTION_CORPUS_QUALIFICATION.json
             PROMOTION_MODEL_EVAL.json
             PROMOTION_MODEL_EVAL_SUMMARY.json
             PROMOTION_TRANSITIONS.json
+            PROMOTION_ADMISSION.json
           if-no-files-found: error
           retention-days: 14

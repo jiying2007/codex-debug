@@ -1,16 +1,18 @@
 # Codex Debug Safe Model Evaluation
 
-This document defines the development-only model-quality evidence chain. It is intentionally separate from Debug runtime verification: model evaluation never grants command, mutation, commit, release, publication, or lifecycle authority.
+This document defines the development-only model-quality and promotion-evidence chain. Model evaluation never grants command, mutation, commit, release, publication, or lifecycle authority.
 
 ## Evidence layers
 
-Codex Debug Safe uses three non-interchangeable layers:
+Codex Debug Safe keeps the following layers non-interchangeable:
 
-1. **Contract fixture** — deterministic JSON used to prove evaluator, digest, and false-fix accounting behavior. It is never live evidence and is never promotion eligible.
-2. **Historical corpus qualification** — credential-free controller execution against code-reviewed historical repository cases. It proves an exact bad commit fails and its exact reviewed direct-child fix passes the same reproduction. It does not call a model and is not a model-quality result.
-3. **Live model evaluation** — the two-pass Debug model path analyzes the qualified bad workspace. A live record can become promotion evidence only when all readiness floors are satisfied and the reviewed corpus is explicitly marked `promotionEligible=true`.
+1. **Contract fixture** — deterministic evaluator/digest/false-fix tests. Never live evidence and never promotion eligible.
+2. **Promotion Provenance** — ordinary read-only CI proves reviewed Git refs, direct-parent relationships and ground-truth-file membership without checking out or executing historical code.
+3. **Historical corpus qualification** — explicitly authorized historical execution proves every exact bad commit fails and every exact reviewed direct-child fix passes the same bounded reproduction.
+4. **Live model evaluation** — credential-backed two-pass Debug analysis records RCA, insufficient-evidence behavior, patch disposition/applicability and token usage.
+5. **Promotion Admission v1** — binds same-run Qualification, live model evidence and a reviewed digest-bound admission policy before a promotion-mode run can pass.
 
-Synthetic live canaries remain useful for behavior smoke testing but are permanently `promotionEligible=false`.
+Synthetic live canaries remain useful smoke evidence but are permanently `promotionEligible=false`.
 
 ## Versioned contracts
 
@@ -19,127 +21,116 @@ The development product contract binds:
 - `modelEvaluationRecordVersion = 1`
 - `promotionCorpusVersion = 2`
 - `promotionTransitionVersion = 1`
+- `promotionAdmissionPolicyVersion = 1`
 
-Model Evaluation Record v1 binds corpus expectations, evidence digests, root-cause output digests, patch disposition/applicability, both model phases, usage, and a self digest. Promotion transition records bind repository/ref/bad/fix identity, exact command digest, bad/fixed reproduction summaries, and representative-output digests without retaining raw historical stdout/stderr in qualification artifacts.
+Model Evaluation Record v1 binds corpus expectations, evidence/root-cause digests, patch disposition/applicability, both model phases, usage and a self digest. Qualification records bind Debug/Core identity, the reviewed corpus digest, readiness, GitHub run context, all 12 bad/fixed transition results and a self digest. Promotion Admission v1 additionally binds the policy, Qualification and model-record digests plus the exact same workflow run context.
 
 ## Promotion corpus case contract
 
-Every reviewed promotion case represents one unique real historical transition and must contain:
+Every reviewed case is one unique real `historical-observed` / `direct-parent-fix` transition with:
 
-- a public `https://github.com/OWNER/REPO.git` URL;
-- a reviewed fetch anchor such as `refs/pull/N/head`, a branch ref, or a tag ref;
-- `mode = historical-observed`;
-- `relation = direct-parent-fix`;
-- exact 40-hex `badCommit` and `fixedCommit` values;
-- an exact bounded reproduction command, run count, and timeout;
+- a public `https://github.com/OWNER/REPO.git` repository;
+- a reviewed `refs/pull/N/head`, branch or tag anchor;
+- unique exact 40-hex bad/fixed commits;
+- one bounded reproduction command, run count and timeout;
 - failure kind;
-- digest-bound expected causal assessment, root-cause terms, and patch policy;
-- digest-bound `fix-commit` ground truth whose commit equals `fixedCommit` and whose files are safe repository-relative paths.
+- digest-bound expected assessment/root-cause terms/patch policy;
+- digest-bound `fix-commit` ground truth with safe repository-relative files.
 
-The materializer fetches only the reviewed anchor, proves both commits exist in that anchored history, proves the fix is the direct child of the bad commit, then requires the exact command to produce a stable failure on the bad commit and zero failures on the fixed commit.
+The historical materializer fetches only the reviewed anchor, proves both commits exist in the anchored history, proves the fix is the direct child of the bad commit, executes the same command on both revisions, requires a reproducible bad failure and zero fixed failures, and scrubs the temporary checkout afterward. Case ids, transition identities, bad commits and fixed commits are unique across the corpus.
 
-Case ids, `repository+badCommit+fixedCommit` transitions, bad commits, and fixed commits are unique across the reviewed corpus. Repeating one historical fix under another case id cannot increase readiness. Ground-truth fix metadata is evaluator-side only and is not injected into the model prompt.
+Ground-truth fix metadata is evaluator-side only and is never injected into the model prompt.
 
 ## Insufficient-evidence variants
 
-Promotion Corpus v2 allows one reviewed historical transition to attach one optional `insufficientVariant`. The variant is a second **evaluation view**, not a second reviewed case. It can increase `insufficientCases` and the number of model-evaluation views, but it never increases the 12-case floor, repository count, failure-kind count, bad/fix identity set, or Promotion Provenance transition count.
+Promotion Corpus v2 may attach one digest-bound `summary-only` insufficient variant to a reviewed transition. It is an evaluation view, not another reviewed transition. Every variant requires:
 
-Every insufficient variant is fail-closed:
-
-- `expected.assessment = insufficient`;
+- `assessment = insufficient`;
 - `patchPolicy = forbidden`;
-- `rootCauseTerms = []`;
-- the only permitted projection is digest-bound `{ "version": 1, "mode": "summary-only" }`;
-- authors cannot supply custom model-visible prompt text or hints.
+- no root-cause terms;
+- `includeGitHistory=false`;
+- no raw stdout/stderr, source anchors, case identity, fixed SHA, ground-truth summary/files or custom model-visible hint.
 
-The underlying real transition is still qualified with full controller evidence. During live model evaluation, the variant receives only controller-generated summary-only evidence: failure kind, run/failure/timeout counts, and the reproduction-command digest. It receives **no raw stdout/stderr**, source anchors, case or variant identity, reviewed fix SHA, ground-truth summary/files, or Git history; `includeGitHistory=false` is mandatory. A pre-model leak check fails closed if hidden reviewed ground truth appears in the projected evidence.
+A pre-model leak check fails closed. The corpus contains three authentic insufficient variants on real Debug, Safe Core and Diagnose transitions; they increase model-evaluation views without inflating Promotion Provenance or the 12-case floor.
 
-### Current authentic insufficient variants
+## Current structural readiness
 
-The reviewed corpus attaches **three authentic insufficient-evidence variants** to three already-reviewed real transitions:
+The structural floor requires at least 12 unique reviewed historical cases, 3 repositories, 4 failure kinds and 3 authentic insufficient variants.
 
-- Codex Debug causal infra-vs-test precedence;
-- Safe Core Actions-pin parser false-negative;
-- Codex Diagnose unknown-length response streaming limit.
-
-Each variant withholds the concrete mechanism and raw failure/source/history evidence while keeping the real reviewed bad→direct-child-fix transition and evaluator-side ground truth. The three variants therefore satisfy the structural `3/3` insufficient-negative floor without inflating the reviewed-transition case count.
-
-This is still only a corpus/evidence-availability fact. No live-model insufficient-evidence accuracy is claimed until a credential-backed live model-evaluation record exists.
-
-## Current readiness floor
-
-`promotionEligible=true` is invalid unless the corpus contains at least:
-
-- 12 unique reviewed historical cases;
-- 3 distinct repositories;
-- 4 failure kinds;
-- 3 authentic insufficient-evidence variants.
-
-Current structural readiness is:
+Current state:
 
 - reviewed cases: `12/12`;
 - repositories: `4/3`;
 - failure kinds: `5/4`;
 - insufficient-evidence variants: `3/3`;
-- model-evaluation views: `15`.
+- model-evaluation views: `15`;
+- structural gaps: none.
 
-The structural readiness floor is fully satisfied. This is deliberately **not** promotion authorization: the checked-in corpus remains `promotionEligible=false`, lifecycle remains `development`, and structural readiness alone does not establish live RCA precision, live insufficient-evidence accuracy, false-fix rate, patch applicability, token efficiency, or completed historical qualification. Switching eligibility remains an explicit reviewed action after the corresponding evidence exists.
+The structural readiness floor is fully satisfied. This is deliberately **not** promotion authorization: the checked-in corpus remains `promotionEligible=false` and lifecycle remains `development`.
 
-The four transitions completing the structural case floor are independent Safe Core historical fixes for SPDX OR license alternatives, exclusion of the canonical Core subtree from consumer ownership scans, canonical UTC Diagnosis Receipt timestamps, and recognition of Change Safe as an active consumer Product Contract. Their reproduction commands exercise the real historical helper/script against bounded local inputs without network access, model calls, VS Code, or source-grep self-proof. The SPDX case also increases current failure-kind diversity from the four-kind minimum to five distinct kinds.
-
-## Continuous Promotion Provenance
-
-Ordinary pull-request and main CI run a read-only `Promotion Provenance` gate. It fetches only reviewed Git refs and inspects Git commit/tree metadata to prove each unique bad/fix pair exists in the anchored history, the fix is the direct child of the bad commit, and declared ground-truth files are touched by the reviewed fix.
-
-Promotion Provenance intentionally sees **12 historical transitions, not 15 evaluation views**. Insufficient variants do not create additional provenance transitions.
-
-`Promotion Provenance` does not checkout or execute historical repository code, does not run reproduction commands, and does not receive model/API credentials. It is provenance evidence only; it is not `Promotion Corpus Qualification` and cannot prove bad-fails/fixed-passes behavior by itself.
+Promotion Provenance intentionally sees **12 historical transitions, not 15 evaluation views**. It does not execute reproduction commands and is not Qualification.
 
 ## Historical execution authority
 
-Historical repository code is untrusted code. Qualification and promotion workflows are manual and require explicit acknowledgement that historical code will execute without an OS sandbox.
+Historical repository code is untrusted code. Qualification and Promotion Model Evaluation require explicit acknowledgement that historical code executes without an OS sandbox.
 
-Historical reproduction runs receive an allowlisted environment only. In particular they do **not** inherit `OPENAI_API_KEY`, GitHub tokens, SSH agent state, cloud credentials, or arbitrary host environment variables. HOME, XDG config, global Git config, and npm user config are redirected to the temporary case directory; Git credential prompting is disabled.
+Historical reproduction receives an allowlisted environment only. It does **not** inherit `OPENAI_API_KEY`, GitHub tokens, SSH agent state, cloud credentials or arbitrary host variables. HOME, XDG config, global Git config and npm user config are redirected to the temporary case directory; Git credential prompting is disabled. Protected model credentials are injected only into the Codex execution authority domain after controller-side evidence acquisition.
 
-The model process is a separate authority domain. Protected model credentials are available only to the Codex execution path after controller-side historical evidence has been collected. Historical reproduction is not rerun under the model credential environment.
+## Promotion Admission v1
 
-This isolation reduces secret exposure but is still not an OS sandbox. Use disposable runners/containers for repositories that are not fully trusted.
+`quality/promotion-admission-policy.json` is self-digested. Safety gates are already zero-tolerance:
+
+- false support: `0` maximum;
+- false-fix candidates: `0` maximum;
+- patch-policy violations: `0` maximum;
+- insufficient-evidence accuracy: `1` minimum.
+
+The current development policy deliberately has `reviewed=false`, `minimumAssessmentAccuracy=null`, `minimumRootCauseTop1Accuracy=null`, `tokenEfficiency.calibrated=false`, and `maximumTokensPerCase=null`. These are explicit fail-closed gaps because credential-backed historical live calibration does not yet exist. No token-efficiency threshold is claimed or invented before calibration.
+
+When a policy is later marked reviewed, both RCA thresholds must be finite values in `[0,1]`, insufficient accuracy remains explicitly bounded, token calibration must be true, and a finite positive token ceiling is required.
+
+Admission rejects Qualification and model records unless they bind the same Debug commit, Safe Core gitlink, GitHub workflow, run id, run attempt, event, repository and source SHA. It also recomputes model metrics instead of trusting a supplied summary.
 
 ## Manual workflows
 
 ### Promotion Corpus Qualification
 
-`Promotion Corpus Qualification` requires no model credential. It validates the manifest, materializes each unique reviewed transition once, proves bad-fails/fixed-passes, and emits `PROMOTION_CORPUS_QUALIFICATION.json`. Insufficient variants reuse that qualified transition and do not execute the same history again merely to inflate evidence counts.
+`Promotion Corpus Qualification` requires no model credential. It validates the manifest, executes all 12 reviewed transitions under isolated historical execution and emits `PROMOTION_CORPUS_QUALIFICATION.json`.
 
 ### Promotion Model Evaluation
 
-`Promotion Model Evaluation` additionally requires `CODEX_DEBUG_CANARY_OPENAI_API_KEY` (preferred) or `OPENAI_API_KEY` plus explicit historical-execution acknowledgement. It supports optional fixed hypothesis/verifier models; an empty model uses Safe Core `auto` routing.
+`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.10 it executes one read-only evidence chain in the same run:
 
-`promotion_mode=false` runs calibration. `promotion_mode=true` fails before model execution unless readiness is satisfied and the manifest is explicitly reviewed to `promotionEligible=true`.
+`validate corpus/policy -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> Promotion Admission -> artifact upload`
 
-The workflow has `contents: read` only, uses SHA-pinned Actions, and performs no repository write, patch apply, commit, push, release, publication, or lifecycle promotion.
+The workflow retains `contents: read` only and performs no patch apply, repository write, commit, push, release, publication or lifecycle promotion.
+
+`promotion_mode=false` is calibration mode. It records Qualification, live metrics and `PROMOTION_ADMISSION.json`, but the checked-in draft policy causes admission `ready=false` without turning calibration itself into a failed experiment.
+
+`promotion_mode=true` is fail-closed promotion evidence. It requires structural readiness, explicit `promotionEligible=true`, claimable live metrics, a reviewed/calibrated admission policy and `PROMOTION_ADMISSION.json.ready=true` from the same run.
 
 ## Metrics
 
-The evaluator records causal-assessment accuracy, root-cause term hit rate, insufficient-evidence accuracy, false support, false-fix candidates, patch-policy violations, both model phases' token usage, and tokens per evaluation case. Safety-critical counts fail closed in live workflows. Token usage is recorded for calibration; no promotion token-efficiency threshold is claimed yet.
+The evaluator records causal-assessment accuracy, root-cause term hit rate, insufficient-evidence accuracy, false support, false-fix candidates, patch-policy violations, patch applicability, both model phases' token usage and tokens per evaluation case. Safety-critical counts remain zero-tolerance in live workflows.
+
+Token usage is currently a calibration measurement only. An evidence-based `maximumTokensPerCase` must be reviewed after live calibration before Promotion Admission can become ready.
 
 ## Claim boundary
 
 Currently allowed statements include:
 
-- Model Evaluation Record v1 exists and is deterministically tested.
-- Promotion Corpus v2 and summary-only insufficient-evidence projection are implemented and fail closed.
-- Twelve unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose, and Codex Change.
-- Three authentic insufficient variants are attached to real transitions without inflating the reviewed-case floor.
-- Current structural coverage is `12/12` cases, `4/3` repositories, `5/4` failure kinds, `3/3` insufficient variants, and `15` evaluation views.
-- The structural corpus floor is satisfied while `promotionEligible=false` and lifecycle remains `development`.
-- Continuous CI proves reviewed Git provenance without executing historical code.
+- Model Evaluation Record v1, Promotion Corpus v2 and Promotion Admission Policy v1 exist and are deterministically tested.
+- Twelve unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose and Codex Change.
+- Structural coverage is `12/12`, `4/3`, `5/4`, `3/3`, with `15` evaluation views and no structural gap.
+- Promotion Provenance is continuously proven without historical execution.
+- The checked-in admission policy is intentionally unreviewed and token-uncalibrated, therefore promotion remains fail closed.
 
 The following statements are **not** allowed until corresponding artifacts exist:
 
-- the promotion corpus is promotion-authorized or fully qualified;
+- the promotion corpus is fully qualified by historical execution;
 - live RCA precision meets a production target;
 - live insufficient-evidence accuracy meets a production target;
-- false-fix rate is production-proven across real repositories;
+- false-fix rate and patch applicability are production-proven across the reviewed corpus;
 - live token efficiency is calibrated at production scale;
+- Promotion Admission is ready;
 - Codex Debug Safe is ready to move from `development` to `active`.
