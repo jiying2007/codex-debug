@@ -24,11 +24,7 @@
         "runs": 1,
         "timeoutMs": 120000
       },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": ["record digest", "fixture"],
-        "patchPolicy": "optional"
-      },
+      "expected": {"assessment":"supported","rootCauseTerms":["record digest","fixture"],"patchPolicy":"optional"},
       "expectationDigest": "f8104b28f67dd75d7b0a2a6a1ae42cec645c126d7e623af4e6e1c49ac2467eca",
       "groundTruth": {
         "type": "fix-commit",
@@ -52,11 +48,7 @@
         "runs": 1,
         "timeoutMs": 120000
       },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": ["infra", "service unavailable"],
-        "patchPolicy": "optional"
-      },
+      "expected": {"assessment":"supported","rootCauseTerms":["infra","service unavailable"],"patchPolicy":"optional"},
       "expectationDigest": "9281f16c8a42d33cfdf95c7a426b64cb32a48ae4fcc295ae11ea27752ec0af6c",
       "groundTruth": {
         "type": "fix-commit",
@@ -64,7 +56,14 @@
         "files": ["src/parsers.js"],
         "summary": "Failure classification checked generic test wording before causal infrastructure signals; the fix moved infra precedence ahead of test and added runner/service-unavailable patterns."
       },
-      "groundTruthDigest": "fa550be424b76d729f82e5ec4acc572aed9bbe2322752936e0925a7430001482"
+      "groundTruthDigest": "fa550be424b76d729f82e5ec4acc572aed9bbe2322752936e0925a7430001482",
+      "insufficientVariant": {
+        "id": "codex-debug-infra-precedence-insufficient-20260906",
+        "expected": {"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},
+        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+        "evidenceProjection": {"version":1,"mode":"summary-only"},
+        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
+      }
     },
     {
       "id": "safe-core-actions-list-marker-20260906",
@@ -80,11 +79,7 @@
         "runs": 1,
         "timeoutMs": 120000
       },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": ["uses", "unpinned"],
-        "patchPolicy": "optional"
-      },
+      "expected": {"assessment":"supported","rootCauseTerms":["uses","unpinned"],"patchPolicy":"optional"},
       "expectationDigest": "7e751cb1c6070d340d6a41ce5343c957f518627d56e09d1c3d37942684d7c5ce",
       "groundTruth": {
         "type": "fix-commit",
@@ -92,7 +87,14 @@
         "files": ["scripts/verify-actions-pins.js"],
         "summary": "The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."
       },
-      "groundTruthDigest": "4e14e2245292950d94eaae7db5d2ac7be520829dcaf05ef5732bb27be2589323"
+      "groundTruthDigest": "4e14e2245292950d94eaae7db5d2ac7be520829dcaf05ef5732bb27be2589323",
+      "insufficientVariant": {
+        "id": "safe-core-actions-list-marker-insufficient-20260906",
+        "expected": {"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},
+        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+        "evidenceProjection": {"version":1,"mode":"summary-only"},
+        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
+      }
     },
     {
       "id": "codex-diagnose-gitlab-stream-limit-20260903",
@@ -108,11 +110,7 @@
         "runs": 1,
         "timeoutMs": 120000
       },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": ["streaming", "response limit"],
-        "patchPolicy": "optional"
-      },
+      "expected": {"assessment":"supported","rootCauseTerms":["streaming","response limit"],"patchPolicy":"optional"},
       "expectationDigest": "0ba316dd57fc685c469106904674d1aef0e0f1f63757352b4077f9ae5ae20c32",
       "groundTruth": {
         "type": "fix-commit",
@@ -120,7 +118,14 @@
         "files": ["src/gitlab.js"],
         "summary": "The GitLab client buffered unknown-length responses with arrayBuffer() before enforcing maxBytes; the fix streams response chunks, cancels on overflow, and raises EGITLABSIZE as soon as the byte limit is crossed."
       },
-      "groundTruthDigest": "9706cfc766e73a6b74181b496aa13169d69c5365e4695b8c9feba42e7cb7db54"
+      "groundTruthDigest": "9706cfc766e73a6b74181b496aa13169d69c5365e4695b8c9feba42e7cb7db54",
+      "insufficientVariant": {
+        "id": "codex-diagnose-gitlab-stream-limit-insufficient-20260906",
+        "expected": {"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},
+        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+        "evidenceProjection": {"version":1,"mode":"summary-only"},
+        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
+      }
     }
   ]
 }
