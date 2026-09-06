@@ -29,49 +29,39 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] fixed-argv GNU/LLVM embedded addr2line ELF symbolization with safe `file:line` reuse in source/blame/history/test-impact
 - [x] real host ELF+DWARF fixture (`cc -g` + `nm` + `addr2line`) validating function/source resolution and path redaction
 - [x] bounded source-prefix remap from external firmware build roots into workspace-contained source, with redacted remap metadata
-- [x] real GNU Arm Embedded Cortex-M3 fixture (`arm-none-eabi-as/ld/nm/addr2line`) validating ELF + linker map + PC/LR + DWARF + source-prefix remap + source-context binding
+- [x] real GNU Arm Embedded Cortex-M3 fixture validating ELF + linker map + PC/LR + DWARF + source-prefix remap + source-context binding
 - [x] Android tombstone frame BuildId extraction plus explicit `MODULE=ELF` symbol mapping with exact BuildId match required before fixed-argv addr2line/source binding
 - [x] real Linux Android-format tombstone fixture using `cc -shared -g --build-id`, `readelf`, `nm`, `addr2line`, including BuildId mismatch/missing fail-closed negatives
 - [x] Linux kernel Oops/RIP/call-trace raw-address retention plus deterministic `System.map` nearest-symbol resolution
-- [x] KASLR-aware base-kernel symbolization: parse deterministic `Kernel Offset`, accept explicit `--kernel-kaslr-slide`, require log/explicit agreement, normalize runtime -> link-time addresses with BigInt, and return `kaslr-unproven` when slide identity is unavailable
+- [x] KASLR-aware base-kernel symbolization with deterministic slide evidence, BigInt runtime->link normalization and `kaslr-unproven` fail-closed behavior
 - [x] real-format non-zero-KASLR Oops/System.map fixture validating runtime/link address separation, exact symbol offsets, slide mismatch refusal and module-frame refusal
-- [x] build-id-bound kernel module symbolization: parse `%pSb/%pBb`-style `[module build-id]`, require explicit `--kernel-module-symbol MODULE=ELF`, exact local ELF BuildId match, exact `nm` function lookup, then fixed host addr2line on `function+offset`
-- [x] real relocatable `.ko` fixture (`cc -g -c` + `ld -r --build-id=sha1` + `readelf` + `nm` + `addr2line`) validating match, mismatch, missing-build-id fail-closed behavior and source-context binding
+- [x] build-id-bound kernel module symbolization plus real relocatable `.ko` fixture validating exact BuildId/function+offset/source-context binding
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority
 - [x] fresh clone per historical candidate + isolated HOME/Git config + common credential-env scrubbing
-- [x] Safe Core test-impact regression-test candidates with symlink escape refusal
-- [x] SARIF/JUnit/PCM16 WAV/Perfetto summaries
-- [x] Cortex-M fault register, Android tombstone, kernel panic/Oops and RTOS signal parsers
-- [x] deterministic classifier corpus and adversarial prompt/secret/patch/debugger gates
-- [x] deterministic context-byte/compaction efficiency benchmark in CI
-- [x] deterministic workflow action pin gate with non-zero coverage assertion
-- [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback, receipt-bound rollback lineage and rollback-drift refusal
-- [x] CLI surfaces for native, embedded, Android and kernel symbol evidence; VS Code embedded source-prefix remap, session resume, bisect, apply and receipt-bound rollback
-- [x] package-content contract excluding tests, quality internals, workflows and `.codex-debug` private state
-- [x] reproducible development VSIX gate: exact VSCE 3.9.2, normalized source mtimes, two independent packages required to have identical SHA-256
-- [x] Safe Core Consumer CI Receipt binding exact CI source SHA, Core pin/digests, Node contract and completed suite lineage
-- [x] development-only Consumer Evidence artifact containing VSIX, Receipt and checksums with read-only GitHub permissions and no publication surface
-- [x] Model Evaluation Record v1 with digest-bound corpus expectations, self-digested records, two-pass model/runtime/usage evidence and deterministic RCA/insufficient/false-fix metrics
-- [x] manual read-only live synthetic model canary with protected-credential fail-closed behavior, SHA-pinned actions, `promotionEligible=false` and no repository/publication authority
-- [x] Promotion Corpus v1 readiness floor: at least 12 reviewed cases, 3 repositories, 4 failure kinds and 3 insufficient-evidence negatives before `promotionEligible=true` can validate
-- [x] first real historical promotion case bound to persistent PR ref + exact bad/fix SHA + direct-parent fix + exact reproduction + digest-bound ground truth; controller must prove bad fails and fixed passes before model evaluation
-- [x] real historical corpus expanded to 4 reviewed direct-parent transitions across Codex Debug, Safe Core and Codex Diagnose, covering test, infra, governance/build and performance/resource-limit failure kinds; current readiness is 4/12 cases, 3/3 repositories, 4/4 failure kinds and 0/3 insufficient-evidence negatives
+- [x] deterministic classifier/security/context/verification/package/workflow governance gates
+- [x] executable E2E for resume verification, Safe Bisect, native/embedded symbolization, patch authorization, apply/rollback and receipt-bound rollback lineage
+- [x] reproducible development VSIX gate with exact VSCE 3.9.2 and two byte-identical packages
+- [x] Safe Core Consumer CI Receipt plus development-only Consumer Evidence artifact, read-only permissions and no publication surface
+- [x] Model Evaluation Record v1 with digest-bound corpus expectations, two-pass model/runtime/usage evidence and deterministic RCA/insufficient/false-fix metrics
+- [x] manual read-only live synthetic model canary with protected-credential fail-closed behavior and `promotionEligible=false`
+- [x] Promotion Corpus readiness floor: 12 reviewed cases, 3 repositories, 4 failure kinds and 3 insufficient-evidence negatives
+- [x] real historical corpus expanded to 4 unique reviewed direct-parent transitions across Codex Debug, Safe Core and Codex Diagnose; current structural coverage is 4/12 cases, 3/3 repositories, 4/4 failure kinds and 0/3 insufficient-evidence negatives
 - [x] duplicate historical transition/bad/fix identities are rejected so repeated fixes cannot inflate readiness
-- [x] continuous read-only Promotion Provenance fetches reviewed refs and proves direct-parent/ground-truth-file bindings without checkout or execution of historical code
-- [x] promotion historical execution uses isolated HOME/Git/npm config and an allowlisted environment so historical code cannot inherit model/GitHub credentials; model credentials stay in the separate Codex execution authority
-- [x] package / package-lock / product-contract development identity is gated as one version (`0.1.4` for this line)
+- [x] continuous read-only Promotion Provenance proves reviewed ref/direct-parent/ground-truth-file bindings without checkout or execution of historical code
+- [x] promotion historical execution uses isolated HOME/Git/npm config and cannot inherit model/GitHub credentials
+- [x] Promotion Corpus v2 insufficient-evidence variant contract: a real reviewed transition may attach one digest-bound `summary-only` evaluation variant with `assessment=insufficient`, `patchPolicy=forbidden`, no root-cause terms, no raw stdout/stderr/source/Git history/ground-truth leakage, while the 12-case floor still counts only unique reviewed transitions
+- [x] package / package-lock / product-contract development identity is gated as one version (`0.1.5` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
 
-- [ ] recorded live-model RCA corpus with root-cause precision and insufficient-evidence negatives
+- [ ] add at least 8 more unique reviewed historical transitions to reach the 12-case floor
+- [ ] add 3 authentic insufficient-evidence variants backed by real reviewed transitions and controller-enforced evidence projection
+- [ ] recorded live-model RCA corpus with root-cause precision and insufficient-evidence metrics
 - [ ] live-model false-fix and patch-applicability benchmark across real repositories
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
 - [ ] promotion corpus reaches its reviewed diversity floor and is explicitly switched to `promotionEligible=true`
-- [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
-- [ ] broader Cortex-M corpus across GCC/LLVM firmware layouts, optimized/LTO builds and vendor linker scripts
-- [ ] broader Android bugreport/tombstone corpus across ABIs/APEX/vendor layouts and module sets
-- [ ] broader kernel module/architecture corpus, including compressed modules, stripped/split debug info and additional KASLR layouts
+- [ ] broader native/minidump, Cortex-M optimized/LTO, Android ABI/vendor and kernel module/architecture corpora
 - [ ] explicit model behavioral canary where credentials are available
 - [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow
 
@@ -84,4 +74,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. A reviewed historical harness is also not a live quality result by itself. No promotion-grade live-model metric is claimed until the promotion corpus is explicitly eligible and protected live records satisfy the evaluator gates.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. A reviewed historical harness or projection capability is also not a live quality result by itself. No promotion-grade live-model metric is claimed until the corpus is explicitly eligible and protected live records satisfy the evaluator gates.
