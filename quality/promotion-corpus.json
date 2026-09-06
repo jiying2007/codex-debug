@@ -13,6 +13,7 @@
     {
       "id": "codex-debug-model-eval-record-digest-20260906",
       "mode": "historical-observed",
+      "relation": "direct-parent-fix",
       "repository": "https://github.com/jiying2007/codex-debug.git",
       "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
       "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
