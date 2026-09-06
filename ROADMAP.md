@@ -23,7 +23,9 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] real Linux native-core fixture (`cc -g` + GDB SIGSEGV + `generate-core-file`) validating `symbolizeCore()` against an actual core image
 - [x] Cortex-M PC/LR -> bounded linker-map symbol/offset resolution
 - [x] fixed-argv GNU/LLVM embedded addr2line ELF symbolization with safe `file:line` reuse in source/blame/history/test-impact
-- [x] real Linux ELF+DWARF fixture (`cc -g` + `nm` + `addr2line`) validating function/source resolution and path redaction
+- [x] real host ELF+DWARF fixture (`cc -g` + `nm` + `addr2line`) validating function/source resolution and path redaction
+- [x] bounded source-prefix remap from external firmware build roots into workspace-contained source, with redacted remap metadata
+- [x] real GNU Arm Embedded Cortex-M3 fixture (`arm-none-eabi-as/ld/nm/addr2line`) validating ELF + linker map + PC/LR + DWARF + source-prefix remap + source-context binding
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority
 - [x] fresh clone per historical candidate + isolated HOME/Git config + common credential-env scrubbing
 - [x] Safe Core test-impact regression-test candidates with symlink escape refusal
@@ -33,7 +35,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] deterministic context-byte/compaction efficiency benchmark in CI
 - [x] deterministic workflow action pin gate with non-zero coverage assertion
 - [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback and rollback-drift refusal
-- [x] CLI + VS Code command surfaces including core, embedded fault, bisect, session resume, persisted apply and rollback
+- [x] CLI + VS Code command surfaces including core, embedded fault, source-prefix remap, bisect, session resume, persisted apply and rollback
 - [x] package-content contract excluding tests, quality internals, workflows and `.codex-debug` private state
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
@@ -44,8 +46,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [ ] verified-fix rate and regression-escape metric on broader executable fixtures
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
 - [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
-- [ ] real cross-toolchain Cortex-M ELF fixture + source-prefix remapping for external build roots
-- [ ] deep Android bugreport and Linux kernel symbol resolution fixtures
+- [ ] broader Cortex-M corpus across GCC/LLVM firmware layouts, optimized/LTO builds and vendor linker scripts
+- [ ] deep Android bugreport/tombstone symbolization and Linux kernel symbol resolution fixtures
 - [ ] explicit model behavioral canary where credentials are available
 - [ ] reproducible VSIX build plus Consumer CI Receipt
 - [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow

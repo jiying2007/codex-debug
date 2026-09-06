@@ -59,9 +59,12 @@ Firmware ELF and linker-map files are untrusted parser inputs. Embedded symboliz
 - symbolizer output is bounded and treated as untrusted evidence, not instructions;
 - `DEBUGINFOD_URLS` is cleared for addr2line execution;
 - workspace `file:line` output is normalized to relative paths; absolute paths outside the workspace are reduced to `<external>/<basename>:line` before they enter Evidence/prompt;
+- `--source-prefix-map OLD=TARGET` may remap DWARF paths from an external build/source root only when `OLD` is absolute and `TARGET` resolves inside the current workspace; at most eight mappings are accepted;
+- source-prefix evidence stores a digest of the external prefix plus a workspace-relative target, never the external host path itself;
+- a source-prefix mapping changes path interpretation only. It does not authorize reading a file: mapped paths still pass the normal workspace realpath/symlink containment checks before source snippets, blame, history or test-impact can consume them;
 - normalized `file:line` output is allowed to enter source/blame/history/test-impact only when workspace-bound source resolution accepts the path.
 
-A real Linux `cc -g` + `nm` + `addr2line` fixture exercises the ELF/DWARF path in CI. This is useful host-toolchain evidence, but it is not yet a substitute for a real Cortex-M cross-toolchain corpus or source-prefix remapping from external firmware build roots.
+A real Linux GNU Arm Embedded fixture uses `arm-none-eabi-as`, `arm-none-eabi-ld`, `arm-none-eabi-nm` and `arm-none-eabi-addr2line` to build a Cortex-M3 ELF with DWARF and a GNU linker map. The fixture injects an external build-root source path into DWARF, remaps it into workspace source, resolves controller-observed PC/LR, verifies linker-map symbol/offset resolution, and then requires mapped source to bind into the existing source-context pipeline. This proves the cross-toolchain path without executing firmware.
 
 ELF parsers are native tooling and may themselves contain vulnerabilities. Treat hostile firmware images like hostile core files and analyze them in an appropriate container/runner boundary when provenance is uncertain.
 
@@ -85,7 +88,7 @@ Session files are append-only and self-bound through the Debug Receipt. This pro
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers have deterministic/adversarial tests plus one real Linux native-core fixture, but there is not yet a production-scale recorded live-model RCA corpus, OS sandbox for historical execution, broad native core/minidump corpus, Cortex-M cross-toolchain corpus, or deep Android/kernel symbol resolver. Those are explicit promotion gaps, not implied guarantees.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers now have deterministic/adversarial tests plus a real Linux native-core fixture and a real GNU Arm Embedded Cortex-M fixture. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump and optimized firmware corpora, deep Android/kernel symbol resolution, reproducible VSIX/Consumer CI evidence, and the final Family release chain.
 
 ## Reporting vulnerabilities
 
