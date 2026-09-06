@@ -1,0 +1,96 @@
+name: Live Model Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      codex_version:
+        description: Codex CLI version or latest
+        required: true
+        default: latest
+        type: string
+      model:
+        description: Optional explicit hypothesis model; empty uses Codex/Safe Core selection
+        required: false
+        default: ''
+        type: string
+      verifier_model:
+        description: Optional explicit verifier model; empty follows the selected hypothesis model
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  live-model-eval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      CODEX_DEBUG_MODEL: ${{ inputs.model }}
+      CODEX_DEBUG_VERIFIER_MODEL: ${{ inputs.verifier_model }}
+      CODEX_DEBUG_MODEL_SELECTION_STRATEGY: auto
+      CODEX_DEBUG_MODEL_COMPATIBILITY_POLICY: strict
+      CODEX_DEBUG_PROVIDER_MODE: openai
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 1
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require protected live-model credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || {
+            echo 'OPENAI_API_KEY is unavailable; refusing to claim a live-model evaluation.' >&2
+            exit 2
+          }
+      - name: Install selected Codex CLI
+        env:
+          CODEX_VERSION: ${{ inputs.codex_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CODEX_VERSION" =~ ^(latest|[0-9]+\.[0-9]+\.[0-9]+)$ ]] || {
+            echo 'codex_version must be latest or an exact x.y.z version.' >&2
+            exit 2
+          }
+          npm install --global --ignore-scripts "@openai/codex@${CODEX_VERSION}"
+          codex --version
+      - name: Record live synthetic model evaluation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/live-model-eval.js --output DEBUG_MODEL_EVAL.json --summary DEBUG_MODEL_EVAL_SUMMARY.json
+          node scripts/model-evaluation.js --corpus quality/model-eval-contract-corpus.json --record DEBUG_MODEL_EVAL.json --require-live
+          test "$(node -p "require('./DEBUG_MODEL_EVAL.json').promotionEligible")" = false
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-debug-live-model-eval-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            DEBUG_MODEL_EVAL.json
+            DEBUG_MODEL_EVAL_SUMMARY.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Fail closed on canary safety regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const s=require('./DEBUG_MODEL_EVAL_SUMMARY.json');
+          if(s.falseSupport!==0||s.falseFixCandidates!==0||s.patchPolicyViolations!==0){
+            console.error(JSON.stringify({falseSupport:s.falseSupport,falseFixCandidates:s.falseFixCandidates,patchPolicyViolations:s.patchPolicyViolations}));
+            process.exit(2);
+          }
+          if(s.insufficientEvidenceAccuracy!==1){
+            console.error(`insufficient-evidence accuracy must remain 1, got ${s.insufficientEvidenceAccuracy}`);
+            process.exit(2);
+          }
+          NODE
