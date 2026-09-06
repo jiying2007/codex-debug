@@ -16,7 +16,9 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 - native crashes, core dumps and bounded fixed-command GDB/LLDB backtraces;
 - ASAN/TSAN/UBSAN/LSAN/Valgrind, race/deadlock/OOM/watchdog evidence;
 - Linux kernel panic/Oops/call-trace, Android ANR/tombstone, Cortex-M fault-register and RTOS task/stack evidence;
-- deterministic Cortex-M `PC/LR -> symbol` resolution from bounded linker maps and fixed-argv GNU/LLVM embedded `addr2line` tools; ELF `file:line` results feed source windows, blame/history and test-impact;
+- deterministic Cortex-M `PC/LR -> symbol` resolution from bounded linker maps and fixed-argv GNU/LLVM embedded `addr2line`; external firmware DWARF paths can be safely remapped into workspace source through bounded source-prefix mappings;
+- Android tombstone `pc -> local ELF source` resolution only after exact tombstone/local-ELF BuildId match;
+- Linux kernel RIP/call-trace `address -> System.map symbol+offset` evidence, with loadable-module frames left unresolved unless module-specific symbols are supplied in a future adapter;
 - SARIF, JUnit, WAV acoustic metrics and Perfetto/Chrome trace summaries;
 - Git HEAD/status/content-state fingerprint, bounded source windows, blame/history and causal commit candidates;
 - Safe Core test-impact based regression-test candidates;
@@ -31,17 +33,17 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 ## Authority model
 
 ```text
-failure / artifact / core / firmware symbols   UNTRUSTED DATA
+failure / artifact / core / firmware/platform symbols   UNTRUSTED DATA
                 ↓
-redact + bound + deterministic parse + digest
+redact + bound + deterministic parse + identity checks + digest
                 ↓
 read-only source / Git / history evidence
                 ↓
 model hypothesis generation                    ADVISORY ONLY
                 ↓
-independent causal verifier                     ADVISORY ONLY
+independent causal verifier                    ADVISORY ONLY
                 ↓
-verifier-accepted patch proposal                INERT
+verifier-accepted patch proposal               INERT
                 ↓
 explicit user authority
   ├─ execute reproduction command
@@ -98,10 +100,31 @@ codex-debug \
   --log hardfault.log \
   --map build/firmware.map \
   --elf build/firmware.elf \
-  --addr2line arm-none-eabi-addr2line
+  --addr2line arm-none-eabi-addr2line \
+  --source-prefix-map /ci/build/fw=.
 ```
 
-Only controller-extracted `PC/LR` values from the fault evidence are passed to a fixed `addr2line -f -C -e ELF <addresses...>` template; the model cannot provide addresses, executables, tool names, or extra arguments. Supported fixed tools include `arm-none-eabi-addr2line`, common RISC-V GNU names, `llvm-addr2line`, and host `addr2line`. A linker map works without an external symbolizer and yields nearest-symbol + offset evidence. ELF `file:line` output is accepted as untrusted deterministic symbolizer data and is reused only when it resolves safely inside the current workspace.
+Only controller-extracted `PC/LR` values from the fault evidence are passed to a fixed `addr2line -f -C -e ELF <addresses...>` template; the model cannot provide addresses, executables, tool names, source mappings or extra arguments. `--source-prefix-map` requires an absolute external prefix and a target that stays inside the workspace. The mapping changes path interpretation only; mapped source still passes realpath/symlink containment before it can enter source context.
+
+Android tombstone local symbols:
+
+```bash
+codex-debug \
+  --log tombstone.txt \
+  --android-symbol libfoo.so=./symbols/libfoo.so
+```
+
+If a tombstone frame has `BuildId: ...`, Codex Debug Safe extracts the BuildId from the explicitly supplied local ELF with fixed `readelf -n`. Source/function resolution is allowed only when the two IDs match exactly. Missing tombstone BuildId, missing local BuildId and mismatch all fail closed for that frame and do not invoke `addr2line`.
+
+Linux kernel `System.map` evidence:
+
+```bash
+codex-debug \
+  --log kernel-oops.log \
+  --kernel-system-map ./symbols/System.map
+```
+
+Kernel RIP/PC and call-trace addresses remain hexadecimal strings and are resolved deterministically to the nearest lower base-kernel symbol. Frames tagged with `[module]` are reported as `module-map-required`; the base `System.map` is never used to fake a module resolution.
 
 Structured evidence:
 
@@ -157,6 +180,7 @@ Codex Debug Safe never commits, pushes, merges, opens PRs/MRs, retries pipelines
 - Debug Selected Failure Evidence
 - Debug Failure Log File
 - Debug Core Dump
+- Debug Embedded Fault
 - Debug Reproduction Command
 - Run Safe Bisect
 - Apply Last Proposed Patch
@@ -167,11 +191,11 @@ Codex Debug Safe never commits, pushes, merges, opens PRs/MRs, retries pipelines
 - Check Debug Environment
 - Show Debug Output
 
-Workspace trust is mandatory. Historical execution and rollback/apply mutation surfaces require explicit user actions.
+Workspace trust is mandatory. Historical execution and rollback/apply mutation surfaces require explicit user actions. Android/kernel symbol-file selection is currently exposed by the CLI engine; richer VS Code platform-symbol pickers remain development work rather than an implied capability.
 
 ## Token and evidence efficiency
 
-Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug adds only bounded parsed frames, platform/symbol summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, ELF images, linker maps, WAVs and trace files are never embedded directly. The deterministic CI benchmark currently enforces a compact/prompt-byte budget before any live-model token claim is made.
+Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug adds only bounded parsed frames, platform/symbol summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, ELF images, linker maps, System.map files, WAVs and trace files are never embedded directly. The deterministic CI benchmark currently enforces a compact/prompt-byte budget before any live-model token claim is made.
 
 ## Family relationship
 
