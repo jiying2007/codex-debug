@@ -26,6 +26,10 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] real host ELF+DWARF fixture (`cc -g` + `nm` + `addr2line`) validating function/source resolution and path redaction
 - [x] bounded source-prefix remap from external firmware build roots into workspace-contained source, with redacted remap metadata
 - [x] real GNU Arm Embedded Cortex-M3 fixture (`arm-none-eabi-as/ld/nm/addr2line`) validating ELF + linker map + PC/LR + DWARF + source-prefix remap + source-context binding
+- [x] Android tombstone frame BuildId extraction plus explicit `MODULE=ELF` symbol mapping with exact BuildId match required before fixed-argv addr2line/source binding
+- [x] real Linux Android-format tombstone fixture using `cc -shared -g --build-id`, `readelf`, `nm`, `addr2line`, including BuildId mismatch/missing fail-closed negatives
+- [x] Linux kernel Oops/RIP/call-trace raw-address retention plus deterministic `System.map` nearest-symbol resolution; loadable-module frames remain unresolved without module-specific symbols
+- [x] real-format Linux Oops/System.map fixture validating 64-bit address resolution and module-frame refusal
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority
 - [x] fresh clone per historical candidate + isolated HOME/Git config + common credential-env scrubbing
 - [x] Safe Core test-impact regression-test candidates with symlink escape refusal
@@ -35,7 +39,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] deterministic context-byte/compaction efficiency benchmark in CI
 - [x] deterministic workflow action pin gate with non-zero coverage assertion
 - [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback and rollback-drift refusal
-- [x] CLI + VS Code command surfaces including core, embedded fault, source-prefix remap, bisect, session resume, persisted apply and rollback
+- [x] CLI surfaces for native, embedded, Android and kernel symbol evidence; VS Code embedded source-prefix remap, session resume, bisect, apply and rollback
 - [x] package-content contract excluding tests, quality internals, workflows and `.codex-debug` private state
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
@@ -47,7 +51,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
 - [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
 - [ ] broader Cortex-M corpus across GCC/LLVM firmware layouts, optimized/LTO builds and vendor linker scripts
-- [ ] deep Android bugreport/tombstone symbolization and Linux kernel symbol resolution fixtures
+- [ ] broader Android bugreport/tombstone corpus across ABIs/APEX/vendor layouts and module sets
+- [ ] kernel module-specific map/ELF handling plus broader architecture/KASLR-aware kernel symbol corpus
 - [ ] explicit model behavioral canary where credentials are available
 - [ ] reproducible VSIX build plus Consumer CI Receipt
 - [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow

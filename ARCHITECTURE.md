@@ -14,6 +14,8 @@ Evidence source
   ├─ explicit reproduction command
   ├─ core + executable
   ├─ Cortex-M fault + linker map / ELF
+  ├─ Android tombstone + matching BuildId ELF
+  ├─ kernel Oops/panic + System.map
   └─ SARIF / JUnit / WAV / perf / tombstone
               ↓
 Evidence Engine
@@ -21,6 +23,8 @@ Evidence Engine
   ├─ deterministic taxonomy/platform parsers
   ├─ fixed-command GDB/LLDB symbolization
   ├─ PC/LR -> map/ELF symbol + safe file:line source resolution
+  ├─ Android BuildId check -> fixed addr2line only on exact identity
+  ├─ kernel 64-bit address -> System.map symbol evidence
   ├─ source/Git/test-impact context
   └─ content/evidence digests
               ↓
@@ -115,7 +119,19 @@ Core symbolization uses fixed argument templates only. GDB disables init files, 
 
 Cortex-M fault parsing exposes only controller-observed `PC/LR` addresses to symbol resolution. A bounded linker-map parser can resolve the nearest symbol and offset without external execution. When an ELF is explicitly supplied, the controller selects only a fixed allowlisted `addr2line` binary and emits a fixed `-f -C -e ELF PC LR` argument shape. Raw ELF/map bytes never enter the model prompt.
 
-ELF `file:line` output is treated as untrusted evidence and converted to source frames only through the existing workspace-bound source resolver. Paths outside the current workspace, missing files, binary files and oversized files are discarded. Accepted embedded source frames then reuse the same source snippet, blame/history, causal-candidate and test-impact pipeline as native stack frames.
+ELF `file:line` output is treated as untrusted evidence and converted to source frames only through the existing workspace-bound source resolver. `--source-prefix-map OLD=TARGET` can reinterpret external firmware build paths only when OLD is absolute and TARGET stays in the workspace; the mapping never grants file-read authority. Accepted embedded source frames reuse the same source snippet, blame/history, causal-candidate and test-impact pipeline as native stack frames.
+
+## Android symbol boundary
+
+Android tombstone frames may be paired with explicit local symbol ELFs using `MODULE=ELF` mappings. A frame reaches source resolution only when the tombstone BuildId exists and exactly matches a BuildId extracted from the local ELF by fixed `readelf -n`. Missing/mismatched identity leaves the frame unresolved and does not invoke addr2line.
+
+After identity success, the frame PC is passed through fixed `addr2line -f -C -e ELF <pc>`. Resulting `file:line` data is still untrusted and enters source/Git/test-impact only through workspace containment. Retained evidence stores local ELF basename, size and SHA-256 digest rather than its absolute host path.
+
+## Kernel symbol boundary
+
+Kernel text parsing preserves RIP/PC and call-trace addresses as hexadecimal strings, so 64-bit addresses never round through JavaScript `Number`. An explicit bounded `System.map` can resolve base-kernel addresses by deterministic nearest-lower-symbol lookup.
+
+A loadable-module frame such as `foo+0x10/0x20 [vendor_mod]` is deliberately **not** resolved through the base-kernel map; it is marked `module-map-required`. Current System.map evidence therefore proves only mappings covered by that supplied kernel map and does not claim KASLR/module/vmlinux completeness.
 
 ## Safe Bisect boundary
 
@@ -123,10 +139,10 @@ Historical code execution is higher risk. CLI requires both an exact `--command`
 
 ## Artifact/platform adapters and test selection
 
-Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, text/tombstone compaction, Cortex-M fault registers + map/ELF symbols, Android tombstone identity/frames, Linux kernel panic/Oops call traces and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
+Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, Cortex-M fault registers + map/ELF symbols, Android tombstone identity/frames + BuildId-bound local ELF symbols, Linux kernel panic/Oops call traces + base-kernel System.map symbols, and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
 
 Debug reuses Safe Core `test-impact` to rank regression-test candidates. Recommendations are not automatically executed and never confer `verified` state.
 
 ## Remaining architecture work before active promotion
 
-The development baseline still does not claim full minidump/Crashpad support, source-prefix remapping for firmware built outside the current workspace, production cross-toolchain ELF fixture coverage, deep Android bugreport parsing, full kernel symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded live-model RCA benchmark. These are explicit promotion work, not hidden assumptions.
+The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, KASLR-aware kernel/module symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, reproducible VSIX/Consumer CI evidence, or a production recorded live-model RCA benchmark. These are explicit promotion work, not hidden assumptions.

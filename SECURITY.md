@@ -66,7 +66,33 @@ Firmware ELF and linker-map files are untrusted parser inputs. Embedded symboliz
 
 A real Linux GNU Arm Embedded fixture uses `arm-none-eabi-as`, `arm-none-eabi-ld`, `arm-none-eabi-nm` and `arm-none-eabi-addr2line` to build a Cortex-M3 ELF with DWARF and a GNU linker map. The fixture injects an external build-root source path into DWARF, remaps it into workspace source, resolves controller-observed PC/LR, verifies linker-map symbol/offset resolution, and then requires mapped source to bind into the existing source-context pipeline. This proves the cross-toolchain path without executing firmware.
 
-ELF parsers are native tooling and may themselves contain vulnerabilities. Treat hostile firmware images like hostile core files and analyze them in an appropriate container/runner boundary when provenance is uncertain.
+## Android tombstone symbol hardening
+
+Android tombstone modules may be paired with explicit local symbols using repeatable `--android-symbol MODULE=ELF` mappings. These mappings are evidence inputs, not execution authority.
+
+- symbol ELF inputs must be bounded regular non-symlink files;
+- the tombstone frame must contain a BuildId before local source resolution is permitted;
+- a fixed `readelf -n` inspection extracts the local ELF BuildId with debuginfod disabled;
+- missing tombstone BuildId, missing local BuildId, or any BuildId mismatch fails closed for that frame and **does not invoke addr2line**;
+- only an exact BuildId match may reach the fixed `addr2line -f -C -e ELF <pc>` template;
+- retained symbol metadata stores module basename, ELF basename, size and SHA-256 digest, not the local absolute ELF path;
+- resolved `file:line` enters source/blame/history/test-impact only through the same workspace containment and optional source-prefix rules used by embedded symbol evidence.
+
+The Linux CI fixture builds a real DWARF shared object with `--build-id=sha1`, extracts its dynamic symbol address and BuildId using `nm`/`readelf`, synthesizes an Android-format tombstone frame, and proves the production platform symbolizer resolves source only for the matching BuildId. Mismatch and BuildId-missing cases are explicit negative fixtures.
+
+## Kernel System.map hardening
+
+Kernel Oops/panic evidence can be paired with an explicit `--kernel-system-map FILE` input. The resolver is deterministic: it parses bounded `System.map` rows and performs nearest-lower-symbol lookup over preserved 64-bit addresses.
+
+- `System.map` must be a bounded regular non-symlink file and its SHA-256 digest is bound into platform evidence;
+- kernel RIP/PC and call-trace addresses are kept as hexadecimal strings, avoiding JavaScript integer precision loss;
+- only non-module frames are resolved through the supplied kernel `System.map`;
+- any frame carrying `[module]` is marked `module-map-required` and remains unresolved, rather than pretending the base-kernel map covers loadable modules;
+- this resolver does not execute `addr2line`, scripts, commands or text found in the log.
+
+The current fixture uses real Linux Oops/System.map line formats and verifies 64-bit address offsets plus loadable-module refusal. It is evidence of the deterministic resolver, not a claim of complete KASLR/module/vmlinux support.
+
+Native ELF/debugger tools are themselves parser attack surfaces. Treat hostile core/ELF/symbol inputs with an appropriate container/runner trust boundary when provenance is uncertain.
 
 ## Historical execution warning
 
@@ -88,7 +114,7 @@ Session files are append-only and self-bound through the Debug Receipt. This pro
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers now have deterministic/adversarial tests plus a real Linux native-core fixture and a real GNU Arm Embedded Cortex-M fixture. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump and optimized firmware corpora, deep Android/kernel symbol resolution, reproducible VSIX/Consumer CI evidence, and the final Family release chain.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing and platform adapters now have deterministic/adversarial tests plus a real Linux native-core fixture, a real GNU Arm Embedded Cortex-M fixture, a real BuildId-bound Android ELF fixture, and a real-format kernel System.map/Oops fixture. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel corpora, module/KASLR handling, reproducible VSIX/Consumer CI evidence, and the final Family release chain.
 
 ## Reporting vulnerabilities
 
