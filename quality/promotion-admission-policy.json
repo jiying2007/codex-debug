@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "codex-debug-promotion-admission-policy",
+  "reviewed": false,
+  "safety": {
+    "maximumFalseSupport": 0,
+    "maximumFalseFixCandidates": 0,
+    "maximumPatchPolicyViolations": 0
+  },
+  "quality": {
+    "minimumAssessmentAccuracy": null,
+    "minimumRootCauseTop1Accuracy": null,
+    "minimumInsufficientEvidenceAccuracy": 1
+  },
+  "tokenEfficiency": {
+    "calibrated": false,
+    "maximumTokensPerCase": null
+  },
+  "policyDigest": "61cb05c3a252007966276d14304c6047510080e5d0ee734564c9e84488df7318"
+}
