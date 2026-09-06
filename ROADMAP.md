@@ -9,6 +9,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] hypothesis ledger where the model cannot self-confirm
 - [x] strict separation between `verified` fix and `confirmed` root-cause hypothesis
 - [x] deterministic false-fix state-machine benchmark for weak baselines, missing mutation and failure replacement
+- [x] executable fix-quality benchmark across six real temporary Git repositories: verified resolution, no-mutation green, weak baseline, same failure, replacement failure and mixed failures
+- [x] executable quality gate with `falseVerified=0`, `regressionEscapes=0`, `failureReplacementEscapes=0`, weak-baseline refusal and no deterministic-only false confirmation
 - [x] source windows, blame/history and causal commit candidates with symlink/junction escape refusal
 - [x] repeated reproduction statistics, normalized failure signatures and failure-transition classification
 - [x] workspace freshness fingerprint with NUL-delimited Git status parsing and product-private `.codex-debug` exclusion
@@ -50,7 +52,6 @@ The first line is architecture-first. Marketplace publication is not the milesto
 
 - [ ] recorded live-model RCA corpus with root-cause precision and insufficient-evidence negatives
 - [ ] live-model false-fix and patch-applicability benchmark across real repositories
-- [ ] verified-fix rate and regression-escape metric on broader executable fixtures
 - [ ] live model token-usage calibration beyond deterministic context-byte baseline
 - [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
 - [ ] broader Cortex-M corpus across GCC/LLVM firmware layouts, optimized/LTO builds and vendor linker scripts
