@@ -27,15 +27,20 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - name: Install native core fixture debugger
+      - name: Install native and Cortex-M fixture tools
         if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends gdb
+          sudo apt-get install -y --no-install-recommends gdb binutils-arm-none-eabi
           command -v gdb
+          command -v arm-none-eabi-as
+          command -v arm-none-eabi-ld
+          command -v arm-none-eabi-nm
+          command -v arm-none-eabi-addr2line
           gdb --version | head -n 1
+          arm-none-eabi-addr2line --version | head -n 1
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run ci
 
