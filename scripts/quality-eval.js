@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict');const corpus=require('../quality/corpus.json');const {parseFailure}=require('../src/parsers');let pass=0;for(const item of corpus.cases){const result=parseFailure(item.text);try{assert.equal(result.kind,item.expected);pass++;}catch(error){console.error(`${item.id}: expected=${item.expected} actual=${result.kind}`);process.exitCode=1;}}const summary={schemaVersion:corpus.schemaVersion,cases:corpus.cases.length,pass,rate:corpus.cases.length?pass/corpus.cases.length:1};process.stdout.write(`${JSON.stringify(summary)}\n`);if(pass!==corpus.cases.length)process.exitCode=2;

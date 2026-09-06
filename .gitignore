@@ -1,0 +1,6 @@
+node_modules/
+*.vsix
+.codex-debug/
+coverage/
+.DS_Store
+*.log
