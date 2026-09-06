@@ -55,8 +55,10 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] manual read-only live synthetic model canary with protected-credential fail-closed behavior, SHA-pinned actions, `promotionEligible=false` and no repository/publication authority
 - [x] Promotion Corpus v1 readiness floor: at least 12 reviewed cases, 3 repositories, 4 failure kinds and 3 insufficient-evidence negatives before `promotionEligible=true` can validate
 - [x] first real historical promotion case bound to persistent PR ref + exact bad/fix SHA + direct-parent fix + exact reproduction + digest-bound ground truth; controller must prove bad fails and fixed passes before model evaluation
+- [x] real historical corpus expanded to 3 reviewed direct-parent transitions across Codex Debug and Safe Core, covering test, infra and governance failure kinds; current readiness is 3/12 cases, 2/3 repositories, 3/4 failure kinds and 0/3 insufficient-evidence negatives
+- [x] duplicate historical transition/bad/fix identities are rejected so repeated fixes cannot inflate readiness
 - [x] promotion historical execution uses isolated HOME/Git/npm config and an allowlisted environment so historical code cannot inherit model/GitHub credentials; model credentials stay in the separate Codex execution authority
-- [x] package / package-lock / product-contract development identity is now gated as one version (`0.1.2` for this line)
+- [x] package / package-lock / product-contract development identity is gated as one version (`0.1.3` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
