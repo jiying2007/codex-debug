@@ -16,7 +16,9 @@ Codex Debug Safe 是 Codex Safe 产品族中的**证据驱动工作区 Debug、�
 - native crash、core dump、固定命令 GDB/LLDB backtrace；
 - ASAN/TSAN/UBSAN/LSAN/Valgrind、race/deadlock/OOM/watchdog；
 - Linux kernel panic/Oops/call trace、Android ANR/tombstone、Cortex-M fault register、RTOS task/stack；
-- Cortex-M `PC/LR → symbol`：支持 bounded linker map 解析和固定 argv 的 GNU/LLVM embedded `addr2line`；ELF `file:line` 会继续进入源码窗口、blame/history 和 test-impact；
+- Cortex-M `PC/LR → symbol`：支持 bounded linker map、固定 argv 的 GNU/LLVM `addr2line`，以及外部 firmware build root → workspace 的有界 source-prefix remap；
+- Android tombstone `pc → 本地 ELF source`：只有 tombstone BuildId 与显式本地 ELF BuildId **精确一致**才进入 `addr2line` 和源码上下文；
+- Linux kernel RIP/call-trace `address → System.map symbol+offset`：保留 64 位地址，带 `[module]` 的 frame 在没有模块专用符号时明确保持 unresolved；
 - SARIF、JUnit、WAV 声学指标、Perfetto/Chrome trace；
 - Git HEAD/status/内容状态指纹、源码窗口、blame/history、causal commit candidates；
 - 复用 Safe Core test-impact 的 regression-test candidates；
@@ -31,9 +33,9 @@ Codex Debug Safe 是 Codex Safe 产品族中的**证据驱动工作区 Debug、�
 ## 权限边界
 
 ```text
-failure / artifact / core / firmware symbols   不可信数据
+failure / artifact / core / firmware / platform symbols   不可信数据
               ↓
-redact / bound / parse / digest
+redact / bound / parse / identity check / digest
               ↓
 只读源码和 Git Evidence
               ↓
@@ -67,7 +69,7 @@ verifier 接受的 patch                    仍然 inert
 
 因此“给一个 crash.log，再跑一个无关绿色测试”最多只是 `passed-unbound`。Runtime verification 还会记录 failure transition：`resolved`、`same-failure`、`different-failure`、`mixed-failure` 或 unbound。
 
-**修复进入 `verified` 并不自动等于根因 hypothesis 被确认。** `verified` 只证明工作区发生变化后，原先可重复的 failure 在绑定的验证中消失；只有已经被因果 verifier 标成 `supported` 的 hypothesis，才能在后续 runtime verification 成功后升级成 `confirmed`。因此 deterministic-only 模式可以证明“这个改动解决了故障”，但不会凭空制造“为什么解决”的根因结论。
+**修复进入 `verified` 并不自动等于根因 hypothesis 被确认。** `verified` 只证明工作区发生变化后，原先可重复的 failure 在绑定的验证中消失；只有已经被因果 verifier 标成 `supported` 的 hypothesis，才能在后续 runtime verification 成功后升级成 `confirmed`。
 
 ## 常用 CLI
 
@@ -77,19 +79,38 @@ codex-debug --command "npm test" --repro-runs 3
 codex-debug --core core.1234 --executable ./build/app --debugger auto
 ```
 
-GDB 固定关闭 init/auto-load/history/debuginfod，LLDB 固定关闭用户 init 与 symbol-file script loading；模型不能提供 debugger command。
-
-Cortex-M map / ELF 符号化：
+Cortex-M map / ELF / source-prefix remap：
 
 ```bash
 codex-debug \
   --log hardfault.log \
   --map build/firmware.map \
   --elf build/firmware.elf \
-  --addr2line arm-none-eabi-addr2line
+  --addr2line arm-none-eabi-addr2line \
+  --source-prefix-map /ci/build/fw=.
 ```
 
-只有从 fault evidence 中由控制器解析出来的 `PC/LR` 才会传给固定的 `addr2line -f -C -e ELF <addresses...>`；模型不能填地址、工具名或附加参数。支持固定枚举的 `arm-none-eabi-addr2line`、常见 RISC-V GNU 名称、`llvm-addr2line` 与 host `addr2line`。只有 map 时也能确定性得到最近 symbol + offset。ELF 的 `file:line` 只有在安全解析到当前 workspace 内时才用于源码/历史/回归候选。
+只有 fault evidence 中由控制器解析出来的 `PC/LR` 才会进入固定 `addr2line -f -C -e ELF <addresses...>`。`--source-prefix-map` 的 OLD 必须是绝对外部路径，TARGET 必须留在当前 workspace；映射只改变路径解释，不授予读取文件的权限，映射后的源码仍要通过 realpath/symlink containment。
+
+Android tombstone 本地符号：
+
+```bash
+codex-debug \
+  --log tombstone.txt \
+  --android-symbol libfoo.so=./symbols/libfoo.so
+```
+
+Debug 会用固定 `readelf -n` 读取本地 ELF BuildId。只有 tombstone BuildId 存在且与本地 ELF 精确匹配，才会执行固定 argv 的 `addr2line`。tombstone 缺 BuildId、本地 ELF 缺 BuildId、BuildId 不匹配都会对该 frame fail-closed，不会生成源码/函数结论。
+
+Linux kernel `System.map`：
+
+```bash
+codex-debug \
+  --log kernel-oops.log \
+  --kernel-system-map ./symbols/System.map
+```
+
+RIP/PC 和 call-trace 地址以十六进制字符串保存，避免 JS 64 位整数精度问题，并使用确定性最近下界 symbol 查找。带 `[module]` 的 frame 会标记 `module-map-required`，不会错误地使用 base-kernel `System.map` 解析模块地址。
 
 Safe Bisect：
 
@@ -122,8 +143,6 @@ codex-debug --rollback-session dbg-fedcba9876543210
 
 `--apply-session` 必须先证明当前 workspace 内容状态仍与 evidence-time fingerprint 一致，并重新检查 stored patch 仍然满足 causal verifier 的 `supported + accept`，然后才通过 patch check 并在 `.codex-debug/snapshots/` 建立私有有界快照。`--rollback-session` 只恢复记录过的 patch paths；如果其中任一文件在 apply 后又被修改，会直接拒绝 rollback，绝不覆盖用户后续修改。
 
-`.codex-debug` 是产品私有状态，因此不进入“用户代码 workspace freshness”指纹；session append-only，session/snapshot 自身仍通过独立 digest 防篡改。
-
 ## Patch 门禁
 
 模型 patch 默认不修改文件。只有显式 `--apply`、`--apply-session` 或 VS Code Apply 命令才允许修改。必须通过文本/256KiB/仓库相对路径/Git-native 路径解析/path traversal/binary/rename-copy/`git apply --check` 等门禁，并拒绝 `.git`、`.codex-debug`、`src/codex-safe-core`、GitHub workflow/control-plane、`.env`/key、generated/vendor/build/dependency output。Snapshot/rollback 进一步拒绝 symlink/junction traversal、symlink/非普通文件和 hardlink。
@@ -132,13 +151,13 @@ Codex Debug Safe 永远不会自动 commit、push、merge、创建 PR/MR、retry
 
 ## VS Code
 
-当前命令包括：Debug Selected Failure Evidence、Debug Failure Log File、Debug Core Dump、Debug Reproduction Command、Run Safe Bisect、Apply Last Proposed Patch、**Rollback Last Applied Patch**、Verify Last Fix、Resume Debug Session and Verify、Show Debug Session、Check Debug Environment、Show Debug Output。
+当前命令包括：Debug Selected Failure Evidence、Debug Failure Log File、Debug Core Dump、Debug Embedded Fault、Debug Reproduction Command、Run Safe Bisect、Apply Last Proposed Patch、**Rollback Last Applied Patch**、Verify Last Fix、Resume Debug Session and Verify、Show Debug Session、Check Debug Environment、Show Debug Output。
 
-Workspace trust 必须启用；historical execution、apply、rollback 都需要显式用户动作。
+Workspace trust 必须启用；historical execution、apply、rollback 都需要显式用户动作。Android/kernel 符号文件当前先通过 CLI 暴露；更完整的 VS Code platform-symbol picker 仍属于 development 工作，不会在文档中提前宣称完成。
 
 ## Token / Evidence 效率
 
-Raw log 不会整块直接送入模型。Safe Core 先做 ANSI/credential cleanup、significant-window selection、duplicate folding 和 byte bound；Debug 再加入有限的 frame、platform/symbol summary、source window、artifact summary、Git candidate、Safe Bisect metadata 与 regression-test candidate。Raw core、ELF、map、WAV、trace 都不会直接嵌入 prompt。当前 CI 已有 deterministic context-byte/compaction benchmark，在有 live-model token 指标前先锁住输入效率底线。
+Raw log 不会整块直接送入模型。Safe Core 先做 ANSI/credential cleanup、significant-window selection、duplicate folding 和 byte bound；Debug 再加入有限的 frame、platform/symbol summary、source window、artifact summary、Git candidate、Safe Bisect metadata 与 regression-test candidate。Raw core、ELF、map、System.map、WAV、trace 都不会直接嵌入 prompt。当前 CI 已有 deterministic context-byte/compaction benchmark，在有 live-model token 指标前先锁住输入效率底线。
 
 ## 与 Safe 族关系
 
