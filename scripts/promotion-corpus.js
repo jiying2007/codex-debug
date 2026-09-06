@@ -10,6 +10,7 @@ const VERSION=1;
 const SHA40=/^[0-9a-f]{40}$/;
 const HEX64=/^[0-9a-f]{64}$/;
 const REPO=/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.git$/;
+const ANCHOR=/^refs\/(?:pull\/\d+\/head|heads\/[A-Za-z0-9._\/-]+|tags\/[A-Za-z0-9._\/-]+)$/;
 const KINDS=new Set(['build','test','crash','sanitizer','race','deadlock','oom','watchdog','kernel','android','mcu','audio','performance','dependency','infra','unknown']);
 const ASSESSMENTS=new Set(['supported','insufficient','contradicted']);
 const PATCH_POLICIES=new Set(['required','optional','forbidden']);
@@ -30,6 +31,8 @@ function validatePromotionCorpus(corpus){
     assert.equal(item.mode,'historical-observed',`promotion case ${item.id} must be historical-observed`);
     assert.equal(item.relation,'direct-parent-fix',`promotion case ${item.id} must bind a direct-parent fix`);
     assert.match(String(item.repository||''),REPO,`promotion case ${item.id} must use a reviewed public GitHub repository URL`);
+    assert.match(String(item.anchorRef||''),ANCHOR,`promotion case ${item.id} requires a reviewed fetch anchor`);
+    assert.ok(!String(item.anchorRef).includes('..'),`unsafe fetch anchor for ${item.id}`);
     assert.match(String(item.badCommit||''),SHA40,`invalid badCommit for ${item.id}`);
     assert.match(String(item.fixedCommit||''),SHA40,`invalid fixedCommit for ${item.id}`);
     assert.notEqual(item.badCommit,item.fixedCommit,`bad/fixed commits must differ for ${item.id}`);
