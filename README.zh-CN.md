@@ -18,7 +18,8 @@ Codex Debug Safe 是 Codex Safe 产品族中的**证据驱动工作区 Debug、�
 - Linux kernel panic/Oops/call trace、Android ANR/tombstone、Cortex-M fault register、RTOS task/stack；
 - Cortex-M `PC/LR → symbol`：支持 bounded linker map、固定 argv 的 GNU/LLVM `addr2line`，以及外部 firmware build root → workspace 的有界 source-prefix remap；
 - Android tombstone `pc → 本地 ELF source`：只有 tombstone BuildId 与显式本地 ELF BuildId **精确一致**才进入 `addr2line` 和源码上下文；
-- Linux kernel runtime RIP/call-trace → link-time `System.map`：必须先由日志 `Kernel Offset` 或显式 `--kernel-kaslr-slide` 证明 KASLR slide，带 `[module]` 的 frame 仍保持 unresolved；
+- Linux kernel runtime RIP/call-trace → link-time `System.map`：必须先由日志 `Kernel Offset` 或显式 `--kernel-kaslr-slide` 证明 KASLR slide；
+- loadable kernel module `function+offset → 本地 .ko source`：只有日志携带 module BuildId，且与显式提供的 module ELF BuildId **精确一致**才允许解析源码；
 - SARIF、JUnit、WAV 声学指标、Perfetto/Chrome trace；
 - Git HEAD/status/内容状态指纹、源码窗口、blame/history、causal commit candidates；
 - 复用 Safe Core test-impact 的 regression-test candidates；
@@ -119,7 +120,17 @@ codex-debug \
   --kernel-kaslr-slide 0x0
 ```
 
-`System.map` 保存的是 link-time 地址，而开启 KASLR 后 Oops 中通常是 runtime 地址。Codex Debug Safe 因此**不会在 slide 未被证明时直接查 System.map**。支持的 `Kernel Offset: 0xHEX from 0xBASE` 会作为控制器证据解析；如果日志没有这行，调用方可显式提供 `--kernel-kaslr-slide 0xHEX`。两者同时存在时必须一致，否则 `EKASLRMISMATCH` fail-closed。实现使用 64 位 `BigInt` 从 runtime 地址减去已证明 slide，再使用归一化 link-time 地址查 `System.map`。如果 slide 无法证明，结果是 `kaslr-unproven`，不会输出猜测符号；地址减 slide 下溢则是 `slide-underflow`。带 `[module]` 的 frame 无论 slide 是否已知都继续标记 `module-map-required`。
+`System.map` 保存的是 link-time 地址，而开启 KASLR 后 Oops 中通常是 runtime 地址。Codex Debug Safe 因此**不会在 slide 未被证明时直接查 System.map**。支持的 `Kernel Offset: 0xHEX from 0xBASE` 会作为控制器证据解析；如果日志没有这行，调用方可显式提供 `--kernel-kaslr-slide 0xHEX`。两者同时存在时必须一致，否则 `EKASLRMISMATCH` fail-closed。实现使用 64 位 `BigInt` 从 runtime 地址减去已证明 slide，再使用归一化 link-time 地址查 `System.map`。如果 slide 无法证明，结果是 `kaslr-unproven`，不会输出猜测符号；地址减 slide 下溢则是 `slide-underflow`。
+
+Kernel module 本地符号是独立身份域：
+
+```bash
+codex-debug \
+  --log kernel-oops.log \
+  --kernel-module-symbol my_driver=./symbols/my_driver.ko
+```
+
+只有文件名相同的 `.ko` **不构成身份凭证**。failure evidence 必须带 module BuildId，例如 kernel `%pSb/%pBb` 风格的 `module_fault+0x4/0x40 [my_driver <build-id>]`。Debug 先通过固定 `readelf -n` 读取显式本地 `.ko`/ELF BuildId；日志缺身份时返回 `module-build-id-required`，不匹配时返回 `module-build-id-mismatch`。只有 BuildId 精确匹配后，固定 host `nm` 才会查找日志中的精确函数，再把 `function+offset` 交给固定 host `addr2line`。解析成功的源码仍必须通过 workspace realpath/symlink containment，之后才可进入 source/blame/history/test-impact；本地 module ELF 的绝对路径不会进入模型证据。
 
 Safe Bisect：
 
@@ -166,7 +177,7 @@ Workspace trust 必须启用；historical execution、apply、rollback 都需要
 
 ## Token / Evidence 效率
 
-Raw log 不会整块直接送入模型。Safe Core 先做 ANSI/credential cleanup、significant-window selection、duplicate folding 和 byte bound；Debug 再加入有限的 frame、platform/symbol summary、source window、artifact summary、Git candidate、Safe Bisect metadata 与 regression-test candidate。Raw core、ELF、map、System.map、WAV、trace 都不会直接嵌入 prompt。当前 CI 已有 deterministic context-byte/compaction benchmark，在有 live-model token 指标前先锁住输入效率底线。
+Raw log 不会整块直接送入模型。Safe Core 先做 ANSI/credential cleanup、significant-window selection、duplicate folding 和 byte bound；Debug 再加入有限的 frame、platform/symbol summary、source window、artifact summary、Git candidate、Safe Bisect metadata 与 regression-test candidate。Raw core、ELF、map、System.map、module ELF、WAV、trace 都不会直接嵌入 prompt。当前 CI 已有 deterministic context-byte/compaction benchmark，在有 live-model token 指标前先锁住输入效率底线。
 
 ## 与 Safe 族关系
 
