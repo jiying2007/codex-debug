@@ -15,7 +15,7 @@ Evidence source
   ├─ core + executable
   ├─ Cortex-M fault + linker map / ELF
   ├─ Android tombstone + matching BuildId ELF
-  ├─ kernel Oops/panic + System.map
+  ├─ kernel Oops/panic + System.map + KASLR slide evidence
   └─ SARIF / JUnit / WAV / perf / tombstone
               ↓
 Evidence Engine
@@ -24,7 +24,7 @@ Evidence Engine
   ├─ fixed-command GDB/LLDB symbolization
   ├─ PC/LR -> map/ELF symbol + safe file:line source resolution
   ├─ Android BuildId check -> fixed addr2line only on exact identity
-  ├─ kernel 64-bit address -> System.map symbol evidence
+  ├─ kernel runtime address + proven KASLR slide -> link-time System.map evidence
   ├─ source/Git/test-impact context
   └─ content/evidence digests
               ↓
@@ -129,9 +129,11 @@ After identity success, the frame PC is passed through fixed `addr2line -f -C -e
 
 ## Kernel symbol boundary
 
-Kernel text parsing preserves RIP/PC and call-trace addresses as hexadecimal strings, so 64-bit addresses never round through JavaScript `Number`. An explicit bounded `System.map` can resolve base-kernel addresses by deterministic nearest-lower-symbol lookup.
+Kernel text parsing preserves RIP/PC and call-trace addresses as hexadecimal strings, so 64-bit addresses never round through JavaScript `Number`. A base-kernel `System.map` is a **link-time address map**, while an Oops may contain KASLR-shifted runtime addresses.
 
-A loadable-module frame such as `foo+0x10/0x20 [vendor_mod]` is deliberately **not** resolved through the base-kernel map; it is marked `module-map-required`. Current System.map evidence therefore proves only mappings covered by that supplied kernel map and does not claim KASLR/module/vmlinux completeness.
+The controller therefore resolves a base-kernel symbol only after the KASLR slide is proven. The slide may come from a deterministic `Kernel Offset: 0x...` record in the supplied log or from explicit `--kernel-kaslr-slide 0xHEX`. If both sources exist they must match exactly; disagreement fails closed with `EKASLRMISMATCH`. Runtime addresses are normalized with `BigInt` subtraction and evidence retains `runtimeAddress`, `linkAddress`, `slide` and `slideSource` separately. If no slide is proven, base-kernel frames are `kaslr-unproven` and no nearest-symbol lookup is performed. A caller that knows KASLR is disabled must explicitly supply `--kernel-kaslr-slide 0x0` unless the log itself proves zero offset.
+
+A loadable-module frame such as `foo+0x10/0x20 [vendor_mod]` is deliberately **not** resolved through the base-kernel map; it is marked `module-map-required`. Current kernel evidence proves only identity-covered base-kernel mappings and does not claim module ELF/map identity coverage yet.
 
 ## Safe Bisect boundary
 
@@ -139,7 +141,7 @@ Historical code execution is higher risk. CLI requires both an exact `--command`
 
 ## Artifact/platform adapters and test selection
 
-Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, Cortex-M fault registers + map/ELF symbols, Android tombstone identity/frames + BuildId-bound local ELF symbols, Linux kernel panic/Oops call traces + base-kernel System.map symbols, and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
+Current deterministic adapters cover SARIF, JUnit, PCM16 WAV metrics, Chrome/Perfetto duration summaries, Cortex-M fault registers + map/ELF symbols, Android tombstone identity/frames + BuildId-bound local ELF symbols, KASLR-aware Linux kernel panic/Oops call traces + base-kernel System.map symbols, and basic RTOS task/stack/assert signals. Raw large/binary artifacts are not embedded directly in model prompts.
 
 Debug reuses Safe Core `test-impact` to rank regression-test candidates. Recommendations are not automatically executed and never confer `verified` state.
 
@@ -173,4 +175,4 @@ The job uses read-only GitHub permissions and is part of the top-level CI Gate. 
 
 ## Remaining architecture work before active promotion
 
-The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, KASLR-aware kernel/module symbol resolution, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded live-model RCA benchmark. The final active Family governance/ruleset and immutable release chain also remain explicit promotion work.
+The development baseline still does not claim full minidump/Crashpad support, broad optimized/LTO/vendor firmware coverage, broad Android bugreport/APEX/vendor symbol layouts, kernel module-specific ELF/map identity handling, heap/profile adapters, provider-native GitHub/GitLab/Sentry acquisition, OS-sandboxed historical execution, or a production recorded live-model RCA benchmark. The final active Family governance/ruleset and immutable release chain also remain explicit promotion work.
