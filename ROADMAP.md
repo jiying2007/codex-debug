@@ -31,7 +31,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] Android tombstone frame BuildId extraction plus explicit `MODULE=ELF` symbol mapping with exact BuildId match required before fixed-argv addr2line/source binding
 - [x] real Linux Android-format tombstone fixture using `cc -shared -g --build-id`, `readelf`, `nm`, `addr2line`, including BuildId mismatch/missing fail-closed negatives
 - [x] Linux kernel Oops/RIP/call-trace raw-address retention plus deterministic `System.map` nearest-symbol resolution; loadable-module frames remain unresolved without module-specific symbols
-- [x] real-format Linux Oops/System.map fixture validating 64-bit address resolution and module-frame refusal
+- [x] KASLR-aware base-kernel symbolization: parse deterministic `Kernel Offset`, accept explicit `--kernel-kaslr-slide`, require log/explicit agreement, normalize runtime -> link-time addresses with BigInt, and return `kaslr-unproven` when slide identity is unavailable
+- [x] real-format non-zero-KASLR Oops/System.map fixture validating runtime/link address separation, exact symbol offsets, slide mismatch refusal and module-frame refusal
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority
 - [x] fresh clone per historical candidate + isolated HOME/Git config + common credential-env scrubbing
 - [x] Safe Core test-impact regression-test candidates with symlink escape refusal
@@ -56,7 +57,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [ ] broader native core corpus beyond the deterministic Linux GDB fixture, including platform-specific minidump/core formats where applicable
 - [ ] broader Cortex-M corpus across GCC/LLVM firmware layouts, optimized/LTO builds and vendor linker scripts
 - [ ] broader Android bugreport/tombstone corpus across ABIs/APEX/vendor layouts and module sets
-- [ ] kernel module-specific map/ELF handling plus broader architecture/KASLR-aware kernel symbol corpus
+- [ ] kernel module-specific map/ELF identity handling plus broader architecture/KASLR kernel corpus
 - [ ] explicit model behavioral canary where credentials are available
 - [ ] Family promotion `development -> active`, repository governance/ruleset and immutable release workflow
 
