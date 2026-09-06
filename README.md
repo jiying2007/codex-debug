@@ -28,7 +28,7 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 - repeated reproduction/verification statistics and failure-transition classification;
 - bounded **first-parent** Safe Bisect with a fresh isolated clone per candidate, only with explicit historical-execution authority;
 - evidence-bound append-only sessions and self-digested Debug Receipt lineage;
-- drift-safe patch snapshots and rollback;
+- drift-safe patch snapshots and **receipt-bound rollback child sessions**;
 - executable fix-quality benchmark with zero false-verification/regression-replacement escape gates;
 - reproducible development VSIX + Safe Core Consumer CI Receipt artifact;
 - CLI and VS Code surfaces over the same engine.
@@ -73,6 +73,8 @@ A successful command alone is **not** a verified fix. `verified` requires:
 A log plus an unrelated green test is `passed-unbound`, not `verified`. Runtime verification also records whether the failure transition is `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or unbound.
 
 **A verified fix does not by itself confirm a root-cause hypothesis.** `verified` proves the observed failure transition after a workspace mutation. A hypothesis can become `confirmed` only when it was already causally `supported` and the bound runtime verification then succeeds. Deterministic-only classification can therefore verify that a change resolved a failure without inventing a causal explanation.
+
+Rollback is an operation, not a new fix status. If a patch reached `verified` and is later rolled back, the new rollback child is `proposed`, because the causal proposal is still known but the current workspace no longer contains the verified fix. A completed rollback child can never inherit `verified` or `applied-unverified`.
 
 ## Development install
 
@@ -185,7 +187,11 @@ codex-debug --apply-session dbg-0123456789abcdef
 codex-debug --rollback-session dbg-fedcba9876543210
 ```
 
-`--apply-session` first requires the current workspace content-state fingerprint to match the evidence-time state and rechecks that the persisted patch still has `supported + accept` causal-verifier authorization. It validates the patch, then writes a private bounded snapshot under `.codex-debug/snapshots/`. `--rollback-session` restores only recorded patch paths and **refuses** when any path has drifted after patch application, so later user edits are never overwritten.
+`--apply-session` first requires the current workspace content-state fingerprint to match the evidence-time state and rechecks that the persisted patch still has `supported + accept` causal-verifier authorization. It validates the patch, then writes a private bounded snapshot under `.codex-debug/snapshots/`.
+
+`--rollback-session` restores only recorded patch paths and **refuses** when any path has drifted after patch application, so later user edits are never overwritten. On success, rollback does not mutate the source session: it writes a new append-only child session with a new random session id and a new Debug Receipt. The child binds its parent session/fingerprint, exact snapshot id, restored paths, rollback digest, workspace fingerprints before/after rollback, `patch.applied=false`, `patch.rolledBack=true`, and verification-side rollback observation through the existing lineage/patch-state/verification digests. The CLI returns that new child id and Receipt.
+
+A rollback child returns to `proposed`, even when its parent was `verified`. Re-consuming the completed rollback child is rejected with `EROLLBACKCONSUMED`. Semantically inconsistent persisted rollback metadata is rejected with `EDEBUGROLLBACKBINDING`. If drift blocks rollback, no child Receipt is written that could falsely claim restoration.
 
 `.codex-debug` is excluded from the workspace-code freshness fingerprint because it is product-private state; append-only session and snapshot files remain independently integrity-bound by their own digests.
 
@@ -211,7 +217,7 @@ Codex Debug Safe never commits, pushes, merges, opens PRs/MRs, retries pipelines
 - Check Debug Environment
 - Show Debug Output
 
-Workspace trust is mandatory. Historical execution and rollback/apply mutation surfaces require explicit user actions. Android/kernel symbol-file selection is currently exposed by the CLI engine; richer VS Code platform-symbol pickers remain development work rather than an implied capability.
+Workspace trust is mandatory. Historical execution and rollback/apply mutation surfaces require explicit user actions. Successful VS Code rollback retains the new receipt-bound child as the current result instead of discarding the operation lineage. Android/kernel symbol-file selection is currently exposed by the CLI engine; richer VS Code platform-symbol pickers remain development work rather than an implied capability.
 
 ## Token and evidence efficiency
 

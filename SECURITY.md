@@ -19,6 +19,9 @@ Every failure input may be attacker controlled: logs, source snippets, commit su
 - Applying a persisted patch requires the current workspace content-state fingerprint to match the evidence-time state; stale model patches fail closed.
 - Applied paths are privately snapshotted before mutation. Symlink/junction parents, symlink targets, non-regular files and hard-linked files are rejected.
 - Rollback verifies every current target still equals its recorded post-patch identity before staging any restore. User edits after apply cause refusal instead of overwrite.
+- Successful rollback is itself append-only state: it creates a new child session and new Debug Receipt rather than mutating the applied/verified parent.
+- A completed rollback child cannot retain `verified` or `applied-unverified`; it returns to `proposed` because the current workspace no longer contains the applied fix.
+- Rollback patch/verification/lineage facts are cross-bound and validated; a rollback child cannot consume the same snapshot again (`EROLLBACKCONSUMED`).
 - `.codex-debug` product-private state is excluded from the user-code freshness fingerprint, but session/snapshot files have separate integrity digests and path hardening.
 - Sessions are append-only: an existing session ID is never overwritten. Session IDs include random entropy, and session directories/files reject symlink/hardlink aliasing.
 - Debug Receipts self-digest metadata and bind evidence, investigation, ledger, verification, patch state and lineage. Receipts are integrity records, not signatures from a remote trust authority.
@@ -118,11 +121,7 @@ Fail-closed states are explicit:
 
 No `nm`/`addr2line` resolution is allowed before BuildId equality. The model cannot provide tool arguments. Host symbol-tool allowlists deliberately exclude embedded cross tools. Retained evidence stores local module basename, size and SHA-256 digest, not its absolute host path.
 
-The executable Linux gate builds a real ET_REL `.ko`-style file via `cc -g -O0 -c` plus `ld -r --build-id=sha1`, then requires production `readelf → nm → function+offset → addr2line → workspace source` resolution. The same fixture proves wrong BuildId and missing logged BuildId remain unresolved. This fixture runs on Linux rather than being replaced by a mock parser case.
-
-This closes the same-name/wrong-module false-precision class for identity-bearing logs. It does **not** yet claim broad coverage for compressed `.ko.xz/.ko.zst`, stripped modules, split debug info, LTO layouts or every architecture/toolchain.
-
-Native ELF/debugger tools are themselves parser attack surfaces. Treat hostile core/ELF/symbol inputs with an appropriate container/runner trust boundary when provenance is uncertain.
+The executable Linux gate builds a real ET_REL `.ko`-style file via `cc -g -O0 -c` plus `ld -r --build-id=sha1`, then requires production `readelf → nm → function+offset → addr2line → workspace source` resolution. The same fixture proves wrong BuildId and missing logged BuildId remain unresolved.
 
 ## Historical execution warning
 
@@ -130,11 +129,17 @@ Native ELF/debugger tools are themselves parser attack surfaces. Treat hostile c
 
 This is still **not an OS sandbox**. Historical code can execute with the current process identity and access resources not removed by the environment policy. Use a disposable runner/container when repository history is not fully trusted.
 
-## Patch snapshot and rollback safety
+## Patch snapshot and receipt-bound rollback safety
 
 `--apply-session` and the VS Code Apply command snapshot only validated patch paths. The snapshot records original bytes plus expected post-apply identity. `--rollback-session` restores only if every target still matches the expected post-patch identity.
 
 Rollback rejects path traversal, internal product state, symlink/junction traversal, symlink targets, non-regular targets and hard-linked files. Restore bytes are staged before mutation. A partial restore caused by an external race/filesystem failure is reported explicitly.
+
+A successful rollback creates a **new child session**. The parent applied/verified session is immutable. `lineage.rollback` contains the operation kind, snapshot id, exact restored paths, rollback digest and before/after workspace state fingerprints; this is covered by `lineageDigest`. The child patch state records `applied=false`, `rolledBack=true`, snapshot/digest/paths and is covered by `patchStateDigest`. Verification records the same rollback snapshot/digest/after-state and is covered by `verificationDigest`.
+
+Stored-session validation cross-checks those domains, so a locally recomputed but semantically inconsistent rollback record is rejected with `EDEBUGROLLBACKBINDING`. A completed rollback cannot retain `verified` or `applied-unverified`, and a rollback child cannot consume the old snapshot again (`EROLLBACKCONSUMED`). Drift refusal occurs before session creation, so a failed rollback cannot leave a receipt that falsely claims restoration.
+
+The executable E2E proves `proposed → applied-unverified → verified → rollback child(proposed)`, persisted child Receipt validation, parent-fingerprint binding, rollback metadata tamper detection, duplicate-snapshot refusal, and the existing post-apply drift refusal.
 
 ## Session and evidence privacy
 
@@ -149,7 +154,7 @@ The development CI produces a **Consumer Evidence artifact**, not a release. It 
 - checkout mtimes are normalized to the validated commit epoch before VSIX creation;
 - exact `@vscode/vsce@3.9.2` packages the same source twice and CI requires byte-identical SHA-256 values;
 - VSIX contents are inspected for required runtime files and forbidden development/private surfaces;
-- Safe Core generates `CONSUMER_CI_RECEIPT.json`, binding the exact validated CI SHA, Core gitlink/version/runtime/governance digests, Node contract and declared completed suites including `kernel-kaslr` and `kernel-module-buildid`;
+- Safe Core generates `CONSUMER_CI_RECEIPT.json`, binding the exact validated CI SHA, Core gitlink/version/runtime/governance digests, Node contract and declared completed suites including `kernel-kaslr`, `kernel-module-buildid` and `rollback-receipt-lineage`;
 - SHA-256 checksums cover the VSIX and Receipt;
 - files are uploaded only as a short-retention GitHub Actions artifact; this is **not** an immutable release or signed publication.
 
@@ -157,7 +162,7 @@ The reproducibility proof is scoped to the normalized CI checkout and exact VSCE
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Deterministic/adversarial gates plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF, non-zero-KASLR System.map/Oops and BuildId-bound relocatable kernel-module fixtures are proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel/module corpora, explicit model canary, and the final Family active/release chain.
+The current baseline is not yet an `active` Family release. Deterministic/adversarial gates plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF, non-zero-KASLR System.map/Oops, BuildId-bound relocatable kernel-module and receipt-bound rollback-lineage fixtures are proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel/module corpora, explicit model canary, and the final Family active/release chain.
 
 ## Reporting vulnerabilities
 

@@ -66,9 +66,11 @@ A successful before/after reproduction can prove that a workspace change resolve
 
 Fix states are `unresolved`, `diagnosed`, `proposed`, `applied-unverified`, `verified`, and `regressed`. `verified` requires an observed reproducible failing baseline, an independently observed workspace mutation, and every bounded post-change run passing. `passed-unbound` is not a fix status. Runtime verification separately records `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or `unbound` failure transition.
 
+Rollback is an operation, not another fix state. When an applied or verified patch is successfully rolled back, the new child session returns to `proposed`: the causal patch proposal remains known, but the current workspace no longer contains the applied fix. A rollback child is therefore forbidden from retaining `verified` or `applied-unverified`.
+
 Safe Bisect is deliberately narrow: it proves a failure transition across a bounded **first-parent** path for one explicit reproduction command. It does not prove an exact faulty line or mechanism.
 
-## Workspace freshness, patch transaction and rollback
+## Workspace freshness and patch transaction
 
 Git context uses `git status --porcelain=v1 -z` so spaces, Unicode and rename records are interpreted without C-style quoting ambiguity. The state fingerprint binds HEAD plus changed path identities/content. Product-private `.codex-debug` state is excluded from this user-code observation domain.
 
@@ -92,13 +94,39 @@ git apply
 record exact post-state identity
 ```
 
-Rollback verifies **all** targets still match the recorded post-state before restoring anything. User drift causes refusal. A filesystem race that causes partial restoration is explicitly reported rather than hidden.
+## Receipt-bound rollback operation
+
+Rollback first verifies **all** targets still match the snapshot's recorded post-patch identity. Any user drift causes refusal before restoration, and no rollback child session is written. Restore bytes are staged privately before mutation. Filesystem races that still produce a partial restore are surfaced explicitly rather than hidden.
+
+A successful rollback is then persisted as a new append-only child session rather than returned as an unrecorded transient result. The child binds:
+
+```text
+parent session id + parent Debug fingerprint
+  ↓
+exact snapshot id + restored paths
+  ↓
+rollback digest
+  ↓
+workspace state fingerprint before rollback
+  ↓
+workspace state fingerprint after rollback
+  ↓
+patch state: applied=false, rolledBack=true
+  ↓
+verification-side rollback observation
+  ↓
+lineage / patch-state / verification digests
+  ↓
+new Debug Receipt + new random session id
+```
+
+The complete operation object lives under `lineage.rollback`, so it is covered by the existing Receipt `lineageDigest`; equivalent rollback facts are cross-bound through `patchStateDigest` and `verificationDigest`. Stored-session validation checks those three domains agree. Reusing a rollback child as another rollback source is rejected with `EROLLBACKCONSUMED`. The restored child may later be used as a fresh proposal source for a new apply transaction, which creates a new snapshot rather than consuming the old rollback again.
 
 ## Session and Debug Receipt lineage
 
 Sessions live under `<git-root>/.codex-debug/sessions/` and are append-only. Session IDs include random entropy; duplicate IDs are never silently overwritten. Session directories/files reject symlink/junction/hardlink aliasing.
 
-A Debug Receipt binds evidence, investigation, hypothesis ledger, verification, patch state and parent lineage and self-digests its metadata. Resume/apply operations create child sessions with `parentSessionId` and `parentDebugFingerprint`; they do not mutate the parent. Local digests detect stale/accidental mutation but are not remote signatures. Persisted patches remain apply-eligible only when deterministic business rules still show `rootCauseAssessment=supported` and `patchDisposition=accept`.
+A Debug Receipt binds evidence, investigation, hypothesis ledger, verification, patch state and parent lineage and self-digests its metadata. Resume, apply and rollback operations create child sessions with `parentSessionId` and `parentDebugFingerprint`; they do not mutate the parent. Local digests detect stale/accidental mutation but are not remote signatures. Persisted patches remain apply-eligible only when deterministic business rules still show `rootCauseAssessment=supported` and `patchDisposition=accept`.
 
 ## Debugger and embedded symbol boundaries
 
@@ -179,7 +207,7 @@ Safe Core Consumer CI Receipt
   ├─ exact CI source SHA
   ├─ Core gitlink + version + runtime/governance digests
   ├─ Node support contract
-  └─ completed suite lineage, including kernel-kaslr and kernel-module-buildid
+  └─ completed suite lineage, including kernel-kaslr, kernel-module-buildid and rollback-receipt-lineage
   ↓
 SHA256SUMS
   ↓

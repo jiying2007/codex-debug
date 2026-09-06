@@ -28,7 +28,7 @@ Codex Debug Safe 是 Codex Safe 产品族中的**证据驱动工作区 Debug、�
 - 多轮 reproduction / verification 统计以及 failure-transition 分类；
 - 每个候选独立 clone 的 **first-parent** Safe Bisect，并且必须显式允许 historical execution；
 - append-only、证据绑定的 session + self-digested Debug Receipt lineage；
-- drift-safe patch snapshot 与 rollback；
+- drift-safe patch snapshot，以及**带独立 Receipt 的 rollback child session**；
 - 真实 executable fix-quality 门禁，要求 false verification / regression escape / failure replacement escape 为 0；
 - 可复现 development VSIX + Safe Core Consumer CI Receipt artifact；
 - CLI 与 VS Code 共用同一引擎。
@@ -73,6 +73,8 @@ verifier 接受的 patch                    仍然 inert
 因此“给一个 crash.log，再跑一个无关绿色测试”最多只是 `passed-unbound`。Runtime verification 还会记录 failure transition：`resolved`、`same-failure`、`different-failure`、`mixed-failure` 或 unbound。
 
 **修复进入 `verified` 并不自动等于根因 hypothesis 被确认。** `verified` 只证明工作区发生变化后，原先可重复的 failure 在绑定的验证中消失；只有已经被因果 verifier 标成 `supported` 的 hypothesis，才能在后续 runtime verification 成功后升级成 `confirmed`。
+
+Rollback 是一次操作，不新增 fix status。如果 patch 已经是 `verified`，随后又执行成功 rollback，新 child 必须回到 `proposed`：patch 的因果提案仍然存在，但当前 workspace 已不再包含已验证修复。完成 rollback 的 child 不能继续保留 `verified` 或 `applied-unverified`。
 
 ## 常用 CLI
 
@@ -161,7 +163,11 @@ codex-debug --apply-session dbg-0123456789abcdef
 codex-debug --rollback-session dbg-fedcba9876543210
 ```
 
-`--apply-session` 必须先证明当前 workspace 内容状态仍与 evidence-time fingerprint 一致，并重新检查 stored patch 仍然满足 causal verifier 的 `supported + accept`，然后才通过 patch check 并在 `.codex-debug/snapshots/` 建立私有有界快照。`--rollback-session` 只恢复记录过的 patch paths；如果其中任一文件在 apply 后又被修改，会直接拒绝 rollback，绝不覆盖用户后续修改。
+`--apply-session` 必须先证明当前 workspace 内容状态仍与 evidence-time fingerprint 一致，并重新检查 stored patch 仍然满足 causal verifier 的 `supported + accept`，然后才通过 patch check 并在 `.codex-debug/snapshots/` 建立私有有界快照。
+
+`--rollback-session` 只恢复记录过的 patch paths；如果其中任一文件在 apply 后又被修改，会直接拒绝 rollback，绝不覆盖用户后续修改。成功 rollback **不会修改原 applied/verified session**，而是创建新的 append-only child session、新随机 session id 和新 Debug Receipt。child 会把 parent session/fingerprint、精确 snapshot id、恢复路径、rollback digest、rollback 前后 workspace state fingerprint、`patch.applied=false`、`patch.rolledBack=true` 以及 verification 中的 rollback observation 一起绑定到现有 lineage / patch-state / verification digest 中。CLI 返回这个新 child 的 session id 和 Receipt。
+
+即使 parent 已是 `verified`，rollback child 也必须回到 `proposed`。再次拿已完成 rollback 的 child 消费原 snapshot 会返回 `EROLLBACKCONSUMED`；持久化 rollback 元数据即使各自被重新计算，但彼此语义不一致，也会因 `EDEBUGROLLBACKBINDING` 被拒绝。如果 drift 导致 rollback 失败，则不会写入一个错误宣称“已经恢复”的 child Receipt。
 
 ## Patch 门禁
 
@@ -173,7 +179,7 @@ Codex Debug Safe 永远不会自动 commit、push、merge、创建 PR/MR、retry
 
 当前命令包括：Debug Selected Failure Evidence、Debug Failure Log File、Debug Core Dump、Debug Embedded Fault、Debug Reproduction Command、Run Safe Bisect、Apply Last Proposed Patch、**Rollback Last Applied Patch**、Verify Last Fix、Resume Debug Session and Verify、Show Debug Session、Check Debug Environment、Show Debug Output。
 
-Workspace trust 必须启用；historical execution、apply、rollback 都需要显式用户动作。Android/kernel 符号文件当前先通过 CLI 暴露；更完整的 VS Code platform-symbol picker 仍属于 development 工作，不会在文档中提前宣称完成。
+Workspace trust 必须启用；historical execution、apply、rollback 都需要显式用户动作。成功 rollback 后，VS Code 会保留新的 receipt-bound child 作为当前结果，而不是丢弃这次操作 lineage。Android/kernel 符号文件当前先通过 CLI 暴露；更完整的 VS Code platform-symbol picker 仍属于 development 工作，不会在文档中提前宣称完成。
 
 ## Token / Evidence 效率
 

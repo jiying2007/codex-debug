@@ -12,14 +12,16 @@ for(const flag of ['--core','--executable','--elf','--map','--addr2line','--bise
   assert.ok(en.includes(flag),`README missing ${flag}`);
   assert.ok(zh.includes(flag),`README.zh-CN missing ${flag}`);
 }
-for(const term of ['passed-unbound','first-parent','development','failure transition','patch snapshots','verified fix does not by itself confirm a root-cause hypothesis','arm-none-eabi-addr2line','kaslr-unproven','EKASLRMISMATCH','module-build-id-required','module-build-id-mismatch']){
+for(const term of ['passed-unbound','first-parent','development','failure transition','patch snapshots','verified fix does not by itself confirm a root-cause hypothesis','arm-none-eabi-addr2line','kaslr-unproven','EKASLRMISMATCH','module-build-id-required','module-build-id-mismatch','receipt-bound rollback child','EROLLBACKCONSUMED','EDEBUGROLLBACKBINDING']){
   assert.ok(en.toLowerCase().includes(term.toLowerCase()),`README missing ${term}`);
 }
-assert.ok(zh.includes('修复进入 `verified` 并不自动等于根因 hypothesis 被确认'),'README.zh-CN missing verified-vs-causal distinction');
-for(const term of ['development Family consumer','first-parent','workspace freshness','Debug Receipt','append-only','fresh temporary clone','PC/LR -> map/ELF symbol','Development Consumer Evidence pipeline','Consumer CI Receipt','KASLR slide','kaslr-unproven','EKASLRMISMATCH','two independent identity domains','logged BuildId','kernel-module-buildid']){
+for(const term of ['修复进入 `verified` 并不自动等于根因 hypothesis 被确认','rollback child','EROLLBACKCONSUMED','EDEBUGROLLBACKBINDING']){
+  assert.ok(zh.includes(term),`README.zh-CN missing ${term}`);
+}
+for(const term of ['development Family consumer','first-parent','workspace freshness','Debug Receipt','append-only','fresh temporary clone','PC/LR -> map/ELF symbol','Development Consumer Evidence pipeline','Consumer CI Receipt','KASLR slide','kaslr-unproven','EKASLRMISMATCH','two independent identity domains','logged BuildId','kernel-module-buildid','Receipt-bound rollback operation','rollback-receipt-lineage','EROLLBACKCONSUMED']){
   assert.ok(arch.toLowerCase().includes(term.toLowerCase()),`ARCHITECTURE missing ${term}`);
 }
-for(const term of ['debuginfod','Historical execution','not an OS sandbox','successful unbound','hard-linked','append-only','credential-like environment variables','self-digest','Embedded ELF / map symbolization hardening','Development Consumer Evidence','@vscode/vsce@3.9.2','contents: read','Kernel System.map / KASLR hardening','kaslr-unproven','EKASLRMISMATCH','Kernel module BuildId hardening','module-build-id-required','module-build-id-mismatch','kernel-module-buildid']){
+for(const term of ['debuginfod','Historical execution','not an OS sandbox','successful unbound','hard-linked','append-only','credential-like environment variables','self-digest','Embedded ELF / map symbolization hardening','Development Consumer Evidence','@vscode/vsce@3.9.2','contents: read','Kernel System.map / KASLR hardening','kaslr-unproven','EKASLRMISMATCH','Kernel module BuildId hardening','module-build-id-required','module-build-id-mismatch','kernel-module-buildid','receipt-bound rollback safety','EDEBUGROLLBACKBINDING','EROLLBACKCONSUMED','rollback-receipt-lineage']){
   assert.ok(security.toLowerCase().includes(term.toLowerCase()),`SECURITY missing ${term}`);
 }
 assert.match(roadmap,/\[x\].*Safe Bisect/);
@@ -32,9 +34,11 @@ assert.match(roadmap,/\[x\].*KASLR-aware base-kernel symbolization/);
 assert.match(roadmap,/\[x\].*non-zero-KASLR Oops\/System\.map fixture/);
 assert.match(roadmap,/\[x\].*kernel module.*BuildId/i);
 assert.match(roadmap,/\[x\].*relocatable.*\.ko/i);
+assert.match(roadmap,/\[x\].*rollback operations persist as append-only child sessions/i);
+assert.match(roadmap,/\[x\].*rollback lineage E2E.*verified.*rollback child\(proposed\)/i);
 assert.doesNotMatch(roadmap,/\[ \].*reproducible VSIX build plus Consumer CI Receipt/);
 assert.doesNotMatch(roadmap,/\[ \].*verified-fix rate and regression-escape metric/);
 assert.doesNotMatch(roadmap,/\[ \].*KASLR-aware kernel symbol/);
 assert.doesNotMatch(roadmap,/\[ \].*kernel module-specific map\/ELF identity handling/);
 assert.match(roadmap,/\[ \].*recorded live-model RCA corpus/);
-process.stdout.write(JSON.stringify({lifecycle:contract.lifecycle,docs:['README.md','README.zh-CN.md','ARCHITECTURE.md','SECURITY.md','ROADMAP.md'],status:'current',consumerEvidence:true,executableFixQuality:true,kernelKaslr:true,kernelModuleBuildId:true})+'\n');
+process.stdout.write(JSON.stringify({lifecycle:contract.lifecycle,docs:['README.md','README.zh-CN.md','ARCHITECTURE.md','SECURITY.md','ROADMAP.md'],status:'current',consumerEvidence:true,executableFixQuality:true,kernelKaslr:true,kernelModuleBuildId:true,rollbackReceiptLineage:true})+'\n');
