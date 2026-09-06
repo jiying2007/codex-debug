@@ -6,7 +6,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {stableDigest}=require('./model-evaluation');
 
-const VERSION=1;
+const VERSION=2;
+const PROJECTION_VERSION=1;
 const SHA40=/^[0-9a-f]{40}$/;
 const HEX64=/^[0-9a-f]{64}$/;
 const REPO=/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.git$/;
@@ -17,6 +18,25 @@ const PATCH_POLICIES=new Set(['required','optional','forbidden']);
 
 function safeRel(value){const p=String(value||'').replace(/\\/g,'/');return Boolean(p)&&!p.startsWith('/')&&!p.split('/').includes('..')&&!p.startsWith('.git/')&&!p.startsWith('.codex-debug/');}
 function validatePolicy(policy={}){for(const key of ['minimumCases','minimumRepositories','minimumFailureKinds','minimumInsufficientCases'])assert.ok(Number.isInteger(policy[key])&&policy[key]>=1&&policy[key]<=1000,`invalid promotion policy ${key}`);return policy;}
+function validateExpected(expected,id){assert.ok(ASSESSMENTS.has(expected.assessment),`invalid expected assessment for ${id}`);assert.ok(PATCH_POLICIES.has(expected.patchPolicy),`invalid patch policy for ${id}`);assert.ok(Array.isArray(expected.rootCauseTerms),`rootCauseTerms must be an array for ${id}`);}
+function validateInsufficientVariant(item,ids){
+  const variant=item.insufficientVariant;
+  if(variant===undefined)return;
+  assert.deepEqual(Object.keys(variant).sort(),['evidenceProjection','evidenceProjectionDigest','expectationDigest','expected','id'],`insufficient variant surface must remain fixed for ${item.id}`);
+  assert.match(String(variant.id||''),/^[a-z0-9][a-z0-9._-]{2,79}$/,'invalid insufficient variant id');
+  assert.ok(!ids.has(variant.id),`duplicate promotion/evaluation case ${variant.id}`);ids.add(variant.id);
+  const expected=variant.expected||{};validateExpected(expected,variant.id);
+  assert.equal(expected.assessment,'insufficient',`insufficient variant ${variant.id} must expect insufficient assessment`);
+  assert.equal(expected.patchPolicy,'forbidden',`insufficient variant ${variant.id} must forbid patches`);
+  assert.deepEqual(expected.rootCauseTerms,[],`insufficient variant ${variant.id} must not disclose root-cause terms`);
+  assert.equal(variant.expectationDigest,stableDigest(expected),`expectation digest mismatch for ${variant.id}`);
+  const projection=variant.evidenceProjection||{};
+  assert.deepEqual(Object.keys(projection).sort(),['mode','version'],`insufficient variant ${variant.id} projection surface must remain fixed`);
+  assert.equal(projection.version,PROJECTION_VERSION,`insufficient variant ${variant.id} projection version mismatch`);
+  assert.equal(projection.mode,'summary-only',`insufficient variant ${variant.id} must use summary-only projection`);
+  assert.match(String(variant.evidenceProjectionDigest||''),HEX64,`invalid evidenceProjectionDigest for ${variant.id}`);
+  assert.equal(variant.evidenceProjectionDigest,stableDigest(projection),`evidence projection digest mismatch for ${variant.id}`);
+}
 function validatePromotionCorpus(corpus){
   assert.equal(corpus?.schemaVersion,VERSION,'promotion corpus schema mismatch');
   assert.equal(corpus?.kind,'codex-debug-promotion-corpus','promotion corpus kind mismatch');
@@ -28,7 +48,7 @@ function validatePromotionCorpus(corpus){
   for(const item of corpus.cases){
     assert.match(String(item.id||''),/^[a-z0-9][a-z0-9._-]{2,119}$/,'invalid promotion case id');
     assert.ok(!ids.has(item.id),`duplicate promotion case ${item.id}`);ids.add(item.id);
-    assert.equal(item.mode,'historical-observed',`promotion case ${item.id} must be historical-observed`);
+    assert.equal(item.mode,'historical-observed',`promotion case ${item.id} must be a unique reviewed historical-observed transition`);
     assert.equal(item.relation,'direct-parent-fix',`promotion case ${item.id} must bind a direct-parent fix`);
     assert.match(String(item.repository||''),REPO,`promotion case ${item.id} must use a reviewed public GitHub repository URL`);
     assert.match(String(item.anchorRef||''),ANCHOR,`promotion case ${item.id} requires a reviewed fetch anchor`);
@@ -45,10 +65,8 @@ function validatePromotionCorpus(corpus){
     assert.ok(String(repro.command||'').length>=1&&String(repro.command).length<=1000&&!/[\0\r\n]/.test(repro.command),`invalid reproduction command for ${item.id}`);
     assert.ok(Number.isInteger(repro.runs)&&repro.runs>=1&&repro.runs<=5,`invalid reproduction runs for ${item.id}`);
     assert.ok(Number.isInteger(repro.timeoutMs)&&repro.timeoutMs>=1000&&repro.timeoutMs<=600000,`invalid reproduction timeout for ${item.id}`);
-    const expected=item.expected||{};
-    assert.ok(ASSESSMENTS.has(expected.assessment),`invalid expected assessment for ${item.id}`);
-    assert.ok(PATCH_POLICIES.has(expected.patchPolicy),`invalid patch policy for ${item.id}`);
-    assert.ok(Array.isArray(expected.rootCauseTerms),`rootCauseTerms must be an array for ${item.id}`);
+    const expected=item.expected||{};validateExpected(expected,item.id);
+    assert.notEqual(expected.assessment,'insufficient',`reviewed transition ${item.id} cannot use insufficient as its full-evidence expectation`);
     assert.equal(item.expectationDigest,stableDigest(expected),`expectation digest mismatch for ${item.id}`);
     const truth=item.groundTruth||{};
     assert.equal(truth.type,'fix-commit',`ground truth for ${item.id} must be fix-commit`);
@@ -58,6 +76,7 @@ function validatePromotionCorpus(corpus){
     assert.ok(String(truth.summary||'').length>=20&&String(truth.summary).length<=2000,`ground-truth summary required for ${item.id}`);
     assert.match(String(item.groundTruthDigest||''),HEX64,`invalid groundTruthDigest for ${item.id}`);
     assert.equal(item.groundTruthDigest,stableDigest(truth),`ground-truth digest mismatch for ${item.id}`);
+    validateInsufficientVariant(item,ids);
   }
   const readiness=promotionReadiness(corpus);
   if(corpus.promotionEligible)assert.equal(readiness.ready,true,`promotionEligible cannot be true: ${readiness.gaps.join('; ')}`);
@@ -67,7 +86,7 @@ function promotionReadiness(corpus){
   const policy=corpus.policy||{},cases=Array.isArray(corpus.cases)?corpus.cases:[];
   const repositories=new Set(cases.map(x=>x.repository));
   const kinds=new Set(cases.map(x=>x.failureKind));
-  const insufficient=cases.filter(x=>x.expected?.assessment==='insufficient').length;
+  const insufficient=cases.filter(x=>x.insufficientVariant).length;
   const gaps=[];
   if(cases.length<policy.minimumCases)gaps.push(`cases ${cases.length}/${policy.minimumCases}`);
   if(repositories.size<policy.minimumRepositories)gaps.push(`repositories ${repositories.size}/${policy.minimumRepositories}`);
@@ -75,7 +94,13 @@ function promotionReadiness(corpus){
   if(insufficient<policy.minimumInsufficientCases)gaps.push(`insufficientCases ${insufficient}/${policy.minimumInsufficientCases}`);
   return Object.freeze({ready:gaps.length===0,cases:cases.length,repositories:repositories.size,failureKinds:kinds.size,insufficientCases:insufficient,gaps});
 }
-function toEvaluationCorpus(corpus){validatePromotionCorpus(corpus);return Object.freeze({schemaVersion:1,kind:'codex-debug-model-eval-corpus',promotionEligible:Boolean(corpus.promotionEligible&&promotionReadiness(corpus).ready),provenance:`promotion:${corpus.provenance}`,cases:corpus.cases.map(item=>({id:item.id,expected:item.expected,expectationDigest:item.expectationDigest}))});}
-function main(){const file=process.argv[2]||path.join(__dirname,'..','quality','promotion-corpus.json'),corpus=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'));validatePromotionCorpus(corpus);const readiness=promotionReadiness(corpus);process.stdout.write(`${JSON.stringify({schemaVersion:VERSION,promotionEligible:corpus.promotionEligible,readyForPromotion:readiness.ready,...readiness,corpusDigest:stableDigest(corpus)})}\n`);}
+function evaluationSpecs(corpus){
+  validatePromotionCorpus(corpus);
+  const out=[];
+  for(const item of corpus.cases){out.push({id:item.id,expected:item.expected,expectationDigest:item.expectationDigest});if(item.insufficientVariant)out.push({id:item.insufficientVariant.id,expected:item.insufficientVariant.expected,expectationDigest:item.insufficientVariant.expectationDigest});}
+  return out;
+}
+function toEvaluationCorpus(corpus){const readiness=promotionReadiness(corpus);return Object.freeze({schemaVersion:1,kind:'codex-debug-model-eval-corpus',promotionEligible:Boolean(corpus.promotionEligible&&readiness.ready),provenance:`promotion:${corpus.provenance}`,cases:evaluationSpecs(corpus)});}
+function main(){const file=process.argv[2]||path.join(__dirname,'..','quality','promotion-corpus.json'),corpus=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'));validatePromotionCorpus(corpus);const readiness=promotionReadiness(corpus);process.stdout.write(`${JSON.stringify({schemaVersion:VERSION,promotionEligible:corpus.promotionEligible,readyForPromotion:readiness.ready,...readiness,evaluationCases:evaluationSpecs(corpus).length,corpusDigest:stableDigest(corpus)})}\n`);}
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={VERSION,validatePromotionCorpus,promotionReadiness,toEvaluationCorpus};
+module.exports={VERSION,PROJECTION_VERSION,validateInsufficientVariant,validatePromotionCorpus,promotionReadiness,evaluationSpecs,toEvaluationCorpus};

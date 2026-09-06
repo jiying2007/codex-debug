@@ -1,0 +1,27 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const corpus=require('../quality/promotion-corpus.json');
+const {stableDigest}=require('../scripts/model-evaluation');
+const {validatePromotionCorpus,promotionReadiness,toEvaluationCorpus}=require('../scripts/promotion-corpus');
+const {projectedEvidence,assertProjectedEvidenceBoundary,observedEvidence}=require('../scripts/promotion-live-eval');
+
+function clone(value){return JSON.parse(JSON.stringify(value));}
+function variant(){const expected={assessment:'insufficient',rootCauseTerms:[],patchPolicy:'forbidden'},evidenceProjection={version:1,mode:'summary-only'};return{id:'projected-insufficient-fixture',expected,expectationDigest:stableDigest(expected),evidenceProjection,evidenceProjectionDigest:stableDigest(evidenceProjection)};}
+function withVariant(){const value=clone(corpus);value.cases[0].insufficientVariant=variant();return value;}
+
+test('promotion corpus v2 attaches insufficient variants without duplicating reviewed transitions',()=>{assert.equal(corpus.schemaVersion,2);validatePromotionCorpus(corpus);const value=withVariant();validatePromotionCorpus(value);const readiness=promotionReadiness(value);assert.equal(readiness.cases,corpus.cases.length);assert.equal(readiness.insufficientCases,1);assert.equal(readiness.ready,false);const evalCorpus=toEvaluationCorpus(value);assert.equal(evalCorpus.cases.length,corpus.cases.length+1);assert.ok(evalCorpus.cases.some(x=>x.id==='projected-insufficient-fixture'));});
+
+test('full reviewed transitions cannot be relabeled insufficient',()=>{const value=clone(corpus),item=value.cases[0];item.expected={assessment:'insufficient',rootCauseTerms:[],patchPolicy:'forbidden'};item.expectationDigest=stableDigest(item.expected);assert.throws(()=>validatePromotionCorpus(value),/cannot use insufficient/);});
+
+test('insufficient variants must forbid patches and root-cause terms',()=>{const patch=withVariant();patch.cases[0].insufficientVariant.expected.patchPolicy='optional';patch.cases[0].insufficientVariant.expectationDigest=stableDigest(patch.cases[0].insufficientVariant.expected);assert.throws(()=>validatePromotionCorpus(patch),/must forbid patches/);const terms=withVariant();terms.cases[0].insufficientVariant.expected.rootCauseTerms=['hidden cause'];terms.cases[0].insufficientVariant.expectationDigest=stableDigest(terms.cases[0].insufficientVariant.expected);assert.throws(()=>validatePromotionCorpus(terms),/must not disclose root-cause terms/);});
+
+test('variant and projection surfaces are fixed and digest-bound',()=>{const extra=withVariant();extra.cases[0].insufficientVariant.custom='x';assert.throws(()=>validatePromotionCorpus(extra),/variant surface must remain fixed/);const projected=withVariant();projected.cases[0].insufficientVariant.evidenceProjection.customText='the answer';projected.cases[0].insufficientVariant.evidenceProjectionDigest=stableDigest(projected.cases[0].insufficientVariant.evidenceProjection);assert.throws(()=>validatePromotionCorpus(projected),/projection surface must remain fixed/);const tampered=withVariant();tampered.cases[0].insufficientVariant.evidenceProjectionDigest='0'.repeat(64);assert.throws(()=>validatePromotionCorpus(tampered),/evidence projection digest mismatch/);});
+
+test('one reviewed transition cannot inflate the 12-case floor by gaining an insufficient variant',()=>{const value=withVariant(),ready=promotionReadiness(value);assert.equal(ready.cases,4);assert.equal(ready.insufficientCases,1);assert.deepEqual(ready.gaps,['cases 4/12','insufficientCases 1/3']);});
+
+test('summary-only projection omits raw output, ids, reviewed fix and ground truth',()=>{const value=withVariant(),item=value.cases[0],observed={summary:{runs:2,failures:2,timeouts:0},representative:{stdout:`RAW_STDOUT ${item.groundTruth.files[0]}`,stderr:`RAW_STDERR ${item.fixedCommit}`}},visible=projectedEvidence(item,observed);assert.equal(visible.sourceType,'historical-projected');assert.equal(visible.includeGitHistory,false);for(const forbidden of ['RAW_STDOUT','RAW_STDERR',item.id,item.insufficientVariant.id,item.fixedCommit,item.groundTruth.summary,...item.groundTruth.files])assert.doesNotMatch(visible.text,new RegExp(String(forbidden).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'));assert.match(visible.text,/Observed runs: 2; failures: 2; timeouts: 0/);assert.doesNotThrow(()=>assertProjectedEvidenceBoundary(item,visible));});
+
+test('projected evidence boundary rejects later leakage or Git-history re-enablement',()=>{const value=withVariant(),item=value.cases[0],observed={summary:{runs:1,failures:1,timeouts:0},representative:{stdout:'',stderr:''}},visible=projectedEvidence(item,observed);assert.throws(()=>assertProjectedEvidenceBoundary(item,{...visible,text:`${visible.text}\n${item.fixedCommit}`}),/leaks reviewed ground truth/);assert.throws(()=>assertProjectedEvidenceBoundary(item,{...visible,includeGitHistory:true}),/must disable Git history/);});
+
+test('observed historical cases retain representative output and Git history',()=>{const item=corpus.cases[0],observed={summary:{runs:1,failures:1,timeouts:0},representative:{stdout:'OBSERVED_STDOUT',stderr:'OBSERVED_STDERR'}},visible=observedEvidence(item,observed);assert.equal(visible.sourceType,'historical-observed');assert.equal(visible.includeGitHistory,true);assert.match(visible.text,/OBSERVED_STDOUT/);assert.match(visible.text,/OBSERVED_STDERR/);});
