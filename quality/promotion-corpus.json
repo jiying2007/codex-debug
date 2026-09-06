@@ -102,6 +102,36 @@
       "expectationDigest": "38179002e0c358eb48fa0ffc0635130605261e5713607df7fb57198b0634eee8",
       "groundTruth": {"type":"fix-commit","commit":"4e7b754b06485a3168a0e12a84cabb24e0e3c3ef","files":["src/http-client.js"],"summary":"SCM HTTP requests did not explicitly reject redirects, so credential-bearing requests could follow an unvalidated 3xx hop; the fix sets fetch redirect mode to error."},
       "groundTruthDigest": "5c31140154d1127a138c4130b31ad9a08f112850a459051310a272176ba297bd"
+    },
+    {
+      "id": "codex-change-scm-stream-limit-20260903",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "anchorRef": "refs/pull/52/head",
+      "badCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
+      "fixedCommit": "128d6668eb3e947e584fc1d660dfcba69c674661",
+      "failureKind": "performance",
+      "reproduction": {"command":"node -e \"(async()=>{const {HttpClient}=require('./src/http-client');let cancelled=false;global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(5*1024*1024),Buffer.alloc(4*1024*1024)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await new HttpClient({baseUrl:'https://api.github.com',token:'',tokenHeader:'Authorization',getRetries:0}).request('GET','/x');process.exit(1)}catch(e){if(e.code!=='ESCMOUTPUT'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["response.text","streaming"],"patchPolicy":"optional"},
+      "expectationDigest": "d9cf65a5e6d3f3afb9f2c50e3e951fb2eed96ba9d24cdf9fde6c8d1c1460e4ac",
+      "groundTruth": {"type":"fix-commit","commit":"128d6668eb3e947e584fc1d660dfcba69c674661","files":["src/http-client.js"],"summary":"The shared SCM HTTP client consumed response.text() without any body limit; the fix added an 8 MiB byte-bounded streaming reader, cancels on overflow, and fails closed with ESCMOUTPUT."},
+      "groundTruthDigest": "1b0816684571728b9cda69bab1b81d2a93a67555332472074be2bb82146c362c"
+    },
+    {
+      "id": "codex-diagnose-notify-stream-limit-20260903",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-diagnose.git",
+      "anchorRef": "refs/pull/23/head",
+      "badCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
+      "fixedCommit": "27f03f79da14be3e3951734247deef3b8361182b",
+      "failureKind": "performance",
+      "reproduction": {"command":"node -e \"(async()=>{const {notifyDiagnosis}=require('./src/notify');let cancelled=false;global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(32768),Buffer.alloc(40000)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await notifyDiagnosis({provider:'feishu',webhookEnv:'HOOK',env:{HOOK:'https://open.feishu.cn/open-apis/bot/v2/hook/test'},diagnosis:{classification:'test',rootCause:'x',confidence:1,retryRecommended:false},evidence:{subject:{jobName:'x'}}});process.exit(1)}catch(e){if(e.code!=='ENOTIFYPROTOCOL'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["response.text","64 KiB"],"patchPolicy":"optional"},
+      "expectationDigest": "eec50e368ee3b0a54777ad73afb9a052642d47513779868605938463c2c1c4a0",
+      "groundTruth": {"type":"fix-commit","commit":"27f03f79da14be3e3951734247deef3b8361182b","files":["src/notify.js"],"summary":"Notification delivery consumed webhook response.text() in full before slicing it for logs; the fix added a 64 KiB byte-bounded streaming reader, cancels on overflow, and fails closed with ENOTIFYPROTOCOL."},
+      "groundTruthDigest": "426df7ad2e465555ace5bd367d31a12ba33ba519b62a67b4693b2e590178a648"
     }
   ]
 }
