@@ -38,6 +38,8 @@ Every promotion case must be code reviewed and must contain:
 
 The materializer fetches only the reviewed anchor, proves both commits exist in that fetched history, proves the fix is a direct child of the bad commit, then requires the exact command to produce a stable failure on the bad commit and zero failures on the fixed commit.
 
+Case ids, `repository+badCommit+fixedCommit` transitions, bad commits and fixed commits are all unique across the reviewed corpus. Repeating one historical fix under another case id cannot increase readiness.
+
 The fix commit and ground-truth summary are **not injected into the model prompt**. They exist only on the evaluator side.
 
 ## Current readiness floor
@@ -49,7 +51,22 @@ The fix commit and ground-truth summary are **not injected into the model prompt
 - 4 failure kinds;
 - 3 insufficient-evidence negatives.
 
-The current development corpus deliberately remains below that floor. Therefore any current historical or live artifact is calibration evidence only and cannot satisfy active-promotion quality requirements.
+The current development corpus has **3 reviewed direct-parent historical transitions across 2 repositories and 3 failure kinds, with 0 insufficient-evidence negatives**. It covers Codex Debug and Safe Core real fixes, including evaluator-record integrity, causal infra-vs-test classification and the shared Actions pin-verifier false-negative. Current readiness is therefore:
+
+- cases: `3/12`;
+- repositories: `2/3`;
+- failure kinds: `3/4`;
+- insufficient-evidence negatives: `0/3`.
+
+The corpus deliberately remains below the floor. Therefore any current historical or live artifact is calibration evidence only and cannot satisfy active-promotion quality requirements.
+
+## Continuous Promotion Provenance
+
+Ordinary pull-request and main CI run a read-only `Promotion Provenance` gate. This gate fetches only reviewed Git refs and inspects Git commit/tree metadata to prove that each bad/fix commit exists in the anchored history, the fix is the direct child of the bad commit, and every declared ground-truth file is actually touched by the reviewed fix.
+
+`Promotion Provenance` **does not checkout or execute historical repository code**, does not run the reproduction command, and does not receive model credentials. Its artifact is provenance evidence only; it is not `Promotion Corpus Qualification` and cannot prove bad-fails/fixed-passes behavior by itself.
+
+Historical execution remains in the separate manual qualification/model-evaluation authority domain described below.
 
 ## Historical execution authority
 
@@ -100,7 +117,9 @@ The following statements are currently allowed:
 - A real-historical promotion harness exists.
 - The corpus readiness floor is enforced.
 - Historical reproduction and model credentials are separated.
-- The first reviewed historical case is bound to a real bad/fix transition in Codex Debug history.
+- Three reviewed direct-parent historical cases are bound to real fixes across Codex Debug and Safe Core.
+- Current reviewed coverage is `3/12` cases, `2/3` repositories, `3/4` failure kinds and `0/3` insufficient-evidence negatives.
+- Continuous CI proves reviewed Git provenance without executing historical code.
 
 The following statements are **not** allowed until corresponding artifacts exist:
 

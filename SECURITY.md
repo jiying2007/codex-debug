@@ -2,7 +2,7 @@
 
 ## Threat model
 
-Every failure input may be attacker controlled: logs, source snippets, commit subjects, filenames, test reports, SARIF/JUnit, core files, ELF images, linker maps, debugger/symbolizer output, platform dumps, performance traces and audio artifacts. Inputs may contain prompt injection, ANSI/control sequences, secrets, malicious paths, malformed binary data, fake tool results, or instructions designed to gain execution authority. Historical repository code is also untrusted when Safe Bisect is used.
+Every failure input may be attacker controlled: logs, source snippets, commit subjects, filenames, test reports, SARIF/JUnit, core files, ELF images, linker maps, debugger/symbolizer output, platform dumps, performance traces and audio artifacts. Inputs may contain prompt injection, ANSI/control sequences, secrets, malicious paths, malformed binary data, fake tool results, or instructions designed to gain execution authority. Historical repository code is also untrusted when Safe Bisect or promotion qualification is used.
 
 ## Invariants
 
@@ -11,7 +11,8 @@ Every failure input may be attacker controlled: logs, source snippets, commit su
 - Raw files and compact model evidence are independently byte bounded; raw core/ELF/map/WAV/performance artifacts are summarized rather than blindly embedded.
 - Model output has no command, debugger/symbolizer, network, patch-apply/rollback, commit, push, merge, release, CI-retry or publication authority.
 - Reproduction and verification commands execute only when explicitly supplied by the caller.
-- Historical execution additionally requires `--allow-historical-execution` or the VS Code modal approval path.
+- Historical execution additionally requires `--allow-historical-execution`, the VS Code modal approval path, or the explicit manual promotion-workflow acknowledgement.
+- Automatic Promotion Provenance is not historical execution: it may fetch reviewed Git refs and inspect commit/tree metadata but must not checkout or execute historical repository code.
 - A persisted patch is usable only when the stored investigation still records `rootCauseAssessment=supported` and `patchDisposition=accept`; a locally recomputable Receipt is never treated as execution authority.
 - Patch paths reject traversal, absolute paths, `.git`, `.codex-debug`, binary patches and `src/codex-safe-core`; rename/copy patches are rejected by the current rollback contract.
 - GitHub workflow/control-plane paths, `.env`/key material and generated/vendor/build/dependency outputs are protected from model patch application by default.
@@ -31,6 +32,28 @@ Every failure input may be attacker controlled: logs, source snippets, commit su
 - VS Code execution surfaces require Workspace Trust.
 - Provider secret values are sourced through environment/auth configuration and are not accepted as CLI secret values.
 - While lifecycle is `development`, CI enforces a publication boundary: no release/publish workflow, `pull_request_target`, write-level contents/packages/id-token permission, npm/vsce/ovsx publish, GitHub release, or Git push surface may appear.
+
+## Promotion provenance versus historical execution
+
+The continuous `Promotion Provenance` CI gate is intentionally lower authority than `Promotion Corpus Qualification`.
+
+Promotion Provenance may:
+
+- fetch only code-reviewed Git refs declared in the promotion corpus;
+- verify exact bad/fix commit objects are reachable from the reviewed anchor;
+- prove the fixed commit is the direct child of the bad commit;
+- inspect the fixed commit's changed-file list and require each declared ground-truth file to be present;
+- emit a self-digested short-retention provenance artifact.
+
+Promotion Provenance must **not**:
+
+- checkout a historical bad/fix workspace;
+- execute a historical reproduction command or any repository script from the reviewed history;
+- receive model/API credentials;
+- assert that the bad commit reproduces or that the fixed commit passes;
+- be treated as a live-model or promotion-qualification result.
+
+Actual bad-fails/fixed-passes proof remains in the manual `Promotion Corpus Qualification` authority domain and requires explicit acknowledgement that historical code will execute without an OS sandbox. Promotion model evaluation is a separate manual authority domain again, with protected model credentials available only to the Codex process after controller-side historical evidence has been collected.
 
 ## Core dump / debugger hardening
 
@@ -154,15 +177,15 @@ The development CI produces a **Consumer Evidence artifact**, not a release. It 
 - checkout mtimes are normalized to the validated commit epoch before VSIX creation;
 - exact `@vscode/vsce@3.9.2` packages the same source twice and CI requires byte-identical SHA-256 values;
 - VSIX contents are inspected for required runtime files and forbidden development/private surfaces;
-- Safe Core generates `CONSUMER_CI_RECEIPT.json`, binding the exact validated CI SHA, Core gitlink/version/runtime/governance digests, Node contract and declared completed suites including `kernel-kaslr`, `kernel-module-buildid` and `rollback-receipt-lineage`;
+- Safe Core generates `CONSUMER_CI_RECEIPT.json`, binding the exact validated CI SHA, Core gitlink/version/runtime/governance digests, Node contract and declared completed suites including `kernel-kaslr`, `kernel-module-buildid`, `rollback-receipt-lineage` and `promotion-provenance`;
 - SHA-256 checksums cover the VSIX and Receipt;
-- files are uploaded only as a short-retention GitHub Actions artifact; this is **not** an immutable release or signed publication.
+- files are uploaded only as short-retention GitHub Actions artifacts; this is **not** an immutable release or signed publication.
 
 The reproducibility proof is scoped to the normalized CI checkout and exact VSCE package version used by the gate. Active promotion must still decide whether to freeze the final packaging dependency graph.
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Deterministic/adversarial gates plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF, non-zero-KASLR System.map/Oops, BuildId-bound relocatable kernel-module and receipt-bound rollback-lineage fixtures are proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel/module corpora, explicit model canary, and the final Family active/release chain.
+The current baseline is not yet an `active` Family release. Deterministic/adversarial gates plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF, non-zero-KASLR System.map/Oops, BuildId-bound relocatable kernel-module, receipt-bound rollback-lineage and reviewed promotion-provenance fixtures are proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel/module corpora, explicit model canary, and the final Family active/release chain.
 
 ## Reporting vulnerabilities
 

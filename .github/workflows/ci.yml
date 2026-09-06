@@ -65,9 +65,32 @@ jobs:
       - run: npm audit --audit-level=high
       - run: node src/codex-safe-core/scripts/verify-package-licenses.js .
 
+  promotion-provenance:
+    name: Promotion Provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+      - name: Prove reviewed refs, direct-parent fixes, and ground-truth files without executing historical code
+        run: node scripts/promotion-provenance.js --output promotion-provenance/PROMOTION_PROVENANCE.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-debug-promotion-provenance-${{ github.sha }}
+          path: promotion-provenance/PROMOTION_PROVENANCE.json
+          if-no-files-found: error
+          retention-days: 14
+
   consumer-evidence:
     name: Consumer Evidence
-    needs: [test, security]
+    needs: [test, security, promotion-provenance]
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     permissions:
@@ -116,7 +139,7 @@ jobs:
           CI_RUN_ID: ${{ github.run_id }}
           CI_RUN_ATTEMPT: ${{ github.run_attempt }}
           CI_EVENT: ${{ github.event_name }}
-          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,model-evaluation-contract,promotion-corpus-contract,promotion-transition-e2e,real-native-core,real-cortex-m,android-buildid,kernel-system-map,kernel-kaslr,kernel-module-buildid,rollback-receipt-lineage,package-contract,reproducible-vsix
+          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,model-evaluation-contract,promotion-corpus-contract,promotion-transition-e2e,promotion-provenance,real-native-core,real-cortex-m,android-buildid,kernel-system-map,kernel-kaslr,kernel-module-buildid,rollback-receipt-lineage,package-contract,reproducible-vsix
         shell: bash
         run: |
           set -euo pipefail
@@ -139,7 +162,7 @@ jobs:
   ci-gate:
     name: CI Gate
     if: ${{ always() }}
-    needs: [test, security, consumer-evidence]
+    needs: [test, security, promotion-provenance, consumer-evidence]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:

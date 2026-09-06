@@ -16,11 +16,11 @@ test('reviewed promotion corpus is valid but intentionally not ready',()=>{
   validatePromotionCorpus(corpus);
   const ready=promotionReadiness(corpus);
   assert.equal(ready.ready,false);
-  assert.equal(ready.cases,1);
-  assert.equal(ready.repositories,1);
-  assert.equal(ready.failureKinds,1);
+  assert.equal(ready.cases,3);
+  assert.equal(ready.repositories,2);
+  assert.equal(ready.failureKinds,3);
   assert.equal(ready.insufficientCases,0);
-  assert.deepEqual(ready.gaps,['cases 1/12','repositories 1/3','failureKinds 1/4','insufficientCases 0/3']);
+  assert.deepEqual(ready.gaps,['cases 3/12','repositories 2/3','failureKinds 3/4','insufficientCases 0/3']);
   assert.equal(toEvaluationCorpus(corpus).promotionEligible,false);
 });
 
@@ -34,6 +34,13 @@ test('ground-truth and expectation tampering fail closed',()=>{
   assert.throws(()=>validatePromotionCorpus(changed),/ground-truth digest mismatch/);
   const changed2=clone(corpus);changed2.cases[0].expected.rootCauseTerms=['anything'];
   assert.throws(()=>validatePromotionCorpus(changed2),/expectation digest mismatch/);
+});
+
+test('duplicate reviewed historical transitions cannot inflate readiness',()=>{
+  const changed=clone(corpus),duplicate=clone(corpus.cases[0]);
+  duplicate.id='duplicate-transition-must-fail';
+  changed.cases.push(duplicate);
+  assert.throws(()=>validatePromotionCorpus(changed),/duplicate historical transition|duplicate badCommit|duplicate fixedCommit/);
 });
 
 test('historical execution environment does not inherit model or repository credentials',()=>{

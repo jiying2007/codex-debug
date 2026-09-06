@@ -24,7 +24,7 @@ function validatePromotionCorpus(corpus){
   assert.ok(String(corpus?.provenance||''),'promotion corpus provenance is required');
   validatePolicy(corpus.policy||{});
   assert.ok(Array.isArray(corpus?.cases)&&corpus.cases.length>0,'promotion corpus requires at least one reviewed case');
-  const ids=new Set();
+  const ids=new Set(),transitions=new Set(),badCommits=new Set(),fixedCommits=new Set();
   for(const item of corpus.cases){
     assert.match(String(item.id||''),/^[a-z0-9][a-z0-9._-]{2,119}$/,'invalid promotion case id');
     assert.ok(!ids.has(item.id),`duplicate promotion case ${item.id}`);ids.add(item.id);
@@ -36,6 +36,10 @@ function validatePromotionCorpus(corpus){
     assert.match(String(item.badCommit||''),SHA40,`invalid badCommit for ${item.id}`);
     assert.match(String(item.fixedCommit||''),SHA40,`invalid fixedCommit for ${item.id}`);
     assert.notEqual(item.badCommit,item.fixedCommit,`bad/fixed commits must differ for ${item.id}`);
+    const transitionKey=`${item.repository}\n${item.badCommit}\n${item.fixedCommit}`;
+    assert.ok(!transitions.has(transitionKey),`duplicate historical transition for ${item.id}`);transitions.add(transitionKey);
+    assert.ok(!badCommits.has(item.badCommit),`duplicate badCommit across promotion cases: ${item.badCommit}`);badCommits.add(item.badCommit);
+    assert.ok(!fixedCommits.has(item.fixedCommit),`duplicate fixedCommit across promotion cases: ${item.fixedCommit}`);fixedCommits.add(item.fixedCommit);
     assert.ok(KINDS.has(item.failureKind),`invalid failureKind for ${item.id}`);
     const repro=item.reproduction||{};
     assert.ok(String(repro.command||'').length>=1&&String(repro.command).length<=1000&&!/[\0\r\n]/.test(repro.command),`invalid reproduction command for ${item.id}`);
