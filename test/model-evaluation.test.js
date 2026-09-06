@@ -1,9 +1,13 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
 const corpus=require('../quality/model-eval-contract-corpus.json');
 const record=require('../quality/model-eval-contract-results.json');
 const {stableDigest,validateCorpus,validateRecord,evaluate}=require('../scripts/model-evaluation');
+require('../scripts/model-eval-contract');
+require('../scripts/live-model-eval');
 
 function clone(value){return JSON.parse(JSON.stringify(value));}
 function resign(value){const copy={...value};delete copy.recordDigest;value.recordDigest=stableDigest(copy);return value;}
@@ -48,4 +52,15 @@ test('forbidden accepted or non-applicable patch is counted as false-fix evidenc
   const result=evaluate(corpus,changed);
   assert.equal(result.falseFixCandidates,1);
   assert.equal(result.patchPolicyViolations,1);
+});
+
+test('live model workflow is manual read-only fail-closed evidence, never promotion authority',()=>{
+  const workflow=fs.readFileSync(path.join(__dirname,'..','.github','workflows','live-model-eval.yml'),'utf8');
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/permissions:\s*\n\s+contents:\s*read\b/);
+  assert.match(workflow,/secrets\.OPENAI_API_KEY/);
+  assert.match(workflow,/refusing to claim a live-model evaluation/);
+  assert.match(workflow,/promotionEligible/);
+  assert.match(workflow,/--require-live/);
+  for(const forbidden of [/\bcontents:\s*write\b/i,/\bid-token:\s*write\b/i,/\bnpm\s+publish\b/i,/\bvsce\s+publish\b/i,/\bgh\s+release\b/i,/\bgit\s+push\b/i])assert.doesNotMatch(workflow,forbidden);
 });
