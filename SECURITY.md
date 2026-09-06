@@ -80,17 +80,22 @@ Android tombstone modules may be paired with explicit local symbols using repeat
 
 The Linux CI fixture builds a real DWARF shared object with `--build-id=sha1`, extracts its dynamic symbol address and BuildId using `nm`/`readelf`, synthesizes an Android-format tombstone frame, and proves the production platform symbolizer resolves source only for the matching BuildId. Mismatch and BuildId-missing cases are explicit negative fixtures.
 
-## Kernel System.map hardening
+## Kernel System.map / KASLR hardening
 
-Kernel Oops/panic evidence can be paired with an explicit `--kernel-system-map FILE` input. The resolver is deterministic: it parses bounded `System.map` rows and performs nearest-lower-symbol lookup over preserved 64-bit addresses.
+Kernel Oops/panic evidence can be paired with an explicit `--kernel-system-map FILE` input. `System.map` contains link-time base-kernel addresses, while Oops RIP/PC and call-trace addresses may be KASLR-shifted runtime addresses. Treating those two spaces as identical can yield convincing but wrong symbols, so the resolver now fails closed unless the slide is proven.
 
 - `System.map` must be a bounded regular non-symlink file and its SHA-256 digest is bound into platform evidence;
-- kernel RIP/PC and call-trace addresses are kept as hexadecimal strings, avoiding JavaScript integer precision loss;
-- only non-module frames are resolved through the supplied kernel `System.map`;
-- any frame carrying `[module]` is marked `module-map-required` and remains unresolved, rather than pretending the base-kernel map covers loadable modules;
-- this resolver does not execute `addr2line`, scripts, commands or text found in the log.
+- kernel RIP/PC and call-trace addresses are kept as hexadecimal strings and transformed with `BigInt`, avoiding JavaScript integer precision loss;
+- a deterministic `Kernel Offset: 0x...` record in the supplied log can prove the slide;
+- callers may explicitly provide `--kernel-kaslr-slide 0xHEX`; if both explicit and log-derived slides exist they must be exactly equal, otherwise resolution stops with `EKASLRMISMATCH`;
+- runtime addresses are normalized to link-time addresses only after slide proof; underflow is rejected as `slide-underflow`;
+- when no slide can be proven, non-module frames are `kaslr-unproven` and **no nearest-lower System.map lookup is performed**;
+- a caller that knows KASLR is disabled must explicitly provide `--kernel-kaslr-slide 0x0` unless the log itself proves zero offset;
+- evidence and reports keep `runtimeAddress`, `linkAddress`, `slide` and `slideSource` separate so address-space identity is auditable;
+- any frame carrying `[module]` is still marked `module-map-required`; the base-kernel map is never used to fake loadable-module resolution;
+- this resolver executes no addr2line, scripts, commands or text found in the log.
 
-The current fixture uses real Linux Oops/System.map line formats and verifies 64-bit address offsets plus loadable-module refusal. It is evidence of the deterministic resolver, not a claim of complete KASLR/module/vmlinux support.
+The current real-format fixture uses a non-zero slide: runtime `ffffffff83001024` plus `Kernel Offset: 0x02000000` must normalize to link-time `ffffffff81001024` before `audio_fault_path+0x24` is accepted. Separate negatives cover missing slide proof, explicit/log mismatch and loadable-module refusal. This closes the base-kernel KASLR ambiguity, but does not yet claim module-specific ELF/map identity coverage across arbitrary architectures.
 
 Native ELF/debugger tools are themselves parser attack surfaces. Treat hostile core/ELF/symbol inputs with an appropriate container/runner trust boundary when provenance is uncertain.
 
@@ -127,7 +132,7 @@ The reproducibility proof is scoped to the normalized CI checkout and exact VSCE
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing and platform adapters now have deterministic/adversarial tests plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF and kernel System.map/Oops fixtures. A reproducible development VSIX + Consumer CI Receipt artifact is also proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel corpora, module/KASLR handling, broader executable fix-quality metrics, and the final Family active/release chain.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing and platform adapters now have deterministic/adversarial tests plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF and non-zero-KASLR kernel System.map/Oops fixtures. Reproducible development VSIX + Consumer CI Receipt and executable false-fix/regression-escape gates are also proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel corpora, kernel module-specific identity handling, and the final Family active/release chain.
 
 ## Reporting vulnerabilities
 
