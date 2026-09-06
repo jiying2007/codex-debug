@@ -9,29 +9,30 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] hypothesis ledger where the model cannot self-confirm
 - [x] strict separation between `verified` fix and `confirmed` root-cause hypothesis
 - [x] deterministic false-fix state-machine benchmark for weak baselines, missing mutation and failure replacement
-- [x] source windows, blame/history and causal commit candidates
+- [x] source windows, blame/history and causal commit candidates with symlink/junction escape refusal
 - [x] repeated reproduction statistics, normalized failure signatures and failure-transition classification
 - [x] workspace freshness fingerprint with NUL-delimited Git status parsing and product-private `.codex-debug` exclusion
 - [x] strict `verified` contract requiring reproducible failing baseline + mutation + green post-change runs
 - [x] append-only receipt-bound sessions with random session entropy and parent lineage
 - [x] self-digested Debug Receipt binding evidence/investigation/ledger/verification/patch state/lineage
 - [x] inert unified-diff proposal + Git-native path parsing + deterministic stale-workspace/apply gates
-- [x] persisted patch re-authorization requiring supported causal verification
+- [x] persisted patch re-authorization requiring supported causal verification, covered at the real apply entrypoint
 - [x] protected control-plane/secret/generated/vendor patch paths fail closed by default
 - [x] bounded private patch snapshots + drift-safe rollback + symlink/junction/hardlink rejection
-- [x] GDB/LLDB fixed-command core symbolization with auto-load/network-symbol hardening
+- [x] GDB/LLDB fixed-command core symbolization with auto-load/network-symbol hardening and host-path redaction
 - [x] Cortex-M PC/LR -> bounded linker-map symbol/offset resolution
 - [x] fixed-argv GNU/LLVM embedded addr2line ELF symbolization with safe `file:line` reuse in source/blame/history/test-impact
+- [x] real Linux ELF+DWARF fixture (`cc -g` + `nm` + `addr2line`) validating function/source resolution and path redaction
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority
 - [x] fresh clone per historical candidate + isolated HOME/Git config + common credential-env scrubbing
-- [x] Safe Core test-impact regression-test candidates
+- [x] Safe Core test-impact regression-test candidates with symlink escape refusal
 - [x] SARIF/JUnit/PCM16 WAV/Perfetto summaries
 - [x] Cortex-M fault register, Android tombstone, kernel panic/Oops and RTOS signal parsers
 - [x] deterministic classifier corpus and adversarial prompt/secret/patch/debugger gates
 - [x] deterministic context-byte/compaction efficiency benchmark in CI
 - [x] deterministic workflow action pin gate with non-zero coverage assertion
-- [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch apply/rollback and rollback-drift refusal
-- [x] CLI + VS Code command surfaces including core, bisect, session resume, persisted apply and rollback
+- [x] executable E2E for manual-edit resume verification, Safe Bisect, HardFault map symbolization, patch authorization, patch apply/rollback and rollback-drift refusal
+- [x] CLI + VS Code command surfaces including core, embedded fault, bisect, session resume, persisted apply and rollback
 - [x] package-content contract excluding tests, quality internals, workflows and `.codex-debug` private state
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
