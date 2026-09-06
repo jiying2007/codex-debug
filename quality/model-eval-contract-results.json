@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "kind": "codex-debug-model-evaluation",
+  "source": "contract-fixture",
+  "promotionEligible": false,
+  "recordedAt": "2026-09-06T00:00:00.000Z",
+  "debugCommit": "f31750a0868e278eeb9c7c377dacb087a8e7348c",
+  "coreCommit": "d8ae46fb84787939f6ecf7632ccf8a52b37188fb",
+  "corpusDigest": "d47a7d5c119db0b25787fc481fe92c27cab0f5d63a72d319cfb36aae9820977b",
+  "cases": [
+    {
+      "caseId": "rca-supported-null-config",
+      "evidenceDigest": "ae875ddacaf617561547526aab57630c1bc6f758654f1a5e5b6d6c7fb83fc212",
+      "expectationDigest": "1f7623262d6c38f6d5d4538c735ef40a0df0e8ab9849f78cd7cb510241fd22cd",
+      "judgment": {
+        "rootCauseText": "Observed null config is dereferenced before validation.",
+        "rootCauseDigest": "a9cfcb9ca7c3215e726030b3677644bb3471d3b76f810e96c361738feef6af3c",
+        "causalAssessment": "supported",
+        "patchProposed": true,
+        "patchDisposition": "accept",
+        "patchApplicable": true,
+        "supportedHypotheses": ["config is null before port access"]
+      },
+      "execution": {
+        "hypothesis": {
+          "model": "fixture-hypothesis",
+          "codexVersion": "0.0.0-fixture",
+          "providerMode": "fixture",
+          "runtimeSource": "contract-fixture",
+          "modelEvidenceDigest": "87be6b16fd1e514bd04842a18f4aaf720e8e57dd206d4e6d40906db2f8dbe286",
+          "usage": {"inputTokens":80,"outputTokens":20,"totalTokens":100,"cachedInputTokens":0},
+          "requestEstimate": {"estimatedInputTokens":85,"estimatedOutputTokens":25,"estimatedTotalTokens":110},
+          "durationMs": 10
+        },
+        "causalVerification": {
+          "model": "fixture-verifier",
+          "codexVersion": "0.0.0-fixture",
+          "providerMode": "fixture",
+          "runtimeSource": "contract-fixture",
+          "modelEvidenceDigest": "81b5d2239838a4426ec10faecbe2da5480f0d8affe96c14f60458a52d0b16ba9",
+          "usage": {"inputTokens":55,"outputTokens":10,"totalTokens":65,"cachedInputTokens":0},
+          "requestEstimate": {"estimatedInputTokens":60,"estimatedOutputTokens":15,"estimatedTotalTokens":75},
+          "durationMs": 10
+        }
+      }
+    },
+    {
+      "caseId": "insufficient-external-500",
+      "evidenceDigest": "d34dfb3ef61828394691a04d41177acd15f54d2404716658ed7540ba54741b17",
+      "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+      "judgment": {
+        "rootCauseText": "The supplied evidence only shows an upstream HTTP 500 and does not identify its causal server-side mechanism.",
+        "rootCauseDigest": "8e69bc9678d4197ccdef91605bc73c01374d2c52f84d59fd687b2e9dbfb48e94",
+        "causalAssessment": "insufficient",
+        "patchProposed": false,
+        "patchDisposition": "none",
+        "patchApplicable": null,
+        "supportedHypotheses": []
+      },
+      "execution": {
+        "hypothesis": {
+          "model": "fixture-hypothesis",
+          "codexVersion": "0.0.0-fixture",
+          "providerMode": "fixture",
+          "runtimeSource": "contract-fixture",
+          "modelEvidenceDigest": "87be6b16fd1e514bd04842a18f4aaf720e8e57dd206d4e6d40906db2f8dbe286",
+          "usage": {"inputTokens":60,"outputTokens":15,"totalTokens":75,"cachedInputTokens":0},
+          "requestEstimate": {"estimatedInputTokens":65,"estimatedOutputTokens":20,"estimatedTotalTokens":85},
+          "durationMs": 10
+        },
+        "causalVerification": {
+          "model": "fixture-verifier",
+          "codexVersion": "0.0.0-fixture",
+          "providerMode": "fixture",
+          "runtimeSource": "contract-fixture",
+          "modelEvidenceDigest": "81b5d2239838a4426ec10faecbe2da5480f0d8affe96c14f60458a52d0b16ba9",
+          "usage": {"inputTokens":45,"outputTokens":8,"totalTokens":53,"cachedInputTokens":0},
+          "requestEstimate": {"estimatedInputTokens":50,"estimatedOutputTokens":13,"estimatedTotalTokens":63},
+          "durationMs": 10
+        }
+      }
+    },
+    {
+      "caseId": "rca-supported-reference-error",
+      "evidenceDigest": "59e164b7511dc152a1f59e7dc375baca489b3b7d5df9c4fb8d468eb5a6c3c817",
+      "expectationDigest": "32604afdb2371a51322c3ba038e4625328cfa385e3fe3314d6e46c9e6a622a8f",
+      "judgment": {
+        "rootCauseText": "retry_count is not defined; code uses retry_count instead of the in-scope retryCount parameter.",
+        "rootCauseDigest": "7df51a08ace355736ac999625b79ac42dbcfc911cf609ad7753ed1534ec1691b",
+        "causalAssessment": "supported",
+        "patchProposed": true,
+        "patchDisposition": "accept",
+        "patchApplicable": true,
+        "supportedHypotheses": ["retry_count is not defined at the observed source line"]
+      },
+      "execution": {
+        "hypothesis": {
+          "model": "fixture-hypothesis",
+          "codexVersion": "0.0.0-fixture",
+          "providerMode": "fixture",
+          "runtimeSource": "contract-fixture",
+          "modelEvidenceDigest": "87be6b16fd1e514bd04842a18f4aaf720e8e57dd206d4e6d40906db2f8dbe286",
+          "usage": {"inputTokens":90,"outputTokens":22,"totalTokens":112,"cachedInputTokens":0},
+          "requestEstimate": {"estimatedInputTokens":95,"estimatedOutputTokens":27,"estimatedTotalTokens":122},
+          "durationMs": 10
+        },
+        "causalVerification": {
+          "model": "fixture-verifier",
+          "codexVersion": "0.0.0-fixture",
+          "providerMode": "fixture",
+          "runtimeSource": "contract-fixture",
+          "modelEvidenceDigest": "81b5d2239838a4426ec10faecbe2da5480f0d8affe96c14f60458a52d0b16ba9",
+          "usage": {"inputTokens":60,"outputTokens":12,"totalTokens":72,"cachedInputTokens":0},
+          "requestEstimate": {"estimatedInputTokens":65,"estimatedOutputTokens":17,"estimatedTotalTokens":82},
+          "durationMs": 10
+        }
+      }
+    }
+  ],
+  "recordDigest": "83660d867eadfcfed6c9adf497a7e407c5a289cf8692137e97df5de4b86e768d"
+}

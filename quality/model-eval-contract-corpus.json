@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "codex-debug-model-eval-corpus",
+  "promotionEligible": false,
+  "provenance": "synthetic-evaluator-contract",
+  "cases": [
+    {
+      "id": "rca-supported-null-config",
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": ["config", "null"],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "1f7623262d6c38f6d5d4538c735ef40a0df0e8ab9849f78cd7cb510241fd22cd"
+    },
+    {
+      "id": "insufficient-external-500",
+      "expected": {
+        "assessment": "insufficient",
+        "rootCauseTerms": [],
+        "patchPolicy": "forbidden"
+      },
+      "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a"
+    },
+    {
+      "id": "rca-supported-reference-error",
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": ["retry_count", "not defined"],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "32604afdb2371a51322c3ba038e4625328cfa385e3fe3314d6e46c9e6a622a8f"
+    }
+  ]
+}

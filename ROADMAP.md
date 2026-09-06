@@ -51,6 +51,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] reproducible development VSIX gate: exact VSCE 3.9.2, normalized source mtimes, two independent packages required to have identical SHA-256
 - [x] Safe Core Consumer CI Receipt binding exact CI source SHA, Core pin/digests, Node contract and completed suite lineage
 - [x] development-only Consumer Evidence artifact containing VSIX, Receipt and checksums with read-only GitHub permissions and no publication surface
+- [x] Model Evaluation Record v1 with digest-bound corpus expectations, self-digested records, two-pass model/runtime/usage evidence and deterministic RCA/insufficient/false-fix metrics
+- [x] manual read-only live synthetic model canary with protected-credential fail-closed behavior, SHA-pinned actions, `promotionEligible=false` and no repository/publication authority
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
@@ -74,4 +76,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-No live-model quality metric is claimed until the corresponding recorded corpus/evaluator exists.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. No live-model quality metric is claimed until the corresponding recorded promotion-eligible corpus/evaluator exists.
