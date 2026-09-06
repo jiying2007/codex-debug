@@ -18,7 +18,7 @@ Codex Debug Safe 是 Codex Safe 产品族中的**证据驱动工作区 Debug、�
 - Linux kernel panic/Oops/call trace、Android ANR/tombstone、Cortex-M fault register、RTOS task/stack；
 - Cortex-M `PC/LR → symbol`：支持 bounded linker map、固定 argv 的 GNU/LLVM `addr2line`，以及外部 firmware build root → workspace 的有界 source-prefix remap；
 - Android tombstone `pc → 本地 ELF source`：只有 tombstone BuildId 与显式本地 ELF BuildId **精确一致**才进入 `addr2line` 和源码上下文；
-- Linux kernel RIP/call-trace `address → System.map symbol+offset`：保留 64 位地址，带 `[module]` 的 frame 在没有模块专用符号时明确保持 unresolved；
+- Linux kernel runtime RIP/call-trace → link-time `System.map`：必须先由日志 `Kernel Offset` 或显式 `--kernel-kaslr-slide` 证明 KASLR slide，带 `[module]` 的 frame 仍保持 unresolved；
 - SARIF、JUnit、WAV 声学指标、Perfetto/Chrome trace；
 - Git HEAD/status/内容状态指纹、源码窗口、blame/history、causal commit candidates；
 - 复用 Safe Core test-impact 的 regression-test candidates；
@@ -28,6 +28,8 @@ Codex Debug Safe 是 Codex Safe 产品族中的**证据驱动工作区 Debug、�
 - 每个候选独立 clone 的 **first-parent** Safe Bisect，并且必须显式允许 historical execution；
 - append-only、证据绑定的 session + self-digested Debug Receipt lineage；
 - drift-safe patch snapshot 与 rollback；
+- 真实 executable fix-quality 门禁，要求 false verification / regression escape / failure replacement escape 为 0；
+- 可复现 development VSIX + Safe Core Consumer CI Receipt artifact；
 - CLI 与 VS Code 共用同一引擎。
 
 ## 权限边界
@@ -105,12 +107,19 @@ Debug 会用固定 `readelf -n` 读取本地 ELF BuildId。只有 tombstone Buil
 Linux kernel `System.map`：
 
 ```bash
+# 推荐：Oops 日志包含 "Kernel Offset: 0x... from 0x..."
 codex-debug \
   --log kernel-oops.log \
   --kernel-system-map ./symbols/System.map
+
+# 老日志/脱敏日志没有 Kernel Offset 时，调用方必须显式绑定已知 slide
+codex-debug \
+  --log kernel-oops.log \
+  --kernel-system-map ./symbols/System.map \
+  --kernel-kaslr-slide 0x0
 ```
 
-RIP/PC 和 call-trace 地址以十六进制字符串保存，避免 JS 64 位整数精度问题，并使用确定性最近下界 symbol 查找。带 `[module]` 的 frame 会标记 `module-map-required`，不会错误地使用 base-kernel `System.map` 解析模块地址。
+`System.map` 保存的是 link-time 地址，而开启 KASLR 后 Oops 中通常是 runtime 地址。Codex Debug Safe 因此**不会在 slide 未被证明时直接查 System.map**。支持的 `Kernel Offset: 0xHEX from 0xBASE` 会作为控制器证据解析；如果日志没有这行，调用方可显式提供 `--kernel-kaslr-slide 0xHEX`。两者同时存在时必须一致，否则 `EKASLRMISMATCH` fail-closed。实现使用 64 位 `BigInt` 从 runtime 地址减去已证明 slide，再使用归一化 link-time 地址查 `System.map`。如果 slide 无法证明，结果是 `kaslr-unproven`，不会输出猜测符号；地址减 slide 下溢则是 `slide-underflow`。带 `[module]` 的 frame 无论 slide 是否已知都继续标记 `module-map-required`。
 
 Safe Bisect：
 
