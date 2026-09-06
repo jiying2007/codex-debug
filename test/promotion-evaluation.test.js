@@ -84,7 +84,7 @@ test('historical transition requires observed bad failure and direct fixed pass'
 
 test('promotion workflows are manual read-only and require historical execution acknowledgement',()=>{
   const root=path.join(__dirname,'..','.github','workflows');
-  for(const file of ['promotion-corpus-qualification.yml','promotion-model-eval.yml']){
+  for(const file of ['promotion-corpus-qualify.yml','promotion-model-eval.yml']){
     const workflow=fs.readFileSync(path.join(root,file),'utf8');
     assert.match(workflow,/workflow_dispatch:/);
     assert.match(workflow,/permissions:\s*\n\s+contents:\s*read\b/);
