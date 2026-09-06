@@ -112,9 +112,22 @@ Local sessions and snapshots may contain compacted logs, source snippets, model 
 
 Session files are append-only and self-bound through the Debug Receipt. This protects against accidental/stale mutation; it does not turn local JSON into an externally signed attestation.
 
+## Development Consumer Evidence
+
+The development CI produces a **Consumer Evidence artifact**, not a release. It has no tag or Marketplace/GitHub Release authority and runs with `contents: read` only.
+
+- the checkout file mtimes are normalized to the validated commit epoch before VSIX creation;
+- exact `@vscode/vsce@3.9.2` packages the same source twice and CI requires byte-identical SHA-256 values;
+- the VSIX contents are inspected for required runtime files and forbidden development/private surfaces;
+- Safe Core generates `CONSUMER_CI_RECEIPT.json`, binding the exact validated CI SHA, Core gitlink/version/runtime/governance digests, Node contract and declared completed suites;
+- SHA-256 checksums cover the VSIX and Receipt;
+- the files are uploaded only as a short-retention GitHub Actions artifact; this does **not** make the artifact an immutable release or signed publication.
+
+The reproducibility proof is scoped to the normalized CI checkout and exact VSCE package version used by the gate. The current workflow obtains VSCE through npm at the exact top-level version, so active promotion should still decide whether to freeze its transitive packaging dependency graph or use the final release build chain before claiming long-term bit-for-bit reproducibility across arbitrary future environments.
+
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing and platform adapters now have deterministic/adversarial tests plus a real Linux native-core fixture, a real GNU Arm Embedded Cortex-M fixture, a real BuildId-bound Android ELF fixture, and a real-format kernel System.map/Oops fixture. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel corpora, module/KASLR handling, reproducible VSIX/Consumer CI evidence, and the final Family release chain.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing and platform adapters now have deterministic/adversarial tests plus real Linux native-core, GNU Arm Embedded Cortex-M, BuildId-bound Android ELF and kernel System.map/Oops fixtures. A reproducible development VSIX + Consumer CI Receipt artifact is also proven in CI. Promotion still requires a production-scale recorded live-model RCA corpus, broader native/minidump/firmware/Android/kernel corpora, module/KASLR handling, broader executable fix-quality metrics, and the final Family active/release chain.
 
 ## Reporting vulnerabilities
 
