@@ -9,12 +9,12 @@ on:
         default: latest
         type: string
       model:
-        description: Optional explicit hypothesis model; empty uses Codex/Safe Core selection
+        description: Optional fixed hypothesis model; empty uses Codex/Safe Core auto selection
         required: false
         default: ''
         type: string
       verifier_model:
-        description: Optional explicit verifier model; empty follows the selected hypothesis model
+        description: Optional fixed verifier model; empty follows the selected hypothesis model
         required: false
         default: ''
         type: string
@@ -30,7 +30,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
       CODEX_DEBUG_MODEL: ${{ inputs.model }}
       CODEX_DEBUG_VERIFIER_MODEL: ${{ inputs.verifier_model }}
-      CODEX_DEBUG_MODEL_SELECTION_STRATEGY: auto
+      CODEX_DEBUG_MODEL_SELECTION_STRATEGY: ${{ inputs.model != '' && 'fixed' || 'auto' }}
       CODEX_DEBUG_MODEL_COMPATIBILITY_POLICY: strict
       CODEX_DEBUG_PROVIDER_MODE: openai
     steps:
