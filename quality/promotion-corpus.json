@@ -76,7 +76,7 @@
       "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
       "failureKind": "build",
       "reproduction": {
-        "command": "node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\n  - uses: actions/checkout@v4\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"",
+        "command": "node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\\\n  - uses: actions/checkout@v4\\\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"",
         "runs": 1,
         "timeoutMs": 120000
       },
@@ -93,6 +93,34 @@
         "summary": "The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."
       },
       "groundTruthDigest": "4e14e2245292950d94eaae7db5d2ac7be520829dcaf05ef5732bb27be2589323"
+    },
+    {
+      "id": "codex-diagnose-gitlab-stream-limit-20260903",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-diagnose.git",
+      "anchorRef": "refs/pull/23/head",
+      "badCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
+      "fixedCommit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+      "failureKind": "performance",
+      "reproduction": {
+        "command": "node -e \"const {GitLabDiagnoseClient}=require('./src/gitlab');global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(6),Buffer.alloc(6)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{},releaseLock:()=>{}}}},arrayBuffer:async()=>{throw new Error('UNBOUNDED_ARRAYBUFFER')}});new GitLabDiagnoseClient({baseUrl:'https://gitlab.example',token:'x'}).request('GET','/x',{accept:'text',maxBytes:8}).then(()=>process.exit(1),e=>{if(e.code!=='EGITLABSIZE'){console.error(e.code||e.message);process.exit(1)}})\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": ["streaming", "response limit"],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "0ba316dd57fc685c469106904674d1aef0e0f1f63757352b4077f9ae5ae20c32",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+        "files": ["src/gitlab.js"],
+        "summary": "The GitLab client buffered unknown-length responses with arrayBuffer() before enforcing maxBytes; the fix streams response chunks, cancels on overflow, and raises EGITLABSIZE as soon as the byte limit is crossed."
+      },
+      "groundTruthDigest": "9706cfc766e73a6b74181b496aa13169d69c5365e4695b8c9feba42e7cb7db54"
     }
   ]
 }
