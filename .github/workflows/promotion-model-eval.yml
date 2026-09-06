@@ -123,10 +123,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          args=(--policy quality/promotion-admission-policy.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --output PROMOTION_ADMISSION.json)
+          cp quality/promotion-admission-policy.json PROMOTION_ADMISSION_POLICY.json
+          args=(--policy PROMOTION_ADMISSION_POLICY.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --output PROMOTION_ADMISSION.json)
           if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-eligible); fi
           node scripts/promotion-admission.js "${args[@]}"
           test -s PROMOTION_ADMISSION.json
+          test -s PROMOTION_ADMISSION_POLICY.json
+      - name: Re-validate promotion admission receipt
+        env:
+          PROMOTION_MODE: ${{ inputs.promotion_mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--policy PROMOTION_ADMISSION_POLICY.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --admission PROMOTION_ADMISSION.json)
+          if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-eligible); fi
+          node scripts/validate-promotion-admission.js "${args[@]}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codex-debug-promotion-model-eval-${{ github.sha }}-${{ github.run_id }}
@@ -135,6 +146,7 @@ jobs:
             PROMOTION_MODEL_EVAL.json
             PROMOTION_MODEL_EVAL_SUMMARY.json
             PROMOTION_TRANSITIONS.json
+            PROMOTION_ADMISSION_POLICY.json
             PROMOTION_ADMISSION.json
           if-no-files-found: error
           retention-days: 14
