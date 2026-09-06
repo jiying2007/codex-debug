@@ -24,19 +24,24 @@ Historical repository code is also untrusted when Safe Bisect is used.
 - `.codex-debug` product-private state is excluded from the user-code freshness fingerprint, but session/snapshot files have separate integrity digests and path hardening.
 - Sessions are append-only: an existing session ID is never overwritten. Session IDs include random entropy, and session directories/files reject symlink/hardlink aliasing.
 - Debug Receipts self-digest their metadata and bind evidence, investigation, ledger, verification, patch state and lineage. Receipts are integrity records, not signatures from a remote trust authority.
+- Automatic source-window collection resolves real paths inside the Git root and rejects symlink/junction components, so an untrusted stack/debug path cannot escape the workspace through a link.
+- Automatic test-impact candidate reads use regular non-symlink files contained by the workspace real path; linked external test content is ignored.
 - A successful unbound command never upgrades a fix to `verified`.
 - A verified fix does not automatically confirm a root-cause hypothesis; only a verifier-supported hypothesis may transition to `confirmed` when runtime evidence also succeeds.
 - VS Code execution surfaces require Workspace Trust.
 - Provider secret values are sourced through environment/auth configuration and are not accepted as CLI secret values.
+- While lifecycle is `development`, CI enforces a publication boundary: no release/publish workflow, `pull_request_target`, write-level contents/packages/id-token permission, npm/vsce/ovsx publish, GitHub release, or Git push surface may appear.
 
 ## Core dump / debugger hardening
 
 A core file and its matching executable are untrusted native inputs to GDB/LLDB. Codex Debug Safe uses fixed debugger commands only:
 
-- GDB runs batch mode without normal init files, disables auto-load and debuginfod, clears `DEBUGINFOD_URLS`, and disables history persistence.
-- LLDB runs without the user init file and disables symbol-file script loading.
+- core/executable inputs must be regular non-symlink files;
+- GDB runs batch mode without normal init files, disables auto-load and debuginfod, clears `DEBUGINFOD_URLS`, and disables history persistence;
+- LLDB runs without the user init file and disables symbol-file script loading;
 - the model cannot supply `-ex`, `-o`, Python, command files or plugin-load arguments;
-- debugger output is bounded before being retained or sent to a model.
+- debugger output is bounded before being retained or sent to a model;
+- workspace source prefixes are converted to relative paths, core/executable paths are reduced to basenames, and HOME prefixes are redacted before debugger output enters evidence/model context.
 
 This reduces attack surface but does not make a native debugger a sandbox. Analyze hostile core/executable pairs only on a machine/container with an appropriate trust boundary.
 
@@ -51,7 +56,10 @@ Firmware ELF and linker-map files are untrusted parser inputs. Embedded symboliz
 - ELF/map inputs must be bounded regular non-symlink files;
 - symbolizer output is bounded and treated as untrusted evidence, not instructions;
 - `DEBUGINFOD_URLS` is cleared for addr2line execution;
-- `file:line` output is allowed to enter source/blame/history/test-impact only when existing workspace-bound source resolution accepts the path. Absolute debug paths outside the workspace are rejected rather than followed.
+- workspace `file:line` output is normalized to relative paths; absolute paths outside the workspace are reduced to `<external>/<basename>:line` before they enter Evidence/prompt;
+- normalized `file:line` output is allowed to enter source/blame/history/test-impact only when workspace-bound source resolution accepts the path.
+
+A real Linux `cc -g` + `nm` + `addr2line` fixture exercises the ELF/DWARF path in CI. This is useful host-toolchain evidence, but it is not yet a substitute for a real Cortex-M cross-toolchain corpus or source-prefix remapping from external firmware build roots.
 
 ELF parsers are native tooling and may themselves contain vulnerabilities. Treat hostile firmware images like hostile core files and analyze them in an appropriate container/runner boundary when provenance is uncertain.
 
@@ -75,7 +83,7 @@ Session files are append-only and self-bound through the Debug Receipt. This pro
 
 ## Development baseline limitations
 
-The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers have deterministic/adversarial tests, but there is not yet a production-scale recorded live-model RCA corpus, OS sandbox for historical execution, full minidump stack, or deep Android/kernel symbol resolver. Those are explicit promotion gaps, not implied guarantees.
+The current baseline is not yet an `active` Family release. Native debugger/symbolizer parsing, platform parsers and artifact parsers have deterministic/adversarial tests, but there is not yet a production-scale recorded live-model RCA corpus, OS sandbox for historical execution, full minidump stack, real native core corpus, Cortex-M cross-toolchain corpus, or deep Android/kernel symbol resolver. Those are explicit promotion gaps, not implied guarantees.
 
 ## Reporting vulnerabilities
 
