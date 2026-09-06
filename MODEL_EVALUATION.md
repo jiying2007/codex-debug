@@ -77,19 +77,21 @@ This is still only a corpus/evidence-availability fact. No live-model insufficie
 
 Current structural readiness is:
 
-- reviewed cases: `8/12`;
+- reviewed cases: `12/12`;
 - repositories: `4/3`;
-- failure kinds: `4/4`;
+- failure kinds: `5/4`;
 - insufficient-evidence variants: `3/3`;
-- model-evaluation views: `11`.
+- model-evaluation views: `15`.
 
-The only structural readiness gap is therefore `cases 8/12`. The corpus remains `promotionEligible=false`. Four additional unique reviewed historical transitions are still required, and structural readiness alone does not establish live RCA precision, live insufficient-evidence accuracy, false-fix rate, patch applicability, or token efficiency.
+The structural readiness floor is fully satisfied. This is deliberately **not** promotion authorization: the checked-in corpus remains `promotionEligible=false`, lifecycle remains `development`, and structural readiness alone does not establish live RCA precision, live insufficient-evidence accuracy, false-fix rate, patch applicability, token efficiency, or completed historical qualification. Switching eligibility remains an explicit reviewed action after the corresponding evidence exists.
+
+The four transitions completing the structural case floor are independent Safe Core historical fixes for SPDX OR license alternatives, exclusion of the canonical Core subtree from consumer ownership scans, canonical UTC Diagnosis Receipt timestamps, and recognition of Change Safe as an active consumer Product Contract. Their reproduction commands exercise the real historical helper/script against bounded local inputs without network access, model calls, VS Code, or source-grep self-proof. The SPDX case also increases current failure-kind diversity from the four-kind minimum to five distinct kinds.
 
 ## Continuous Promotion Provenance
 
 Ordinary pull-request and main CI run a read-only `Promotion Provenance` gate. It fetches only reviewed Git refs and inspects Git commit/tree metadata to prove each unique bad/fix pair exists in the anchored history, the fix is the direct child of the bad commit, and declared ground-truth files are touched by the reviewed fix.
 
-Promotion Provenance intentionally sees **8 historical transitions, not 11 evaluation views**. Insufficient variants do not create additional provenance transitions.
+Promotion Provenance intentionally sees **12 historical transitions, not 15 evaluation views**. Insufficient variants do not create additional provenance transitions.
 
 `Promotion Provenance` does not checkout or execute historical repository code, does not run reproduction commands, and does not receive model/API credentials. It is provenance evidence only; it is not `Promotion Corpus Qualification` and cannot prove bad-fails/fixed-passes behavior by itself.
 
@@ -127,14 +129,15 @@ Currently allowed statements include:
 
 - Model Evaluation Record v1 exists and is deterministically tested.
 - Promotion Corpus v2 and summary-only insufficient-evidence projection are implemented and fail closed.
-- Eight unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose, and Codex Change.
+- Twelve unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose, and Codex Change.
 - Three authentic insufficient variants are attached to real transitions without inflating the reviewed-case floor.
-- Current structural coverage is `8/12` cases, `4/3` repositories, `4/4` failure kinds, `3/3` insufficient variants, and `11` evaluation views.
+- Current structural coverage is `12/12` cases, `4/3` repositories, `5/4` failure kinds, `3/3` insufficient variants, and `15` evaluation views.
+- The structural corpus floor is satisfied while `promotionEligible=false` and lifecycle remains `development`.
 - Continuous CI proves reviewed Git provenance without executing historical code.
 
 The following statements are **not** allowed until corresponding artifacts exist:
 
-- the promotion corpus is ready;
+- the promotion corpus is promotion-authorized or fully qualified;
 - live RCA precision meets a production target;
 - live insufficient-evidence accuracy meets a production target;
 - false-fix rate is production-proven across real repositories;

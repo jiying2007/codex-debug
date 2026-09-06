@@ -132,6 +132,66 @@
       "expectationDigest": "eec50e368ee3b0a54777ad73afb9a052642d47513779868605938463c2c1c4a0",
       "groundTruth": {"type":"fix-commit","commit":"27f03f79da14be3e3951734247deef3b8361182b","files":["src/notify.js"],"summary":"Notification delivery consumed webhook response.text() in full before slicing it for logs; the fix added a 64 KiB byte-bounded streaming reader, cancels on overflow, and fails closed with ENOTIFYPROTOCOL."},
       "groundTruthDigest": "426df7ad2e465555ace5bd367d31a12ba33ba519b62a67b4693b2e590178a648"
+    },
+    {
+      "id": "safe-core-spdx-or-license-20260826",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
+      "fixedCommit": "1755262f51d5e15d74e432add38863d2383bb495",
+      "failureKind": "dependency",
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'lic-')),x=p.join(d,'node_modules','x');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'package.json'),JSON.stringify({name:'x',version:'1',license:'(MIT OR GPL-3.0-or-later)'}));const r=cp.spawnSync(process.execPath,['scripts/verify-package-licenses.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(r.status===0?0:1)\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["SPDX OR","license"],"patchPolicy":"optional"},
+      "expectationDigest": "593efb2297a5d7ac894c9bd7892af7a31ba7e7a3d733992a7c189ea080da97f3",
+      "groundTruth": {"type":"fix-commit","commit":"1755262f51d5e15d74e432add38863d2383bb495","files":["scripts/verify-package-licenses.js"],"summary":"The dependency-license verifier treated any GPL/AGPL token as forbidden even when a permissive SPDX OR alternative was available; the fix evaluates OR alternatives and rejects only when every alternative remains forbidden."},
+      "groundTruthDigest": "7dfeec52209f7066abd4701e4b70cffd473339f015d4b6c7df11f7cbcd13096f"
+    },
+    {
+      "id": "safe-core-consumer-boundary-core-submodule-20260826",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
+      "fixedCommit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
+      "failureKind": "build",
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'fam-'));for(const r of ['codex-commit','codex-review','codex-pr','codex-review-service']){const x=p.join(d,r,'src','codex-safe-core');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'x.js'),'function buildReviewEvidenceChunks() {}')}const q=cp.spawnSync(process.execPath,['scripts/verify-consumer-boundaries.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(q.status===0?0:1)\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["src/codex-safe-core","boundary scan"],"patchPolicy":"optional"},
+      "expectationDigest": "724258a0b2dae77561144ca45e4ac912bdb827b2c747cf1318dfa6e79f83d757",
+      "groundTruth": {"type":"fix-commit","commit":"72363d4f648171242810ac5871d713b2fa9b3bb6","files":["scripts/verify-consumer-boundaries.js"],"summary":"The consumer ownership walker compared directory entry names against the full path src/codex-safe-core, so it scanned the embedded canonical Core and falsely reported Core-owned implementations as consumer violations; the fix excludes that exact relative subtree."},
+      "groundTruthDigest": "afb35d88b2bddee44b59e24bcbcbc7d7d94ea0053b4faafdecff9c88d3c62699"
+    },
+    {
+      "id": "safe-core-diagnosis-receipt-utc-20260830",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
+      "fixedCommit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
+      "failureKind": "test",
+      "reproduction": {"command":"node -e \"const {validateDiagnosisReceipt}=require('./diagnosis-platform');const r={schemaVersion:1,kind:'codex-diagnose',subject:{commitSha:'abc'},evidenceDigest:'a'.repeat(64),classification:'unknown',confidence:.5,diagnosisFingerprint:'b'.repeat(64),model:'',codexVersion:'',createdAt:'2026-08-30T12:00:00+08:00'};try{validateDiagnosisReceipt(r);process.exit(1)}catch(e){if(e.code!=='EDIAGNOSISRECEIPT'){console.error(e.code||e.message);process.exit(1)}}\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["createdAt","canonical UTC"],"patchPolicy":"optional"},
+      "expectationDigest": "03c6a24a31e96be0b42329d5b5f953f51a69a77dc74883585e8fcc15e73f1758",
+      "groundTruth": {"type":"fix-commit","commit":"bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8","files":["diagnosis-platform.js"],"summary":"Diagnosis Receipt validation accepted any Date.parse-compatible createdAt value, including offset-local timestamps; the fix requires the canonical millisecond ISO-8601 UTC Z form and round-trip equality."},
+      "groundTruthDigest": "f4f1fae7ad1ac0ca2a477efe1ada1c65f0410e75d25a76ec206e69f1ac39402e"
+    },
+    {
+      "id": "safe-core-change-product-contract-20260831",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
+      "fixedCommit": "76418b80533c644e3ab01045290cd3cdd355622c",
+      "failureKind": "build",
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),core=require('./core-contract.json'),{verify}=require('./scripts/verify-consumer-product-contract');const d=fs.mkdtempSync(p.join(os.tmpdir(),'pc-')),pin='d'.repeat(40),v='9.9.9';cp.execFileSync('git',['init','-q'],{cwd:d});fs.mkdirSync(p.join(d,'src'));fs.writeFileSync(p.join(d,'package.json'),JSON.stringify({version:v}));fs.writeFileSync(p.join(d,'product-contract.json'),JSON.stringify({...core,productId:'codex-change-safe',productVersion:v,safeCoreVersion:core.coreVersion,safeCoreCommit:pin}));cp.execFileSync('git',['update-index','--add','--cacheinfo',`160000,${pin},src/codex-safe-core`],{cwd:d});verify(d,pin,'codex-change-safe')\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["change-safe","productId"],"patchPolicy":"optional"},
+      "expectationDigest": "9afbf920aae50936cffb22f6a07a1d20654126ebce11a72a31cf8e17224720d7",
+      "groundTruth": {"type":"fix-commit","commit":"76418b80533c644e3ab01045290cd3cdd355622c","files":["scripts/verify-consumer-product-contract.js"],"summary":"The active-consumer Product Contract verifier omitted codex-change-safe from its allowed productId set, so valid Change consumers failed Family validation; the fix adds Change to the canonical accepted product identities."},
+      "groundTruthDigest": "dbb908f6ed26b689a422bfa191fb8f2c7a67d7c9afad548774aa8212f376b732"
     }
   ]
 }
