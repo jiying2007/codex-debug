@@ -87,23 +87,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          evidence_dir=consumer-evidence
+          version=$(node -p "require('./package.json').version")
+          vsix_name="codex-debug-safe-${version}.vsix"
+          test -n "$version"
+          mkdir -p "$evidence_dir"
           npx --yes @vscode/vsce@3.9.2 --version
           epoch=$(git show -s --format=%ct HEAD)
           export SOURCE_DATE_EPOCH="$epoch"
-          while IFS= read -r -d '' file; do touch -h -d "@${epoch}" "$file"; done < <(find . -path './.git' -prune -o -path './node_modules' -prune -o -print0)
+          while IFS= read -r -d '' file; do touch -h -d "@${epoch}" "$file"; done < <(find . -path './.git' -prune -o -path './node_modules' -prune -o -path './consumer-evidence' -prune -o -print0)
           npx --yes @vscode/vsce@3.9.2 package --no-dependencies --out codex-debug-safe-a.vsix
           npx --yes @vscode/vsce@3.9.2 package --no-dependencies --out codex-debug-safe-b.vsix
           sha_a=$(sha256sum codex-debug-safe-a.vsix | awk '{print $1}')
           sha_b=$(sha256sum codex-debug-safe-b.vsix | awk '{print $1}')
           test "$sha_a" = "$sha_b" || { echo "VSIX is not reproducible: ${sha_a} != ${sha_b}" >&2; exit 1; }
-          cp codex-debug-safe-a.vsix codex-debug-safe-0.1.0.vsix
-          unzip -Z1 codex-debug-safe-0.1.0.vsix > /tmp/vsix-files.txt
+          cp codex-debug-safe-a.vsix "$evidence_dir/$vsix_name"
+          unzip -Z1 "$evidence_dir/$vsix_name" > /tmp/vsix-files.txt
           grep -Fx 'extension/extension.js' /tmp/vsix-files.txt
           grep -Fx 'extension/src/debug.js' /tmp/vsix-files.txt
           grep -Fx 'extension/src/platform-symbols.js' /tmp/vsix-files.txt
           grep -Fx 'extension/src/codex-safe-core/index.js' /tmp/vsix-files.txt
           if grep -E '^extension/(test|quality|scripts|\.github|\.codex-debug|\.git)(/|$)' /tmp/vsix-files.txt; then echo 'VSIX contains development/private surfaces' >&2; exit 1; fi
-          printf '%s  %s\n' "$sha_a" codex-debug-safe-0.1.0.vsix > VSIX_SHA256
+          printf '%s  %s\n' "$sha_a" "$vsix_name" > "$evidence_dir/VSIX_SHA256"
       - name: Generate Consumer CI Receipt and checksums
         env:
           CI_SOURCE_SHA: ${{ github.sha }}
@@ -115,19 +120,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node src/codex-safe-core/scripts/generate-consumer-ci-receipt.js --output CONSUMER_CI_RECEIPT.json
-          test -s CONSUMER_CI_RECEIPT.json
-          sha256sum codex-debug-safe-0.1.0.vsix CONSUMER_CI_RECEIPT.json > SHA256SUMS
-          grep -F 'codex-debug-safe-0.1.0.vsix' SHA256SUMS
-          grep -F 'CONSUMER_CI_RECEIPT.json' SHA256SUMS
+          evidence_dir=consumer-evidence
+          version=$(node -p "require('./package.json').version")
+          vsix_name="codex-debug-safe-${version}.vsix"
+          test -s "$evidence_dir/$vsix_name"
+          node src/codex-safe-core/scripts/generate-consumer-ci-receipt.js --output "$evidence_dir/CONSUMER_CI_RECEIPT.json"
+          test -s "$evidence_dir/CONSUMER_CI_RECEIPT.json"
+          (cd "$evidence_dir" && sha256sum "$vsix_name" CONSUMER_CI_RECEIPT.json > SHA256SUMS)
+          grep -F "$vsix_name" "$evidence_dir/SHA256SUMS"
+          grep -F 'CONSUMER_CI_RECEIPT.json' "$evidence_dir/SHA256SUMS"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codex-debug-safe-consumer-evidence-${{ github.sha }}
-          path: |
-            codex-debug-safe-0.1.0.vsix
-            CONSUMER_CI_RECEIPT.json
-            SHA256SUMS
-            VSIX_SHA256
+          path: consumer-evidence/
           if-no-files-found: error
           retention-days: 14
 
