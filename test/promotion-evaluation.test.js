@@ -18,11 +18,11 @@ test('reviewed promotion corpus remains fail-closed below diversity floor',()=>{
   validatePromotionCorpus(corpus);
   const r=promotionReadiness(corpus);
   assert.equal(r.ready,false);
-  assert.equal(r.cases,3);
-  assert.equal(r.repositories,2);
-  assert.equal(r.failureKinds,3);
+  assert.equal(r.cases,4);
+  assert.equal(r.repositories,3);
+  assert.equal(r.failureKinds,4);
   assert.equal(r.insufficientCases,0);
-  assert.deepEqual(r.gaps,['cases 3/12','repositories 2/3','failureKinds 3/4','insufficientCases 0/3']);
+  assert.deepEqual(r.gaps,['cases 4/12','insufficientCases 0/3']);
   const evalCorpus=toEvaluationCorpus(corpus);
   assert.equal(evalCorpus.promotionEligible,false);
 });
