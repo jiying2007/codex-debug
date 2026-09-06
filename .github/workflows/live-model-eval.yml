@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
       CODEX_DEBUG_MODEL: ${{ inputs.model }}
       CODEX_DEBUG_VERIFIER_MODEL: ${{ inputs.verifier_model }}
       CODEX_DEBUG_MODEL_SELECTION_STRATEGY: auto
@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${OPENAI_API_KEY:-}" || {
-            echo 'OPENAI_API_KEY is unavailable; refusing to claim a live-model evaluation.' >&2
+            echo 'CODEX_DEBUG_CANARY_OPENAI_API_KEY (preferred) or OPENAI_API_KEY is unavailable; refusing to claim a live-model evaluation.' >&2
             exit 2
           }
       - name: Install selected Codex CLI
@@ -62,7 +62,7 @@ jobs:
             echo 'codex_version must be latest or an exact x.y.z version.' >&2
             exit 2
           }
-          npm install --global --ignore-scripts "@openai/codex@${CODEX_VERSION}"
+          npm install --global "@openai/codex@${CODEX_VERSION}"
           codex --version
       - name: Record live synthetic model evaluation
         shell: bash
