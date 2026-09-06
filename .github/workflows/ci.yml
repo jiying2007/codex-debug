@@ -105,7 +105,7 @@ jobs:
           CI_RUN_ID: ${{ github.run_id }}
           CI_RUN_ATTEMPT: ${{ github.run_attempt }}
           CI_EVENT: ${{ github.event_name }}
-          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,real-native-core,real-cortex-m,android-buildid,kernel-system-map,package-contract,reproducible-vsix
+          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,real-native-core,real-cortex-m,android-buildid,kernel-system-map,kernel-kaslr,package-contract,reproducible-vsix
         shell: bash
         run: |
           set -euo pipefail
