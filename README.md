@@ -16,21 +16,22 @@ The current Product Contract is `lifecycle: development`. Debug is registered as
 - native crashes, core dumps and bounded fixed-command GDB/LLDB backtraces;
 - ASAN/TSAN/UBSAN/LSAN/Valgrind, race/deadlock/OOM/watchdog evidence;
 - Linux kernel panic/Oops/call-trace, Android ANR/tombstone, Cortex-M fault-register and RTOS task/stack evidence;
+- deterministic Cortex-M `PC/LR -> symbol` resolution from bounded linker maps and fixed-argv GNU/LLVM embedded `addr2line` tools; ELF `file:line` results feed source windows, blame/history and test-impact;
 - SARIF, JUnit, WAV acoustic metrics and Perfetto/Chrome trace summaries;
 - Git HEAD/status/content-state fingerprint, bounded source windows, blame/history and causal commit candidates;
 - Safe Core test-impact based regression-test candidates;
 - two-pass model investigation: competing hypotheses followed by independent causal verification;
 - bounded unified-diff proposals, inert by default;
 - repeated reproduction/verification statistics and failure-transition classification;
-- bounded **first-parent** Safe Bisect in an isolated temporary clone, only with explicit historical-execution authority;
-- evidence-bound resumable sessions and Debug Receipt v1;
+- bounded **first-parent** Safe Bisect with a fresh isolated clone per candidate, only with explicit historical-execution authority;
+- evidence-bound append-only sessions and self-digested Debug Receipt lineage;
 - drift-safe patch snapshots and rollback;
 - CLI and VS Code surfaces over the same engine.
 
 ## Authority model
 
 ```text
-failure / artifact / core dump                 UNTRUSTED DATA
+failure / artifact / core / firmware symbols   UNTRUSTED DATA
                 ↓
 redact + bound + deterministic parse + digest
                 ↓
@@ -52,7 +53,7 @@ explicit user authority
 observed before/after evidence + Debug Receipt
 ```
 
-Logs, source text, commit subjects, debugger output, artifact summaries, filenames and platform dumps are data, never instructions. A model cannot execute commands, apply/rollback a patch, commit, push, merge, retry CI, publish a release or self-promote a hypothesis to `confirmed`.
+Logs, source text, commit subjects, debugger/symbolizer output, artifact summaries, filenames and platform dumps are data, never instructions. A model cannot execute commands, choose symbolizer argv, apply/rollback a patch, commit, push, merge, retry CI, publish a release or self-promote a hypothesis to `confirmed`.
 
 ## What `verified` means
 
@@ -62,7 +63,7 @@ A successful command alone is **not** a verified fix. `verified` requires:
 2. a sufficiently reproducible baseline (`1/1` failure, or at least two repeated failures sharing one normalized failure signature);
 3. an independently observed workspace content-state mutation after that baseline;
 4. every bounded post-change verification run passes;
-5. the stored session still validates its evidence, investigation, ledger, verification and patch-state digests.
+5. the stored session still validates its evidence, investigation, ledger, verification, patch-state and lineage digests.
 
 A log plus an unrelated green test is `passed-unbound`, not `verified`. Runtime verification also records whether the failure transition is `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or unbound.
 
@@ -80,7 +81,7 @@ npm link
 
 ## CLI
 
-Logs, reproduction and core dumps:
+Logs, reproduction and native core dumps:
 
 ```bash
 codex-debug --log build.log
@@ -88,7 +89,19 @@ codex-debug --command "npm test" --repro-runs 3
 codex-debug --core core.1234 --executable ./build/app --debugger auto
 ```
 
-GDB runs with init loading, auto-load and debuginfod disabled. LLDB disables user init and symbol-file script loading. Debugger output is bounded before model context.
+GDB runs with init loading, auto-load, history and debuginfod disabled. LLDB disables user init and symbol-file script loading. Debugger output is bounded before model context.
+
+Cortex-M linker-map / ELF symbolization:
+
+```bash
+codex-debug \
+  --log hardfault.log \
+  --map build/firmware.map \
+  --elf build/firmware.elf \
+  --addr2line arm-none-eabi-addr2line
+```
+
+Only controller-extracted `PC/LR` values from the fault evidence are passed to a fixed `addr2line -f -C -e ELF <addresses...>` template; the model cannot provide addresses, executables, tool names, or extra arguments. Supported fixed tools include `arm-none-eabi-addr2line`, common RISC-V GNU names, `llvm-addr2line`, and host `addr2line`. A linker map works without an external symbolizer and yields nearest-symbol + offset evidence. ELF `file:line` output is accepted as untrusted deterministic symbolizer data and is reused only when it resolves safely inside the current workspace.
 
 Structured evidence:
 
@@ -111,7 +124,7 @@ codex-debug \
   --allow-historical-execution
 ```
 
-Good must pass, bad must reproducibly fail, and mixed/flaky historical evidence fails closed. A proven `firstBad` proves only the supplied reproduction transition, not the precise faulty line/mechanism.
+Good must pass, bad must reproducibly fail, and mixed/flaky historical evidence fails closed. Every candidate runs in a fresh clone with isolated HOME/Git config and common credential-like environment variables removed. This is still not an OS sandbox. A proven `firstBad` proves only the supplied reproduction transition, not the precise faulty line/mechanism.
 
 Resume after a manual edit:
 
@@ -129,13 +142,13 @@ codex-debug --apply-session dbg-0123456789abcdef
 codex-debug --rollback-session dbg-fedcba9876543210
 ```
 
-`--apply-session` first requires the current workspace content-state fingerprint to match the evidence-time state, validates the patch, then writes a private bounded snapshot under `.codex-debug/snapshots/`. `--rollback-session` restores only recorded patch paths and **refuses** when any path has drifted after patch application, so later user edits are never overwritten.
+`--apply-session` first requires the current workspace content-state fingerprint to match the evidence-time state and rechecks that the persisted patch still has `supported + accept` causal-verifier authorization. It validates the patch, then writes a private bounded snapshot under `.codex-debug/snapshots/`. `--rollback-session` restores only recorded patch paths and **refuses** when any path has drifted after patch application, so later user edits are never overwritten.
 
-`.codex-debug` is excluded from the workspace-code freshness fingerprint because it is product-private state; session and snapshot files remain independently integrity-bound by their own digests.
+`.codex-debug` is excluded from the workspace-code freshness fingerprint because it is product-private state; append-only session and snapshot files remain independently integrity-bound by their own digests.
 
 ## Patch policy
 
-A patch is inert until explicit `--apply`, `--apply-session`, or the corresponding VS Code command. It must be textual, at most 256 KiB, repository-relative, free of traversal/`.git` writes, avoid `src/codex-safe-core`, reject binary patches, and pass `git apply --check --whitespace=error-all`.
+A patch is inert until explicit `--apply`, `--apply-session`, or the corresponding VS Code command. It must be textual, at most 256 KiB, repository-relative, free of traversal, reject binary/rename/copy patches, pass Git-native path parsing and `git apply --check --whitespace=error-all`, and avoid `.git`, `.codex-debug`, `src/codex-safe-core`, GitHub workflow/control-plane files, `.env`/key material, and generated/vendor/build/dependency outputs. Snapshot/rollback additionally rejects symlink/junction traversal, symlink/non-regular targets and hard-linked files.
 
 Codex Debug Safe never commits, pushes, merges, opens PRs/MRs, retries pipelines or publishes releases.
 
@@ -158,7 +171,7 @@ Workspace trust is mandatory. Historical execution and rollback/apply mutation s
 
 ## Token and evidence efficiency
 
-Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug adds only bounded parsed frames, platform summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, WAVs and trace files are never embedded directly.
+Raw logs are not blindly sent to the model. Safe Core performs ANSI/credential cleanup, significant-window selection, duplicate folding and byte bounding. Debug adds only bounded parsed frames, platform/symbol summaries, source windows, deterministic artifact summaries, Git candidates, Safe Bisect metadata and regression-test candidates. Raw core dumps, ELF images, linker maps, WAVs and trace files are never embedded directly. The deterministic CI benchmark currently enforces a compact/prompt-byte budget before any live-model token claim is made.
 
 ## Family relationship
 
