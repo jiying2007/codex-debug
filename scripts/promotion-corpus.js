@@ -21,13 +21,14 @@ function validatePromotionCorpus(corpus){
   assert.equal(corpus?.kind,'codex-debug-promotion-corpus','promotion corpus kind mismatch');
   assert.equal(typeof corpus?.promotionEligible,'boolean','promotionEligible must be explicit');
   assert.ok(String(corpus?.provenance||''),'promotion corpus provenance is required');
-  const policy=validatePolicy(corpus.policy||{});
-  assert.ok(Array.isArray(corpus.cases)&&corpus.cases.length>0,'promotion corpus requires at least one reviewed case');
+  validatePolicy(corpus.policy||{});
+  assert.ok(Array.isArray(corpus?.cases)&&corpus.cases.length>0,'promotion corpus requires at least one reviewed case');
   const ids=new Set();
   for(const item of corpus.cases){
     assert.match(String(item.id||''),/^[a-z0-9][a-z0-9._-]{2,119}$/,'invalid promotion case id');
     assert.ok(!ids.has(item.id),`duplicate promotion case ${item.id}`);ids.add(item.id);
     assert.equal(item.mode,'historical-observed',`promotion case ${item.id} must be historical-observed`);
+    assert.equal(item.relation,'direct-parent-fix',`promotion case ${item.id} must bind a direct-parent fix`);
     assert.match(String(item.repository||''),REPO,`promotion case ${item.id} must use a reviewed public GitHub repository URL`);
     assert.match(String(item.badCommit||''),SHA40,`invalid badCommit for ${item.id}`);
     assert.match(String(item.fixedCommit||''),SHA40,`invalid fixedCommit for ${item.id}`);
