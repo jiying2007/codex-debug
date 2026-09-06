@@ -51,14 +51,14 @@ The fix commit and ground-truth summary are **not injected into the model prompt
 - 4 failure kinds;
 - 3 insufficient-evidence negatives.
 
-The current development corpus has **3 reviewed direct-parent historical transitions across 2 repositories and 3 failure kinds, with 0 insufficient-evidence negatives**. It covers Codex Debug and Safe Core real fixes, including evaluator-record integrity, causal infra-vs-test classification and the shared Actions pin-verifier false-negative. Current readiness is therefore:
+The current development corpus has **4 reviewed direct-parent historical transitions across 3 repositories and 4 failure kinds, with 0 insufficient-evidence negatives**. It covers Codex Debug, Safe Core and Codex Diagnose real fixes: evaluator-record integrity, causal infra-vs-test classification, the shared Actions pin-verifier false-negative, and GitLab unknown-length response streaming limits. Current readiness is therefore:
 
-- cases: `3/12`;
-- repositories: `2/3`;
-- failure kinds: `3/4`;
+- cases: `4/12`;
+- repositories: `3/3`;
+- failure kinds: `4/4`;
 - insufficient-evidence negatives: `0/3`.
 
-The corpus deliberately remains below the floor. Therefore any current historical or live artifact is calibration evidence only and cannot satisfy active-promotion quality requirements.
+Repository diversity and failure-kind diversity now meet their structural floors, but the corpus still lacks eight reviewed cases and all three insufficient-evidence negatives. It deliberately remains below the overall floor. Therefore any current historical or live artifact is calibration evidence only and cannot satisfy active-promotion quality requirements.
 
 ## Continuous Promotion Provenance
 
@@ -117,8 +117,8 @@ The following statements are currently allowed:
 - A real-historical promotion harness exists.
 - The corpus readiness floor is enforced.
 - Historical reproduction and model credentials are separated.
-- Three reviewed direct-parent historical cases are bound to real fixes across Codex Debug and Safe Core.
-- Current reviewed coverage is `3/12` cases, `2/3` repositories, `3/4` failure kinds and `0/3` insufficient-evidence negatives.
+- Four reviewed direct-parent historical cases are bound to real fixes across Codex Debug, Safe Core and Codex Diagnose.
+- Current reviewed coverage is `4/12` cases, `3/3` repositories, `4/4` failure kinds and `0/3` insufficient-evidence negatives.
 - Continuous CI proves reviewed Git provenance without executing historical code.
 
 The following statements are **not** allowed until corresponding artifacts exist:
