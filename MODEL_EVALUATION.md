@@ -60,6 +60,14 @@ The current development corpus has **3 reviewed direct-parent historical transit
 
 The corpus deliberately remains below the floor. Therefore any current historical or live artifact is calibration evidence only and cannot satisfy active-promotion quality requirements.
 
+## Continuous Promotion Provenance
+
+Ordinary pull-request and main CI run a read-only `Promotion Provenance` gate. This gate fetches only reviewed Git refs and inspects Git commit/tree metadata to prove that each bad/fix commit exists in the anchored history, the fix is the direct child of the bad commit, and every declared ground-truth file is actually touched by the reviewed fix.
+
+`Promotion Provenance` **does not checkout or execute historical repository code**, does not run the reproduction command, and does not receive model credentials. Its artifact is provenance evidence only; it is not `Promotion Corpus Qualification` and cannot prove bad-fails/fixed-passes behavior by itself.
+
+Historical execution remains in the separate manual qualification/model-evaluation authority domain described below.
+
 ## Historical execution authority
 
 Historical repository code is untrusted code. Qualification and promotion workflows are manual and require an explicit acknowledgement that historical code will execute without an OS sandbox.
@@ -111,6 +119,7 @@ The following statements are currently allowed:
 - Historical reproduction and model credentials are separated.
 - Three reviewed direct-parent historical cases are bound to real fixes across Codex Debug and Safe Core.
 - Current reviewed coverage is `3/12` cases, `2/3` repositories, `3/4` failure kinds and `0/3` insufficient-evidence negatives.
+- Continuous CI proves reviewed Git provenance without executing historical code.
 
 The following statements are **not** allowed until corresponding artifacts exist:
 
