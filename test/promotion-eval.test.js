@@ -16,11 +16,11 @@ test('reviewed promotion corpus is valid but intentionally not ready',()=>{
   validatePromotionCorpus(corpus);
   const ready=promotionReadiness(corpus);
   assert.equal(ready.ready,false);
-  assert.equal(ready.cases,3);
-  assert.equal(ready.repositories,2);
-  assert.equal(ready.failureKinds,3);
+  assert.equal(ready.cases,4);
+  assert.equal(ready.repositories,3);
+  assert.equal(ready.failureKinds,4);
   assert.equal(ready.insufficientCases,0);
-  assert.deepEqual(ready.gaps,['cases 3/12','repositories 2/3','failureKinds 3/4','insufficientCases 0/3']);
+  assert.deepEqual(ready.gaps,['cases 4/12','insufficientCases 0/3']);
   assert.equal(toEvaluationCorpus(corpus).promotionEligible,false);
 });
 
