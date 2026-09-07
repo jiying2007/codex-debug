@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "kind": "codex-debug-promotion-repository-governance-lock",
+  "reviewed": false,
+  "repository": "jiying2007/codex-debug",
+  "branch": "main",
+  "requiredCheck": "CI Gate",
+  "ruleset": null,
+  "lockDigest": "5bdc4c77ce718901001c8e927beb4e76837d0198d81285d7837d3b289367358b"
+}
