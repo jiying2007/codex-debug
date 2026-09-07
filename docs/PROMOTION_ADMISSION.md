@@ -17,6 +17,7 @@ A promotion-mode model run must bind three independently validated layers from t
 The 0.1.10 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
 
 - `reviewed=false`;
+- `calibrationEvidence=null`;
 - `maximumFalseSupport=0`;
 - `maximumFalseFixCandidates=0`;
 - `maximumPatchPolicyViolations=0`;
@@ -26,7 +27,11 @@ The 0.1.10 development line intentionally keeps the admission policy **unreviewe
 - `tokenEfficiency.calibrated=false`;
 - `maximumTokensPerCase=null`.
 
-Null RCA thresholds and the null token ceiling are deliberate fail-closed gaps, not defaults. A value must not be invented before live calibration evidence exists. When the policy is later marked `reviewed=true`, all quality thresholds must be finite values in `[0,1]`, token calibration must be true, and a finite positive `maximumTokensPerCase` is mandatory.
+Null RCA thresholds, null calibration evidence and the null token ceiling are deliberate fail-closed gaps, not defaults. A value must not be invented before live calibration evidence exists.
+
+When the policy is later marked `reviewed=true`, all quality thresholds must be finite values in `[0,1]`, token calibration must be true, a finite positive `maximumTokensPerCase` is mandatory, and `calibrationEvidence` must bind the exact reviewed Calibration Report provenance. The bound fields are the report digest, Debug commit, Safe Core commit, reviewed-corpus digest, evaluation-corpus digest, Qualification digest, model-record digest, Admission digest and the original GitHub Actions run context. That run context must come from `Promotion Model Evaluation` via `workflow_dispatch`, and its `sourceSha` must equal the calibration Debug commit.
+
+A reviewed policy is also invalid when its calibration evidence was collected against a different Safe Core gitlink or a different reviewed/evaluation corpus. This prevents an old calibration from silently authorizing thresholds after Core or benchmark identity changes. The calibration Debug SHA itself is historical provenance and is not required to equal the later policy-review commit, because reviewing the policy necessarily changes the repository SHA.
 
 ## Workflow sequencing
 
@@ -40,15 +45,15 @@ The protected model credential follows an additional least-privilege boundary: `
 
 For `promotion_mode=false`, the workflow records qualification, live calibration, Admission and the digest-bound review-only Calibration Report, but the current draft policy causes `ready=false` without failing the calibration run. This is how RCA accuracy, insufficient-evidence accuracy, patch applicability and token usage are collected before choosing thresholds.
 
-For `promotion_mode=true`, the workflow additionally requires the reviewed corpus and live record to be promotion eligible and requires `PROMOTION_ADMISSION.json.ready=true`. Any draft threshold, uncalibrated token ceiling, safety regression, quality miss, SHA/Core mismatch or cross-run evidence assembly fails closed.
+For `promotion_mode=true`, the workflow additionally requires the reviewed corpus and live record to be promotion eligible and requires `PROMOTION_ADMISSION.json.ready=true`. Any missing calibration provenance, draft threshold, uncalibrated token ceiling, stale Core/corpus calibration, safety regression, quality miss, SHA/Core mismatch or cross-run evidence assembly fails closed.
 
 ## Required sequence before active promotion
 
 1. Run credential-backed calibration with explicit historical-execution acknowledgement.
 2. Review the generated Qualification, Admission Receipt, Calibration Report, model quality, patch-applicability results and token usage.
-3. Set evidence-based RCA thresholds and a token ceiling; recompute the policy digest and review that policy change.
+3. Set evidence-based RCA thresholds and a token ceiling, copy the exact Calibration Report provenance into `calibrationEvidence`, recompute the policy digest and review that policy change.
 4. Explicitly review the separate `promotionEligible=true` corpus change.
-5. Run `Promotion Model Evaluation` with `promotion_mode=true`; same-run Qualification and Admission must pass.
+5. Run `Promotion Model Evaluation` with `promotion_mode=true`; same-run Qualification and Admission must pass, and the reviewed policy calibration must still match the current Safe Core and corpus identity.
 6. Only after that evidence may lifecycle/release governance be considered.
 
-Structural readiness (`12/12`, `4/3`, `5/4`, `3/3`, 15 views) remains distinct from qualification, model quality, promotion admission, lifecycle authority and release authority.
+Structural readiness (`12/12`, `4/3`, `5/4`, `3/3`, 15 views) remains distinct from qualification, model quality, policy calibration provenance, promotion admission, lifecycle authority and release authority.

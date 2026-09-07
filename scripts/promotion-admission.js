@@ -20,10 +20,39 @@ function currentCore(root){return execFileSync('git',['ls-files','--stage','src/
 function finite01(value){return Number.isFinite(Number(value))&&Number(value)>=0&&Number(value)<=1;}
 function policyPayload(policy){const copy={...policy};delete copy.policyDigest;return copy;}
 
+function validateRunContext(ctx,label='runContext'){
+  assert.match(String(ctx?.sourceSha||''),SHA40,`${label} sourceSha is required`);
+  assert.ok(String(ctx?.runId||''),`${label} runId is required`);
+  assert.ok(String(ctx?.runAttempt||''),`${label} runAttempt is required`);
+  assert.ok(String(ctx?.workflow||''),`${label} workflow is required`);
+  assert.ok(String(ctx?.event||''),`${label} event is required`);
+  assert.ok(String(ctx?.repository||''),`${label} repository is required`);
+  return ctx;
+}
+
+function validateCalibrationEvidence(evidence,{required=false}={}){
+  if(evidence===null||evidence===undefined){
+    assert.equal(required,false,'reviewed promotion policy requires calibrationEvidence');
+    return null;
+  }
+  assert.equal(typeof evidence,'object','promotion calibrationEvidence must be an object');
+  for(const key of ['reportDigest','corpusDigest','evaluationCorpusDigest','qualificationDigest','modelRecordDigest','admissionDigest']){
+    assert.match(String(evidence[key]||''),HEX64,`invalid promotion calibration evidence ${key}`);
+  }
+  assert.match(String(evidence.debugCommit||''),SHA40,'invalid promotion calibration evidence debugCommit');
+  assert.match(String(evidence.coreCommit||''),SHA40,'invalid promotion calibration evidence coreCommit');
+  validateRunContext(evidence.runContext,'promotion calibration runContext');
+  assert.equal(evidence.runContext.sourceSha,evidence.debugCommit,'promotion calibration sourceSha must equal debugCommit');
+  assert.equal(evidence.runContext.workflow,'Promotion Model Evaluation','promotion calibration must come from Promotion Model Evaluation');
+  assert.equal(evidence.runContext.event,'workflow_dispatch','promotion calibration must come from workflow_dispatch');
+  return evidence;
+}
+
 function validateAdmissionPolicy(policy=defaultPolicy){
   assert.equal(policy?.schemaVersion,POLICY_VERSION,'promotion admission policy schema mismatch');
   assert.equal(policy?.kind,'codex-debug-promotion-admission-policy','promotion admission policy kind mismatch');
   assert.equal(typeof policy?.reviewed,'boolean','promotion admission policy reviewed must be explicit');
+  validateCalibrationEvidence(policy.calibrationEvidence,{required:policy.reviewed===true});
 
   const safety=policy.safety||{};
   for(const key of ['maximumFalseSupport','maximumFalseFixCandidates','maximumPatchPolicyViolations']){
@@ -57,14 +86,8 @@ function validateAdmissionPolicy(policy=defaultPolicy){
 
 function assertRunBinding(qualification,modelRecord){
   const q=qualification.runContext||{},m=modelRecord.runContext||{};
-  for(const [label,ctx] of [['qualification',q],['model',m]]){
-    assert.match(String(ctx.sourceSha||''),SHA40,`${label} runContext sourceSha is required`);
-    assert.ok(String(ctx.runId||''),`${label} runContext runId is required`);
-    assert.ok(String(ctx.runAttempt||''),`${label} runContext runAttempt is required`);
-    assert.ok(String(ctx.workflow||''),`${label} runContext workflow is required`);
-    assert.ok(String(ctx.event||''),`${label} runContext event is required`);
-    assert.ok(String(ctx.repository||''),`${label} runContext repository is required`);
-  }
+  validateRunContext(q,'qualification runContext');
+  validateRunContext(m,'model runContext');
   assert.equal(q.sourceSha,qualification.debugCommit,'qualification sourceSha must equal debugCommit');
   assert.equal(m.sourceSha,modelRecord.debugCommit,'model sourceSha must equal debugCommit');
   for(const key of ['sourceSha','runId','runAttempt','workflow','event','repository'])assert.equal(m[key],q[key],`qualification/model runContext mismatch: ${key}`);
@@ -98,6 +121,13 @@ function evaluateAdmission({
   if(expectedDebugCommit)assert.equal(modelRecord.debugCommit,expectedDebugCommit,'promotion admission debugCommit is not current HEAD');
   if(expectedCoreCommit)assert.equal(modelRecord.coreCommit,expectedCoreCommit,'promotion admission coreCommit is not current gitlink');
   assertRunBinding(qualification,modelRecord);
+
+  if(policy.reviewed===true){
+    const evidence=policy.calibrationEvidence;
+    assert.equal(evidence.coreCommit,modelRecord.coreCommit,'reviewed policy calibration Safe Core does not match current evaluation');
+    assert.equal(evidence.corpusDigest,stableDigest(reviewedCorpus),'reviewed policy calibration corpus does not match current reviewed corpus');
+    assert.equal(evidence.evaluationCorpusDigest,stableDigest(evaluationCorpus),'reviewed policy calibration evaluation corpus does not match current evaluation corpus');
+  }
 
   const summary=evaluate(evaluationCorpus,modelRecord,{requireLive:true});
   const gaps=[];
@@ -175,7 +205,7 @@ function main(){
   const policy=JSON.parse(fs.readFileSync(path.resolve(args.policy),'utf8'));
   validateAdmissionPolicy(policy);
   if(args.validatePolicyOnly){
-    process.stdout.write(`${JSON.stringify({schemaVersion:POLICY_VERSION,reviewed:policy.reviewed,tokenCalibrated:policy.tokenEfficiency.calibrated,policyDigest:policy.policyDigest})}\n`);
+    process.stdout.write(`${JSON.stringify({schemaVersion:POLICY_VERSION,reviewed:policy.reviewed,tokenCalibrated:policy.tokenEfficiency.calibrated,calibrationReportDigest:policy.calibrationEvidence?.reportDigest||null,policyDigest:policy.policyDigest})}\n`);
     return;
   }
   if(!args.qualification||!args.record)throw new Error('--qualification and --record are required unless --validate-policy-only is used');
@@ -189,4 +219,4 @@ function main(){
 }
 
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={POLICY_VERSION,validateAdmissionPolicy,assertRunBinding,evaluateAdmission};
+module.exports={POLICY_VERSION,validateRunContext,validateCalibrationEvidence,validateAdmissionPolicy,assertRunBinding,evaluateAdmission};

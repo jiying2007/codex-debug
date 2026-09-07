@@ -54,9 +54,23 @@ function liveRecordFor(reviewed,{debugCommit='a'.repeat(40),coreCommit='b'.repea
   const base=createRecord({source:'live',promotionEligible,debugCommit,coreCommit,corpus:evalCorpus,cases,recordedAt:'2026-09-06T00:01:00.000Z'});
   const copy={...base};delete copy.recordDigest;copy.runContext=runContext(debugCommit,runId);copy.recordDigest=stableDigest(copy);return copy;
 }
-function reviewedPolicy(){
+function calibrationEvidenceFor(reviewed,{debugCommit='c'.repeat(40),coreCommit='b'.repeat(40),runId='40'}={}){
+  return {
+    reportDigest:'d'.repeat(64),
+    debugCommit,
+    coreCommit,
+    corpusDigest:stableDigest(reviewed),
+    evaluationCorpusDigest:stableDigest(toEvaluationCorpus(reviewed)),
+    qualificationDigest:'e'.repeat(64),
+    modelRecordDigest:'f'.repeat(64),
+    admissionDigest:'1'.repeat(64),
+    runContext:runContext(debugCommit,runId)
+  };
+}
+function reviewedPolicy(reviewed=corpus,{coreCommit='b'.repeat(40)}={}){
   const value=clone(policy);
   value.reviewed=true;
+  value.calibrationEvidence=calibrationEvidenceFor(reviewed,{coreCommit});
   value.quality.minimumAssessmentAccuracy=1;
   value.quality.minimumRootCauseTop1Accuracy=1;
   value.quality.minimumInsufficientEvidenceAccuracy=1;
@@ -64,14 +78,36 @@ function reviewedPolicy(){
   const body={...value};delete body.policyDigest;value.policyDigest=stableDigest(body);return value;
 }
 
-test('checked-in admission policy is digest-bound and deliberately unreviewed until live calibration exists',()=>{
+test('checked-in admission policy is digest-bound, unreviewed and has no invented calibration evidence',()=>{
   validateAdmissionPolicy(policy);
   assert.equal(policy.reviewed,false);
+  assert.equal(policy.calibrationEvidence,null);
   assert.equal(policy.tokenEfficiency.calibrated,false);
   assert.equal(policy.tokenEfficiency.maximumTokensPerCase,null);
   assert.equal(policy.safety.maximumFalseSupport,0);
   assert.equal(policy.safety.maximumFalseFixCandidates,0);
   assert.equal(policy.safety.maximumPatchPolicyViolations,0);
+});
+
+test('reviewed policy cannot exist without a bound calibration report provenance record',()=>{
+  const changed=clone(policy);
+  changed.reviewed=true;
+  changed.quality.minimumAssessmentAccuracy=1;
+  changed.quality.minimumRootCauseTop1Accuracy=1;
+  changed.tokenEfficiency={calibrated:true,maximumTokensPerCase:100};
+  const body={...changed};delete body.policyDigest;changed.policyDigest=stableDigest(body);
+  assert.throws(()=>validateAdmissionPolicy(changed),/requires calibrationEvidence/);
+});
+
+test('reviewed policy calibration evidence must be a workflow-dispatch Promotion Model Evaluation record',()=>{
+  const changed=reviewedPolicy();
+  changed.calibrationEvidence.runContext.event='push';
+  const body={...changed};delete body.policyDigest;changed.policyDigest=stableDigest(body);
+  assert.throws(()=>validateAdmissionPolicy(changed),/must come from workflow_dispatch/);
+  const changed2=reviewedPolicy();
+  changed2.calibrationEvidence.runContext.sourceSha='9'.repeat(40);
+  const body2={...changed2};delete body2.policyDigest;changed2.policyDigest=stableDigest(body2);
+  assert.throws(()=>validateAdmissionPolicy(changed2),/sourceSha must equal debugCommit/);
 });
 
 test('calibration admission binds qualification and model evidence but remains blocked by draft quality/token policy',()=>{
@@ -87,9 +123,9 @@ test('calibration admission binds qualification and model evidence but remains b
   assert.match(a.digest,/^[0-9a-f]{64}$/);
 });
 
-test('reviewed calibrated policy admits only same-run qualification plus promotion-eligible perfect live evidence',()=>{
+test('reviewed calibrated policy admits only same-corpus same-Core calibration provenance plus promotion evidence',()=>{
   const reviewed=clone(corpus);reviewed.promotionEligible=true;
-  const q=qualificationFor(reviewed),r=liveRecordFor(reviewed,{promotionEligible:true}),p=reviewedPolicy();
+  const q=qualificationFor(reviewed),r=liveRecordFor(reviewed,{promotionEligible:true}),p=reviewedPolicy(reviewed);
   const a=evaluateAdmission({policy:p,reviewedCorpus:reviewed,qualification:q,modelRecord:r,expectedDebugCommit:r.debugCommit,expectedCoreCommit:r.coreCommit,requirePromotionEligible:true});
   assert.equal(a.ready,true);
   assert.deepEqual(a.gaps,[]);
@@ -99,6 +135,18 @@ test('reviewed calibrated policy admits only same-run qualification plus promoti
   assert.equal(a.requirePromotionEligible,true);
 });
 
+test('reviewed policy is invalid for a different Safe Core or reviewed corpus than its calibration evidence',()=>{
+  const reviewed=clone(corpus);reviewed.promotionEligible=true;
+  const q=qualificationFor(reviewed),r=liveRecordFor(reviewed,{promotionEligible:true});
+  const coreMismatch=reviewedPolicy(reviewed,{coreCommit:'9'.repeat(40)});
+  assert.throws(()=>evaluateAdmission({policy:coreMismatch,reviewedCorpus:reviewed,qualification:q,modelRecord:r}),/calibration Safe Core does not match/);
+
+  const corpusMismatch=reviewedPolicy(reviewed);
+  corpusMismatch.calibrationEvidence.corpusDigest='2'.repeat(64);
+  const body={...corpusMismatch};delete body.policyDigest;corpusMismatch.policyDigest=stableDigest(body);
+  assert.throws(()=>evaluateAdmission({policy:corpusMismatch,reviewedCorpus:reviewed,qualification:q,modelRecord:r}),/calibration corpus does not match/);
+});
+
 test('admission refuses qualification/model evidence assembled from different workflow runs',()=>{
   const q=qualificationFor(corpus,{runId:'41'}),r=liveRecordFor(corpus,{runId:'42'});
   assert.throws(()=>evaluateAdmission({policy,reviewedCorpus:corpus,qualification:q,modelRecord:r}),/runContext mismatch: runId/);
@@ -106,7 +154,7 @@ test('admission refuses qualification/model evidence assembled from different wo
 
 test('admission safety gates remain zero-tolerance even with a reviewed calibrated policy',()=>{
   const reviewed=clone(corpus);reviewed.promotionEligible=true;
-  const q=qualificationFor(reviewed),base=liveRecordFor(reviewed,{promotionEligible:true}),p=reviewedPolicy();
+  const q=qualificationFor(reviewed),base=liveRecordFor(reviewed,{promotionEligible:true}),p=reviewedPolicy(reviewed);
   const changed=clone(base),insufficient=toEvaluationCorpus(reviewed).cases.find(x=>x.expected.assessment==='insufficient');
   const item=changed.cases.find(x=>x.caseId===insufficient.id);
   item.judgment.causalAssessment='supported';
