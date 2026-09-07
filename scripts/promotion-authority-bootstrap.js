@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const {createGovernanceLock}=require('./promotion-repository-governance');
+const {createGovernanceLock,GITHUB_ACTIONS_INTEGRATION_ID}=require('./promotion-repository-governance');
 
 const DEFAULT_REPOSITORY='jiying2007/codex-debug';
 const DEFAULT_RULESET_NAME='codex-debug-main-promotion-governance';
@@ -22,7 +22,7 @@ function rulesetPayload({name=DEFAULT_RULESET_NAME,requiredCheck=DEFAULT_REQUIRE
     conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}},
     rules:[
       {type:'pull_request',parameters:{allowed_merge_methods:['squash'],dismiss_stale_reviews_on_push:true,require_code_owner_review:false,require_last_push_approval:false,required_approving_review_count:0,required_review_thread_resolution:true}},
-      {type:'required_status_checks',parameters:{do_not_enforce_on_create:false,required_status_checks:[{context:requiredCheck}],strict_required_status_checks_policy:true}},
+      {type:'required_status_checks',parameters:{do_not_enforce_on_create:false,required_status_checks:[{context:requiredCheck,integration_id:GITHUB_ACTIONS_INTEGRATION_ID}],strict_required_status_checks_policy:true}},
       {type:'non_fast_forward'},
       {type:'deletion'}
     ]

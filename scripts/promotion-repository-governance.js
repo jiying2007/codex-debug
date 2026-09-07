@@ -8,6 +8,7 @@ const {stableDigest}=require('./model-evaluation');
 
 const GOVERNANCE_LOCK_VERSION=1;
 const GOVERNANCE_RECEIPT_VERSION=2;
+const GITHUB_ACTIONS_INTEGRATION_ID=15368;
 const SHA40=/^[0-9a-f]{40}$/;
 const HEX64=/^[0-9a-f]{64}$/;
 const ISO_UTC=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -25,9 +26,8 @@ function targetsBranch(ruleset,branch){
   const ref=`refs/heads/${branch}`,condition=ruleset.conditions?.ref_name||{},include=Array.isArray(condition.include)?condition.include:[],exclude=Array.isArray(condition.exclude)?condition.exclude:[];
   return include.some(x=>refPatternMatches(x,ref,branch))&&!exclude.some(x=>refPatternMatches(x,ref,branch));
 }
-function requiredCheckContexts(rule){
-  return (rule?.parameters?.required_status_checks||[]).map(x=>String(x?.context||'')).filter(Boolean);
-}
+function requiredCheckEntries(rule){return Array.isArray(rule?.parameters?.required_status_checks)?rule.parameters.required_status_checks:[];}
+function requiredCheckContexts(rule){return requiredCheckEntries(rule).map(x=>String(x?.context||'')).filter(Boolean);}
 function publicRulesetProjection(ruleset){
   return {
     id:ruleset?.id??null,
@@ -51,7 +51,10 @@ function ruleGaps(ruleset,branch,requiredCheck,{requireBypassVisibility=false}={
   else if(pull.parameters?.dismiss_stale_reviews_on_push!==true)gaps.push('pull_request dismiss_stale_reviews_on_push must be true');
   if(!status)gaps.push('required_status_checks rule missing');
   else{
-    if(!checks.includes(requiredCheck))gaps.push(`required status check ${requiredCheck} missing`);
+    const matching=requiredCheckEntries(status).filter(entry=>String(entry?.context||'')===requiredCheck);
+    if(!matching.length)gaps.push(`required status check ${requiredCheck} missing`);
+    else if(matching.length!==1)gaps.push(`required status check ${requiredCheck} must appear exactly once`);
+    else if(Number(matching[0]?.integration_id)!==GITHUB_ACTIONS_INTEGRATION_ID)gaps.push(`required status check ${requiredCheck} must require GitHub Actions integration ${GITHUB_ACTIONS_INTEGRATION_ID}`);
     if(status.parameters?.strict_required_status_checks_policy!==true)gaps.push('strict_required_status_checks_policy must be true');
   }
   if(!byType.has('non_fast_forward'))gaps.push('non_fast_forward rule missing');
@@ -156,4 +159,4 @@ async function main(){
   if(!receipt.ready)process.exitCode=2;
 }
 if(require.main===module){main().catch(error=>{console.error(error.stack||error.message);process.exitCode=2;});}
-module.exports={GOVERNANCE_LOCK_VERSION,GOVERNANCE_RECEIPT_VERSION,LOCK_KIND,refPatternMatches,targetsBranch,requiredCheckContexts,publicRulesetProjection,ruleGaps,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt,fetchRulesets,parseArgs};
+module.exports={GOVERNANCE_LOCK_VERSION,GOVERNANCE_RECEIPT_VERSION,GITHUB_ACTIONS_INTEGRATION_ID,LOCK_KIND,refPatternMatches,targetsBranch,requiredCheckEntries,requiredCheckContexts,publicRulesetProjection,ruleGaps,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt,fetchRulesets,parseArgs};

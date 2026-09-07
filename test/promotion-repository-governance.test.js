@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {stableDigest}=require('../scripts/model-evaluation');
-const {refPatternMatches,targetsBranch,publicRulesetProjection,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt}=require('../scripts/promotion-repository-governance');
+const {GITHUB_ACTIONS_INTEGRATION_ID,refPatternMatches,targetsBranch,publicRulesetProjection,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt}=require('../scripts/promotion-repository-governance');
 const {parseArgs:parseLockArgs}=require('../scripts/promotion-repository-governance-lock');
 
 const SHA='a'.repeat(40),REPO='jiying2007/codex-debug';
@@ -13,7 +13,7 @@ function ruleset(overrides={}){
     {type:'deletion'},
     {type:'non_fast_forward'},
     {type:'pull_request',parameters:{dismiss_stale_reviews_on_push:true,required_approving_review_count:0}},
-    {type:'required_status_checks',parameters:{strict_required_status_checks_policy:true,do_not_enforce_on_create:false,required_status_checks:[{context:'CI Gate'}]}}
+    {type:'required_status_checks',parameters:{strict_required_status_checks_policy:true,do_not_enforce_on_create:false,required_status_checks:[{context:'CI Gate',integration_id:GITHUB_ACTIONS_INTEGRATION_ID}]}}
   ]};
   return Object.assign(value,overrides);
 }
@@ -44,6 +44,14 @@ test('admin-reviewed governance lock requires visible empty bypass actors and bi
   assert.throws(()=>createGovernanceLock({repository:REPO,ruleset:ruleset({bypass_actors:[{actor_id:1,actor_type:'RepositoryRole',bypass_mode:'always'}]})}),/bypass actors must be empty/);
 });
 
+test('required CI Gate must be uniquely bound to the GitHub Actions integration',()=>{
+  const variants=[];
+  const missingSource=ruleset();missingSource.rules=missingSource.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'CI Gate'}]}}:x);variants.push([missingSource,/GitHub Actions integration/]);
+  const wrongSource=ruleset();wrongSource.rules=wrongSource.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'CI Gate',integration_id:999}]}}:x);variants.push([wrongSource,/GitHub Actions integration/]);
+  const duplicate=ruleset();duplicate.rules=duplicate.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'CI Gate',integration_id:GITHUB_ACTIONS_INTEGRATION_ID},{context:'CI Gate',integration_id:999}]}}:x);variants.push([duplicate,/appear exactly once/]);
+  for(const [value,error] of variants)assert.throws(()=>createGovernanceLock({repository:REPO,ruleset:value}),error);
+});
+
 test('low-privilege live ruleset may hide bypass actors only when an admin-reviewed lock matches exactly',()=>{
   const governanceLock=lock(),value=receipt([visible()],governanceLock);
   assert.equal(value.ready,true);assert.deepEqual(value.gaps,[]);assert.equal(value.rulesets.length,1);assert.equal(value.governanceLockDigest,governanceLock.lockDigest);assert.match(value.digest,/^[0-9a-f]{64}$/);
@@ -53,9 +61,10 @@ test('low-privilege live ruleset may hide bypass actors only when an admin-revie
 test('repository governance rejects ruleset drift after admin review, including hidden bypass-change timestamp drift',()=>{
   const governanceLock=lock();
   const timeDrift=visible(ruleset({updated_at:'2026-09-07T01:03:00Z'}));
-  const changed=visible();changed.rules=changed.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'security'}]}}:x);
+  const changed=visible();changed.rules=changed.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'security',integration_id:GITHUB_ACTIONS_INTEGRATION_ID}]}}:x);
+  const sourceDrift=visible();sourceDrift.rules=sourceDrift.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'CI Gate',integration_id:999}]}}:x);
   const exposedBypass={...visible(),bypass_actors:[{actor_id:1,actor_type:'RepositoryRole',bypass_mode:'always'}]};
-  for(const live of [timeDrift,changed,exposedBypass]){const value=receipt([live],governanceLock);assert.equal(value.ready,false);assert.ok(value.gaps.length>0);assert.throws(()=>validateGovernanceReceipt(value),/not ready/);}
+  for(const live of [timeDrift,changed,sourceDrift,exposedBypass]){const value=receipt([live],governanceLock);assert.equal(value.ready,false);assert.ok(value.gaps.length>0);assert.throws(()=>validateGovernanceReceipt(value),/not ready/);}
 });
 
 test('repository governance rejects weak or missing reviewed rulesets',()=>{
