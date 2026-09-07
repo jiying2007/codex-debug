@@ -25,8 +25,10 @@ The checked-in development lock at `quality/promotion-repository-governance-lock
 
 ## Required main ruleset
 
-The administrator-reviewed ruleset must be an **active branch ruleset** targeting the default/main branch with:
+The administrator-reviewed ruleset must be an **active branch ruleset** that protects the stable explicit ref `refs/heads/main` with:
 
+- `conditions.ref_name.include=["refs/heads/main"]` (or another stable explicit/wildcard rule that actually covers main);
+- no `~DEFAULT_BRANCH` token in either the include or exclude set;
 - `pull_request`;
 - `pull_request.parameters.dismiss_stale_reviews_on_push=true`;
 - `required_status_checks` containing exact context `CI Gate` **exactly once**;
@@ -35,6 +37,8 @@ The administrator-reviewed ruleset must be an **active branch ruleset** targetin
 - `non_fast_forward`;
 - `deletion`;
 - `bypass_actors=[]` in the administrator-visible snapshot.
+
+Promotion governance deliberately rejects `~DEFAULT_BRANCH`. GitHub resolves that token dynamically against the repository's current default branch. If the repository default branch were ever renamed away from `main`, a ruleset using `~DEFAULT_BRANCH` could silently stop protecting main without the ruleset JSON itself changing. The reviewed lock therefore requires stable explicit main targeting rather than inferring default-branch identity from the branch being checked.
 
 The integration binding matters because GitHub Rulesets otherwise permit a required status check to accept a matching context from any source. Promotion requires the aggregate `CI Gate` specifically from GitHub Actions, not merely any status/check named `CI Gate`. The reviewed public-projection digest includes the `integration_id`, so changing or removing the expected source invalidates the Governance Lock.
 
@@ -62,7 +66,7 @@ Review the generated candidate in a normal PR before replacing the checked-in dr
 node scripts/promotion-authority-bootstrap.js
 ```
 
-The dry run prints the exact Ruleset payload, required acknowledgement flags, lock candidate path and calibration `gh workflow run` arguments without invoking `gh` or mutating GitHub. The generated Ruleset payload binds `CI Gate` to GitHub Actions with `integration_id=15368`.
+The dry run prints the exact Ruleset payload, required acknowledgement flags, lock candidate path and calibration `gh workflow run` arguments without invoking `gh` or mutating GitHub. The generated Ruleset payload targets `refs/heads/main` explicitly and binds `CI Gate` to GitHub Actions with `integration_id=15368`.
 
 To create the required Ruleset when it does not exist, re-read its administrator-visible detail and generate a Governance Lock candidate:
 
@@ -77,6 +81,7 @@ This operation is fail closed:
 - a same-name existing Ruleset is validated and never silently patched;
 - multiple same-name Rulesets are rejected as ambiguous;
 - a hidden, malformed or non-empty `bypass_actors` surface is rejected;
+- dynamic `~DEFAULT_BRANCH` targeting is rejected; promotion requires stable explicit main coverage;
 - a `CI Gate` entry with no expected source, the wrong `integration_id`, or duplicate matching entries is rejected;
 - weak rule semantics are rejected by Governance Lock generation;
 - the only file written is `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.candidate.json` (or the explicit `--lock-output` path);

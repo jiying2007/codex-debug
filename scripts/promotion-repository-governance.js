@@ -21,10 +21,18 @@ function refPatternMatches(pattern,ref,defaultBranch){
   const re=`^${escapeRegex(pattern).replace(/\*/g,'.*').replace(/\?/g,'.')}$`;
   return new RegExp(re).test(ref);
 }
+function refConditions(ruleset){
+  const condition=ruleset?.conditions?.ref_name||{};
+  return {include:Array.isArray(condition.include)?condition.include:[],exclude:Array.isArray(condition.exclude)?condition.exclude:[]};
+}
+function usesDynamicDefaultBranch(ruleset){
+  const {include,exclude}=refConditions(ruleset);
+  return [...include,...exclude].includes('~DEFAULT_BRANCH');
+}
 function targetsBranch(ruleset,branch){
-  if(ruleset?.target!=='branch'||ruleset?.enforcement!=='active')return false;
-  const ref=`refs/heads/${branch}`,condition=ruleset.conditions?.ref_name||{},include=Array.isArray(condition.include)?condition.include:[],exclude=Array.isArray(condition.exclude)?condition.exclude:[];
-  return include.some(x=>refPatternMatches(x,ref,branch))&&!exclude.some(x=>refPatternMatches(x,ref,branch));
+  if(ruleset?.target!=='branch'||ruleset?.enforcement!=='active'||usesDynamicDefaultBranch(ruleset))return false;
+  const ref=`refs/heads/${branch}`,{include,exclude}=refConditions(ruleset);
+  return include.some(x=>refPatternMatches(x,ref,''))&&!exclude.some(x=>refPatternMatches(x,ref,''));
 }
 function requiredCheckEntries(rule){return Array.isArray(rule?.parameters?.required_status_checks)?rule.parameters.required_status_checks:[];}
 function requiredCheckContexts(rule){return requiredCheckEntries(rule).map(x=>String(x?.context||'')).filter(Boolean);}
@@ -44,6 +52,7 @@ function publicRulesetProjection(ruleset){
 }
 function ruleGaps(ruleset,branch,requiredCheck,{requireBypassVisibility=false}={}){
   const gaps=[];
+  if(usesDynamicDefaultBranch(ruleset))gaps.push('ruleset must not use ~DEFAULT_BRANCH; promotion governance requires stable explicit main targeting');
   if(!targetsBranch(ruleset,branch))gaps.push(`ruleset must be active and target ${branch}`);
   const rules=Array.isArray(ruleset?.rules)?ruleset.rules:[],byType=new Map(rules.map(x=>[x.type,x])),pull=byType.get('pull_request'),status=byType.get('required_status_checks');
   const checks=requiredCheckContexts(status);
@@ -159,4 +168,4 @@ async function main(){
   if(!receipt.ready)process.exitCode=2;
 }
 if(require.main===module){main().catch(error=>{console.error(error.stack||error.message);process.exitCode=2;});}
-module.exports={GOVERNANCE_LOCK_VERSION,GOVERNANCE_RECEIPT_VERSION,GITHUB_ACTIONS_INTEGRATION_ID,LOCK_KIND,refPatternMatches,targetsBranch,requiredCheckEntries,requiredCheckContexts,publicRulesetProjection,ruleGaps,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt,fetchRulesets,parseArgs};
+module.exports={GOVERNANCE_LOCK_VERSION,GOVERNANCE_RECEIPT_VERSION,GITHUB_ACTIONS_INTEGRATION_ID,LOCK_KIND,refPatternMatches,refConditions,usesDynamicDefaultBranch,targetsBranch,requiredCheckEntries,requiredCheckContexts,publicRulesetProjection,ruleGaps,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt,fetchRulesets,parseArgs};

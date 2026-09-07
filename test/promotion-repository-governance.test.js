@@ -9,7 +9,7 @@ const {parseArgs:parseLockArgs}=require('../scripts/promotion-repository-governa
 
 const SHA='a'.repeat(40),REPO='jiying2007/codex-debug';
 function ruleset(overrides={}){
-  const value={id:123,name:'codex-debug-main-promotion-governance',target:'branch',source_type:'Repository',source:REPO,enforcement:'active',created_at:'2026-09-07T01:00:00Z',updated_at:'2026-09-07T01:01:00Z',bypass_actors:[],conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}},rules:[
+  const value={id:123,name:'codex-debug-main-promotion-governance',target:'branch',source_type:'Repository',source:REPO,enforcement:'active',created_at:'2026-09-07T01:00:00Z',updated_at:'2026-09-07T01:01:00Z',bypass_actors:[],conditions:{ref_name:{include:['refs/heads/main'],exclude:[]}},rules:[
     {type:'deletion'},
     {type:'non_fast_forward'},
     {type:'pull_request',parameters:{dismiss_stale_reviews_on_push:true,required_approving_review_count:0}},
@@ -29,19 +29,21 @@ function receipt(rs=[visible()],governanceLock=lock()){
   return evaluateGovernance({repository:REPO,branch:'main',sourceSha:SHA,rulesets:rs,lock:governanceLock,recordedAt:'2026-09-07T01:20:00.000Z',runContext:{workflow:'Promotion Model Evaluation',runId:'99',runAttempt:'1',event:'workflow_dispatch',repository:REPO,sourceSha:SHA}});
 }
 
-test('ruleset targeting accepts default branch and exact/glob refs while respecting excludes',()=>{
-  assert.equal(refPatternMatches('~DEFAULT_BRANCH','refs/heads/main','main'),true);
-  assert.equal(refPatternMatches('refs/heads/*','refs/heads/main','main'),true);
+test('ruleset targeting accepts stable explicit refs and rejects dynamic default-branch targeting',()=>{
+  assert.equal(refPatternMatches('~DEFAULT_BRANCH','refs/heads/main','main'),true,'generic helper can resolve a caller-supplied default branch');
+  assert.equal(refPatternMatches('refs/heads/*','refs/heads/main',''),true);
   assert.equal(targetsBranch(ruleset(),'main'),true);
+  assert.equal(targetsBranch(ruleset({conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}}}),'main'),false);
   assert.equal(targetsBranch(ruleset({conditions:{ref_name:{include:['~ALL'],exclude:['refs/heads/main']}}}),'main'),false);
 });
 
-test('admin-reviewed governance lock requires visible empty bypass actors and binds the public projection',()=>{
+test('admin-reviewed governance lock requires visible empty bypass actors, stable main targeting, and binds the public projection',()=>{
   const good=lock();
   assert.equal(good.reviewed,true);assert.equal(good.ruleset.bypassActorCount,0);assert.equal(good.ruleset.publicProjectionDigest,stableDigest(publicRulesetProjection(ruleset())));assert.doesNotThrow(()=>validateGovernanceLock(good,{expectedRepository:REPO,expectedBranch:'main',expectedRequiredCheck:'CI Gate'}));
   const hidden=visible();
   assert.throws(()=>createGovernanceLock({repository:REPO,ruleset:hidden}),/expose bypass_actors/);
   assert.throws(()=>createGovernanceLock({repository:REPO,ruleset:ruleset({bypass_actors:[{actor_id:1,actor_type:'RepositoryRole',bypass_mode:'always'}]})}),/bypass actors must be empty/);
+  assert.throws(()=>createGovernanceLock({repository:REPO,ruleset:ruleset({conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}}})}),/must not use ~DEFAULT_BRANCH/);
 });
 
 test('required CI Gate must be uniquely bound to the GitHub Actions integration',()=>{
@@ -58,13 +60,14 @@ test('low-privilege live ruleset may hide bypass actors only when an admin-revie
   assert.doesNotThrow(()=>validateGovernanceReceipt(value,{expectedRepository:REPO,expectedBranch:'main',expectedSourceSha:SHA,expectedLockDigest:governanceLock.lockDigest}));
 });
 
-test('repository governance rejects ruleset drift after admin review, including hidden bypass-change timestamp drift',()=>{
+test('repository governance rejects ruleset drift after admin review, including branch-target and hidden bypass-change drift',()=>{
   const governanceLock=lock();
   const timeDrift=visible(ruleset({updated_at:'2026-09-07T01:03:00Z'}));
   const changed=visible();changed.rules=changed.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'security',integration_id:GITHUB_ACTIONS_INTEGRATION_ID}]}}:x);
   const sourceDrift=visible();sourceDrift.rules=sourceDrift.rules.map(x=>x.type==='required_status_checks'?{...x,parameters:{...x.parameters,required_status_checks:[{context:'CI Gate',integration_id:999}]}}:x);
+  const targetDrift=visible(ruleset({conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}}}));
   const exposedBypass={...visible(),bypass_actors:[{actor_id:1,actor_type:'RepositoryRole',bypass_mode:'always'}]};
-  for(const live of [timeDrift,changed,sourceDrift,exposedBypass]){const value=receipt([live],governanceLock);assert.equal(value.ready,false);assert.ok(value.gaps.length>0);assert.throws(()=>validateGovernanceReceipt(value),/not ready/);}
+  for(const live of [timeDrift,changed,sourceDrift,targetDrift,exposedBypass]){const value=receipt([live],governanceLock);assert.equal(value.ready,false);assert.ok(value.gaps.length>0);assert.throws(()=>validateGovernanceReceipt(value),/not ready/);}
 });
 
 test('repository governance rejects weak or missing reviewed rulesets',()=>{
