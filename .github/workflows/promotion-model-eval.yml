@@ -37,7 +37,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
-      OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
       CODEX_DEBUG_MODEL: ${{ inputs.model }}
       CODEX_DEBUG_VERIFIER_MODEL: ${{ inputs.verifier_model }}
       CODEX_DEBUG_MODEL_SELECTION_STRATEGY: ${{ inputs.model != '' && 'fixed' || 'auto' }}
@@ -60,14 +59,6 @@ jobs:
         run: |
           echo 'Historical promotion evaluation executes reviewed old repository code and is not an OS sandbox. Explicit acknowledgement is required.' >&2
           exit 2
-      - name: Require protected live-model credential
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${OPENAI_API_KEY:-}" || {
-            echo 'CODEX_DEBUG_CANARY_OPENAI_API_KEY (preferred) or OPENAI_API_KEY is unavailable; refusing live promotion evaluation.' >&2
-            exit 2
-          }
       - name: Install selected Codex CLI
         env:
           CODEX_VERSION: ${{ inputs.codex_version }}
@@ -90,10 +81,15 @@ jobs:
           test -s PROMOTION_CORPUS_QUALIFICATION.json
       - name: Record historical live-model evaluation
         env:
+          OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
         shell: bash
         run: |
           set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}" || {
+            echo 'CODEX_DEBUG_CANARY_OPENAI_API_KEY (preferred) or OPENAI_API_KEY is unavailable; refusing live promotion evaluation.' >&2
+            exit 2
+          }
           args=(--output PROMOTION_MODEL_EVAL.json --summary PROMOTION_MODEL_EVAL_SUMMARY.json --transitions PROMOTION_TRANSITIONS.json)
           if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-ready); fi
           node scripts/promotion-live-eval.js "${args[@]}"
