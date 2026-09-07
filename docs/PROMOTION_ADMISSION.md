@@ -30,20 +30,22 @@ Null RCA thresholds and the null token ceiling are deliberate fail-closed gaps, 
 
 ## Workflow sequencing
 
-`Promotion Model Evaluation` now performs the authority chain in one read-only workflow run after explicit acknowledgement that historical code executes without an OS sandbox:
+`Promotion Model Evaluation` performs the authority chain in one read-only workflow run after explicit acknowledgement that historical code executes without an OS sandbox:
 
-`validate corpus/policy -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> promotion admission -> artifact upload`
+`validate corpus/policy -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> promotion admission -> receipt revalidation -> calibration review report -> artifact upload`
 
-The workflow retains `contents: read` only. Historical reproduction receives the existing isolated HOME/Git/npm environment and cannot inherit model or GitHub credentials. Model credentials are used only by the Codex execution path.
+The workflow retains `contents: read` only. Historical reproduction receives the existing isolated HOME/Git/npm environment and cannot inherit model or GitHub credentials.
 
-For `promotion_mode=false`, the workflow records qualification, live calibration and an admission record, but the current draft policy causes `ready=false` without failing the calibration run. This is how RCA accuracy, insufficient-evidence accuracy and token usage are collected before choosing thresholds.
+The protected model credential follows an additional least-privilege boundary: `OPENAI_API_KEY` is **not** defined at job scope and is injected only into the `Record historical live-model evaluation` step. Checkout, dependency installation, corpus/policy validation, the complete 12-transition Qualification step, Admission, Receipt revalidation, Calibration Report generation, and artifact upload do not receive the model credential through workflow environment. The live-model step itself fails closed before model execution when the protected credential is absent. Historical reproduction executed inside live evaluation continues to receive the scrubbed historical environment rather than the model process environment.
+
+For `promotion_mode=false`, the workflow records qualification, live calibration, Admission and the digest-bound review-only Calibration Report, but the current draft policy causes `ready=false` without failing the calibration run. This is how RCA accuracy, insufficient-evidence accuracy, patch applicability and token usage are collected before choosing thresholds.
 
 For `promotion_mode=true`, the workflow additionally requires the reviewed corpus and live record to be promotion eligible and requires `PROMOTION_ADMISSION.json.ready=true`. Any draft threshold, uncalibrated token ceiling, safety regression, quality miss, SHA/Core mismatch or cross-run evidence assembly fails closed.
 
 ## Required sequence before active promotion
 
 1. Run credential-backed calibration with explicit historical-execution acknowledgement.
-2. Review the generated Qualification, model summary, patch-applicability results and token usage.
+2. Review the generated Qualification, Admission Receipt, Calibration Report, model quality, patch-applicability results and token usage.
 3. Set evidence-based RCA thresholds and a token ceiling; recompute the policy digest and review that policy change.
 4. Explicitly review the separate `promotionEligible=true` corpus change.
 5. Run `Promotion Model Evaluation` with `promotion_mode=true`; same-run Qualification and Admission must pass.
