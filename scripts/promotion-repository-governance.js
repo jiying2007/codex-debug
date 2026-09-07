@@ -6,6 +6,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {stableDigest}=require('./model-evaluation');
 
+const GOVERNANCE_LOCK_VERSION=1;
+const GOVERNANCE_RECEIPT_VERSION=2;
 const SHA40=/^[0-9a-f]{40}$/;
 const HEX64=/^[0-9a-f]{64}$/;
 const ISO_UTC=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -61,7 +63,7 @@ function ruleGaps(ruleset,branch,requiredCheck,{requireBypassVisibility=false}={
   return {gaps,checks:checks.sort()};
 }
 function validateGovernanceLock(lock,{expectedRepository='',expectedBranch='',expectedRequiredCheck='',requireReviewed=true}={}){
-  assert.equal(lock?.schemaVersion,1,'repository governance lock schema mismatch');
+  assert.equal(lock?.schemaVersion,GOVERNANCE_LOCK_VERSION,'repository governance lock schema mismatch');
   assert.equal(lock?.kind,LOCK_KIND,'repository governance lock kind mismatch');
   assert.ok(String(lock?.repository||'').includes('/'),'repository governance lock repository must be owner/name');
   assert.ok(String(lock?.branch||''),'repository governance lock branch is required');
@@ -90,7 +92,7 @@ function createGovernanceLock({repository,branch='main',requiredCheck='CI Gate',
   assert.deepEqual(gaps,[],`repository governance admin snapshot is not acceptable: ${gaps.join('; ')}`);
   assert.ok(Number.isInteger(ruleset?.id)&&ruleset.id>0,'repository governance ruleset id is invalid');
   assert.ok(!Number.isNaN(Date.parse(String(ruleset?.updated_at||''))),'repository governance ruleset updated_at is required');
-  const body={schemaVersion:1,kind:LOCK_KIND,reviewed:true,reviewedAt:new Date(reviewedAt).toISOString(),repository,branch,requiredCheck,ruleset:{id:ruleset.id,name:String(ruleset.name||''),updatedAt:String(ruleset.updated_at),publicProjectionDigest:stableDigest(publicRulesetProjection(ruleset)),adminSnapshotDigest:stableDigest(ruleset),bypassActorCount:0}};
+  const body={schemaVersion:GOVERNANCE_LOCK_VERSION,kind:LOCK_KIND,reviewed:true,reviewedAt:new Date(reviewedAt).toISOString(),repository,branch,requiredCheck,ruleset:{id:ruleset.id,name:String(ruleset.name||''),updatedAt:String(ruleset.updated_at),publicProjectionDigest:stableDigest(publicRulesetProjection(ruleset)),adminSnapshotDigest:stableDigest(ruleset),bypassActorCount:0}};
   body.lockDigest=stableDigest(body);
   return Object.freeze(body);
 }
@@ -109,12 +111,12 @@ function evaluateGovernance({repository,branch='main',sourceSha,rulesets,lock,re
     if(!local.length)satisfying.push({id:ruleset.id,name:ruleset.name,enforcement:ruleset.enforcement,updatedAt:String(ruleset.updated_at||''),requiredChecks:requiredCheckContexts((ruleset.rules||[]).find(x=>x.type==='required_status_checks')).sort(),publicProjectionDigest:projectionDigest,governanceLockDigest:lock.lockDigest});
     else gaps.push(...local);
   }
-  const body={schemaVersion:2,kind:'codex-debug-promotion-repository-governance',recordedAt:new Date(recordedAt).toISOString(),repository,branch,sourceSha,requiredCheck,governanceLockDigest:lock.lockDigest,runContext:{...runContext},rulesets:satisfying,ready:gaps.length===0&&satisfying.length===1,gaps:[...new Set(gaps)]};
+  const body={schemaVersion:GOVERNANCE_RECEIPT_VERSION,kind:'codex-debug-promotion-repository-governance',recordedAt:new Date(recordedAt).toISOString(),repository,branch,sourceSha,requiredCheck,governanceLockDigest:lock.lockDigest,runContext:{...runContext},rulesets:satisfying,ready:gaps.length===0&&satisfying.length===1,gaps:[...new Set(gaps)]};
   body.digest=stableDigest(body);
   return Object.freeze(body);
 }
 function validateGovernanceReceipt(receipt,{expectedRepository='',expectedBranch='',expectedSourceSha='',expectedLockDigest=''}={}){
-  assert.equal(receipt?.schemaVersion,2,'repository governance receipt schema mismatch');
+  assert.equal(receipt?.schemaVersion,GOVERNANCE_RECEIPT_VERSION,'repository governance receipt schema mismatch');
   assert.equal(receipt?.kind,'codex-debug-promotion-repository-governance','repository governance receipt kind mismatch');
   assert.ok(ISO_UTC.test(String(receipt?.recordedAt||''))&&new Date(receipt.recordedAt).toISOString()===receipt.recordedAt,'repository governance recordedAt must be canonical UTC');
   assert.match(String(receipt?.sourceSha||''),SHA40,'repository governance sourceSha is invalid');
@@ -154,4 +156,4 @@ async function main(){
   if(!receipt.ready)process.exitCode=2;
 }
 if(require.main===module){main().catch(error=>{console.error(error.stack||error.message);process.exitCode=2;});}
-module.exports={LOCK_KIND,refPatternMatches,targetsBranch,requiredCheckContexts,publicRulesetProjection,ruleGaps,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt,fetchRulesets,parseArgs};
+module.exports={GOVERNANCE_LOCK_VERSION,GOVERNANCE_RECEIPT_VERSION,LOCK_KIND,refPatternMatches,targetsBranch,requiredCheckContexts,publicRulesetProjection,ruleGaps,validateGovernanceLock,createGovernanceLock,evaluateGovernance,validateGovernanceReceipt,fetchRulesets,parseArgs};

@@ -1,7 +1,7 @@
 {
   "productContractVersion": 2,
   "productId": "codex-debug-safe",
-  "productVersion": "0.1.11",
+  "productVersion": "0.1.12",
   "lifecycle": "development",
   "safeCoreVersion": "4.17.5",
   "safeCoreCommit": "d8ae46fb84787939f6ecf7632ccf8a52b37188fb",
@@ -29,6 +29,7 @@
   "modelEvaluationRecordVersion": 1,
   "promotionCorpusVersion": 2,
   "promotionTransitionVersion": 1,
+  "promotionQualificationVersion": 1,
   "promotionAdmissionPolicyVersion": 1,
   "promotionAdmissionVersion": 2,
   "promotionRepositoryGovernanceLockVersion": 1,

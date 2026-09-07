@@ -10,6 +10,7 @@ const {stableDigest}=require('./model-evaluation');
 const {validatePromotionCorpus,promotionReadiness}=require('./promotion-corpus');
 const {materializeHistoricalCase}=require('./historical-case');
 
+const QUALIFICATION_VERSION=1;
 const SHA40=/^[0-9a-f]{40}$/;
 const HEX64=/^[0-9a-f]{64}$/;
 function head(root){return execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();}
@@ -18,7 +19,7 @@ function parseArgs(argv){const out={output:'PROMOTION_CORPUS_QUALIFICATION.json'
 function runContext(){return {workflow:String(process.env.GITHUB_WORKFLOW||''),runId:String(process.env.GITHUB_RUN_ID||''),runAttempt:String(process.env.GITHUB_RUN_ATTEMPT||''),event:String(process.env.GITHUB_EVENT_NAME||''),repository:String(process.env.GITHUB_REPOSITORY||''),sourceSha:String(process.env.GITHUB_SHA||'')};}
 function validateQualificationRecord(record,reviewedCorpus=corpus){
   validatePromotionCorpus(reviewedCorpus);
-  assert.equal(record?.schemaVersion,1,'qualification schema mismatch');
+  assert.equal(record?.schemaVersion,QUALIFICATION_VERSION,'qualification schema mismatch');
   assert.equal(record?.kind,'codex-debug-promotion-corpus-qualification','qualification kind mismatch');
   assert.match(String(record?.debugCommit||''),SHA40,'invalid qualification debugCommit');
   assert.match(String(record?.coreCommit||''),SHA40,'invalid qualification coreCommit');
@@ -56,10 +57,10 @@ function main(){
   validatePromotionCorpus(corpus);
   const transitions=[];
   for(const item of corpus.cases){const materialized=materializeHistoricalCase(item);try{transitions.push(materialized.transition);}finally{materialized.cleanup();}}
-  const root=path.resolve(__dirname,'..'),record={schemaVersion:1,kind:'codex-debug-promotion-corpus-qualification',recordedAt:new Date().toISOString(),debugCommit:head(root),coreCommit:core(root),corpusDigest:stableDigest(corpus),readiness:promotionReadiness(corpus),runContext:runContext(),cases:transitions};record.digest=stableDigest(record);
+  const root=path.resolve(__dirname,'..'),record={schemaVersion:QUALIFICATION_VERSION,kind:'codex-debug-promotion-corpus-qualification',recordedAt:new Date().toISOString(),debugCommit:head(root),coreCommit:core(root),corpusDigest:stableDigest(corpus),readiness:promotionReadiness(corpus),runContext:runContext(),cases:transitions};record.digest=stableDigest(record);
   validateQualificationRecord(record,corpus);
   fs.writeFileSync(path.resolve(args.output),`${JSON.stringify(record,null,2)}\n`,'utf8');
   process.stdout.write(`${JSON.stringify({output:path.resolve(args.output),cases:transitions.length,debugCommit:record.debugCommit,coreCommit:record.coreCommit,readyForPromotion:record.readiness.ready,gaps:record.readiness.gaps,digest:record.digest})}\n`);
 }
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={runContext,validateQualificationRecord};
+module.exports={QUALIFICATION_VERSION,runContext,validateQualificationRecord};

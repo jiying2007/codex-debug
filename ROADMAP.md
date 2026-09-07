@@ -34,8 +34,9 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] calibration mode produces qualification/live/admission evidence with explicit null governance digests and without granting promotion authority
 - [x] promotion mode requires reviewed Governance Lock v1 + live Governance Receipt v2, explicit eligibility, reviewed/calibrated admission policy and ready Admission v2 receipt
 - [x] Admission v2 self-digest and independent reconstruction bind repository governance, Qualification, model evidence and admission policy into one downstream authority record
-- [x] shipped Product Contract exposes `promotionAdmissionVersion=2`, `promotionRepositoryGovernanceLockVersion=1`, `promotionRepositoryGovernanceVersion=2` and `promotionCalibrationReportVersion=1`
-- [x] package / package-lock / product-contract development identity gated as one version (`0.1.11` for this line)
+- [x] shipped Product Contract exposes Promotion Transition v1, Promotion Qualification v1, Admission Policy v1, Admission v2, Governance Lock v1, Governance Receipt v2 and Calibration Report v1
+- [x] manifest gate cross-checks shipped Promotion schema versions directly against implementation module constants
+- [x] package / package-lock / product-contract development identity gated as one version (`0.1.12` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
@@ -61,4 +62,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.11 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.12 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.

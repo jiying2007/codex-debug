@@ -11,6 +11,7 @@ const {stableDigest,resultCase,createRecord,evaluate}=require('./model-evaluatio
 const {validatePromotionCorpus,promotionReadiness,toEvaluationCorpus}=require('./promotion-corpus');
 const {materializeHistoricalCase}=require('./historical-case');
 
+const TRANSITION_VERSION=1;
 function gitlink(root){const {execFileSync}=require('node:child_process');return execFileSync('git',['ls-files','--stage','src/codex-safe-core'],{cwd:root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim().split(/\s+/)[1];}
 function head(root){const {execFileSync}=require('node:child_process');return execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();}
 function optionsFromEnv(workspace,item){const explicit=String(process.env.CODEX_DEBUG_MODEL||'').trim();return {workspace,codexPath:process.env.CODEX_PATH||'codex',model:explicit,verifierModel:String(process.env.CODEX_DEBUG_VERIFIER_MODEL||''),modelSelectionStrategy:String(process.env.CODEX_DEBUG_MODEL_SELECTION_STRATEGY||(explicit?'fixed':'auto')),modelCompatibilityPolicy:String(process.env.CODEX_DEBUG_MODEL_COMPATIBILITY_POLICY||'strict'),providerMode:String(process.env.CODEX_DEBUG_PROVIDER_MODE||'openai'),providerBaseUrl:String(process.env.CODEX_DEBUG_PROVIDER_BASE_URL||''),providerApiKeyEnv:String(process.env.CODEX_DEBUG_PROVIDER_API_KEY_ENV||'OPENAI_API_KEY'),providerCredentialSource:String(process.env.CODEX_DEBUG_PROVIDER_CREDENTIAL_SOURCE||'auto'),providerAllowInsecureHttp:false,maxEstimatedTokens:Number(process.env.CODEX_DEBUG_MAX_ESTIMATED_TOKENS||80000),commandTimeoutMs:item.reproduction.timeoutMs,maxLogBytes:4*1024*1024,includeGitHistory:true,persist:false,kind:item.failureKind};}
@@ -55,9 +56,9 @@ async function main(){
     }finally{materialized.cleanup();}
   }
   const repoRoot=path.resolve(__dirname,'..'),base=createRecord({source:'live',promotionEligible:Boolean(corpus.promotionEligible&&readiness.ready),debugCommit:head(repoRoot),coreCommit:gitlink(repoRoot),corpus:evaluationCorpus,cases}),record=withRunContext(base),summary=evaluate(evaluationCorpus,record,{requireLive:true,requirePromotionEligible:args.requirePromotionReady});
-  const transitionBody={schemaVersion:1,kind:'codex-debug-promotion-transitions',corpusDigest:stableDigest(corpus),debugCommit:record.debugCommit,cases:transitions};transitionBody.digest=stableDigest(transitionBody);
+  const transitionBody={schemaVersion:TRANSITION_VERSION,kind:'codex-debug-promotion-transitions',corpusDigest:stableDigest(corpus),debugCommit:record.debugCommit,cases:transitions};transitionBody.digest=stableDigest(transitionBody);
   fs.writeFileSync(path.resolve(args.output),`${JSON.stringify(record,null,2)}\n`,'utf8');fs.writeFileSync(path.resolve(args.summary),`${JSON.stringify({...summary,promotionReadiness:readiness},null,2)}\n`,'utf8');fs.writeFileSync(path.resolve(args.transitions),`${JSON.stringify(transitionBody,null,2)}\n`,'utf8');
   process.stdout.write(`${JSON.stringify({reviewedTransitions:corpus.cases.length,evaluationCases:cases.length,insufficientCases:readiness.insufficientCases,debugCommit:record.debugCommit,coreCommit:record.coreCommit,readyForPromotion:readiness.ready,promotionEligible:record.promotionEligible,claimableLiveMetric:summary.claimableLiveMetric,falseSupport:summary.falseSupport,falseFixCandidates:summary.falseFixCandidates,patchPolicyViolations:summary.patchPolicyViolations,usage:summary.usage})}\n`);
 }
 if(require.main===module)main().catch(error=>{console.error(error.stack||error.message);process.exitCode=2;});
-module.exports={optionsFromEnv,observedEvidence,projectedEvidence,assertProjectedEvidenceBoundary,decorateExecution,withRunContext,runVisibleCase};
+module.exports={TRANSITION_VERSION,optionsFromEnv,observedEvidence,projectedEvidence,assertProjectedEvidenceBoundary,decorateExecution,withRunContext,runVisibleCase};
