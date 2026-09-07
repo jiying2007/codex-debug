@@ -10,7 +10,7 @@ const {DEFAULT_REPOSITORY,DEFAULT_RULESET_NAME,rulesetPayload,calibrationArgs,pa
 
 const REPO=DEFAULT_REPOSITORY;
 function adminRuleset(overrides={}){
-  const base={id:321,name:DEFAULT_RULESET_NAME,target:'branch',source_type:'Repository',source:REPO,enforcement:'active',created_at:'2026-09-07T05:00:00Z',updated_at:'2026-09-07T05:01:00Z',bypass_actors:[],conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}},rules:[
+  const base={id:321,name:DEFAULT_RULESET_NAME,target:'branch',source_type:'Repository',source:REPO,enforcement:'active',created_at:'2026-09-07T05:00:00Z',updated_at:'2026-09-07T05:01:00Z',bypass_actors:[],conditions:{ref_name:{include:['refs/heads/main'],exclude:[]}},rules:[
     {type:'pull_request',parameters:{allowed_merge_methods:['squash'],dismiss_stale_reviews_on_push:true,require_code_owner_review:false,require_last_push_approval:false,required_approving_review_count:0,required_review_thread_resolution:true}},
     {type:'required_status_checks',parameters:{do_not_enforce_on_create:false,required_status_checks:[{context:'CI Gate',integration_id:GITHUB_ACTIONS_INTEGRATION_ID}],strict_required_status_checks_policy:true}},
     {type:'non_fast_forward'},
@@ -30,10 +30,11 @@ test('bootstrap is dry-run by default and performs no gh operation',()=>{
   assert.ok(result.calibration.ghArgs.includes('promotion_mode=false'));
 });
 
-test('ruleset payload exactly encodes fail-closed repository governance and GitHub Actions check source',()=>{
+test('ruleset payload exactly encodes stable explicit main governance and GitHub Actions check source',()=>{
   const payload=rulesetPayload();
   assert.equal(payload.target,'branch');assert.equal(payload.enforcement,'active');assert.deepEqual(payload.bypass_actors,[]);
-  assert.deepEqual(payload.conditions.ref_name,{include:['~DEFAULT_BRANCH'],exclude:[]});
+  assert.deepEqual(payload.conditions.ref_name,{include:['refs/heads/main'],exclude:[]});
+  assert.equal(JSON.stringify(payload).includes('~DEFAULT_BRANCH'),false);
   const byType=new Map(payload.rules.map(rule=>[rule.type,rule]));
   assert.equal(byType.get('pull_request').parameters.dismiss_stale_reviews_on_push,true);
   assert.deepEqual(byType.get('pull_request').parameters.allowed_merge_methods,['squash']);
@@ -79,11 +80,12 @@ test('missing ruleset is created once from the exact payload then re-read before
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
-test('hidden, weak, or wrong-source administrator snapshot is rejected instead of generating a lock',()=>{
+test('hidden, dynamic-target, weak, or wrong-source administrator snapshot is rejected instead of generating a lock',()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-bootstrap-')),output=path.join(dir,'lock.json');
   try{
     const variants=[];
     const hidden=adminRuleset();delete hidden.bypass_actors;variants.push([hidden,/expose bypass_actors/]);
+    const dynamicTarget=adminRuleset({conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}}});variants.push([dynamicTarget,/must not use ~DEFAULT_BRANCH/]);
     const missingSource=adminRuleset();missingSource.rules=missingSource.rules.map(rule=>rule.type==='required_status_checks'?{...rule,parameters:{...rule.parameters,required_status_checks:[{context:'CI Gate'}]}}:rule);variants.push([missingSource,/GitHub Actions integration/]);
     const wrongSource=adminRuleset();wrongSource.rules=wrongSource.rules.map(rule=>rule.type==='required_status_checks'?{...rule,parameters:{...rule.parameters,required_status_checks:[{context:'CI Gate',integration_id:999}]}}:rule);variants.push([wrongSource,/GitHub Actions integration/]);
     for(const [detail,error] of variants){const runGh=(args)=>args[1].includes('?per_page=100')?JSON.stringify([{id:detail.id,name:detail.name}]):JSON.stringify(detail);assert.throws(()=>ensureRuleset(applyArgs(output),runGh),error);assert.equal(fs.existsSync(output),false);}
