@@ -6,7 +6,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {execFileSync}=require('node:child_process');
 const {GITHUB_ACTIONS_INTEGRATION_ID}=require('../scripts/promotion-repository-governance');
-const {ROADMAP_PENDING,ROADMAP_ACTIVE,validateLifecycleTransition,validateRoadmapTransition,validateActivationCommit,validatePromotionRun,validateCiGate}=require('../scripts/immutable-release-authority');
+const {PROMOTION_WORKFLOW,PROMOTION_WORKFLOW_PATH,ROADMAP_PENDING,ROADMAP_ACTIVE,validateLifecycleTransition,validateRoadmapTransition,validateActivationCommit,validatePromotionRun,expectedPromotionRunContext,validateArtifactRunContext,validateCiGate}=require('../scripts/immutable-release-authority');
 const {verifyDevelopmentBoundary}=require('../scripts/verify-development-boundary');
 
 function git(dir,args){return execFileSync('git',args,{cwd:dir,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();}
@@ -40,11 +40,24 @@ test('activation commit must be the single direct child and only touch lifecycle
   }finally{fs.rmSync(fixture.dir,{recursive:true,force:true});}
 });
 
-test('promotion run must be a successful workflow_dispatch Promotion Model Evaluation on main',()=>{
-  const sha='a'.repeat(40),run={id:123,name:'Promotion Model Evaluation',event:'workflow_dispatch',conclusion:'success',head_branch:'main',head_sha:sha,repository:{full_name:'jiying2007/codex-debug'}};
+test('promotion run must be the exact successful workflow_dispatch workflow on main',()=>{
+  const sha='a'.repeat(40),run={id:123,name:PROMOTION_WORKFLOW,path:PROMOTION_WORKFLOW_PATH,event:'workflow_dispatch',conclusion:'success',head_branch:'main',head_sha:sha,run_attempt:2,repository:{full_name:'jiying2007/codex-debug'}};
   assert.doesNotThrow(()=>validatePromotionRun(run,{repository:'jiying2007/codex-debug',promotionRunId:'123',promotionSha:sha}));
+  assert.throws(()=>validatePromotionRun({...run,path:'.github/workflows/other.yml'},{repository:'jiying2007/codex-debug',promotionRunId:'123',promotionSha:sha}),/workflow path mismatch/);
   assert.throws(()=>validatePromotionRun({...run,event:'push'},{repository:'jiying2007/codex-debug',promotionRunId:'123',promotionSha:sha}),/workflow_dispatch/);
   assert.throws(()=>validatePromotionRun({...run,conclusion:'failure'},{repository:'jiying2007/codex-debug',promotionRunId:'123',promotionSha:sha}),/successful/);
+  assert.throws(()=>validatePromotionRun({...run,run_attempt:0},{repository:'jiying2007/codex-debug',promotionRunId:'123',promotionSha:sha}),/attempt is invalid/);
+});
+
+test('promotion artifact runContext must match the selected GitHub run identity',()=>{
+  const sha='c'.repeat(40),run={id:456,name:PROMOTION_WORKFLOW,path:PROMOTION_WORKFLOW_PATH,event:'workflow_dispatch',conclusion:'success',head_branch:'main',head_sha:sha,run_attempt:3,repository:{full_name:'jiying2007/codex-debug'}};
+  const expected=expectedPromotionRunContext(run,'jiying2007/codex-debug',sha);
+  assert.deepEqual(expected,{workflow:PROMOTION_WORKFLOW,runId:'456',runAttempt:'3',event:'workflow_dispatch',repository:'jiying2007/codex-debug',sourceSha:sha});
+  assert.doesNotThrow(()=>validateArtifactRunContext({...expected},expected,'model'));
+  for(const key of ['workflow','runId','runAttempt','event','repository','sourceSha']){
+    assert.throws(()=>validateArtifactRunContext({...expected,[key]:'different'},expected,'model'),new RegExp(`model runContext mismatch: ${key}`));
+  }
+  assert.throws(()=>validateArtifactRunContext(null,expected,'qualification'),/qualification runContext is required/);
 });
 
 test('release source requires exactly one successful CI Gate from GitHub Actions',()=>{

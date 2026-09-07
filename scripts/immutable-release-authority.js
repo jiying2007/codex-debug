@@ -15,6 +15,8 @@ const {validateGovernanceReceipt,GITHUB_ACTIONS_INTEGRATION_ID}=require('./promo
 
 const RELEASE_AUTHORITY_VERSION=1;
 const KIND='codex-debug-immutable-release-authority';
+const PROMOTION_WORKFLOW='Promotion Model Evaluation';
+const PROMOTION_WORKFLOW_PATH='.github/workflows/promotion-model-eval.yml';
 const SHA40=/^[0-9a-f]{40}$/;
 const EXPECTED_ACTIVATION_FILES=['ROADMAP.md','product-contract.json'];
 const ROADMAP_PENDING='- [ ] Family promotion `development -> active` and immutable release workflow';
@@ -59,13 +61,32 @@ function validateActivationCommit(root,promotionSha,releaseSha=currentHead(root)
 
 function validatePromotionRun(run,{repository,promotionRunId,promotionSha}){
   assert.equal(Number(run?.id),Number(promotionRunId),'promotion run id mismatch');
-  assert.equal(run?.name,'Promotion Model Evaluation','release requires Promotion Model Evaluation run');
+  assert.equal(run?.name,PROMOTION_WORKFLOW,'release requires Promotion Model Evaluation run');
+  assert.equal(run?.path,PROMOTION_WORKFLOW_PATH,'promotion run workflow path mismatch');
   assert.equal(run?.event,'workflow_dispatch','promotion run must come from workflow_dispatch');
   assert.equal(run?.conclusion,'success','promotion run must be successful');
   assert.equal(run?.head_branch,'main','promotion run must target main');
   assert.equal(run?.head_sha,promotionSha,'promotion run head SHA mismatch');
+  assert.ok(Number.isInteger(Number(run?.run_attempt))&&Number(run.run_attempt)>0,'promotion run attempt is invalid');
   if(run?.repository?.full_name)assert.equal(run.repository.full_name,repository,'promotion run repository mismatch');
   return run;
+}
+
+function expectedPromotionRunContext(run,repository,promotionSha){
+  return {
+    workflow:PROMOTION_WORKFLOW,
+    runId:String(run.id),
+    runAttempt:String(run.run_attempt),
+    event:'workflow_dispatch',
+    repository,
+    sourceSha:promotionSha
+  };
+}
+
+function validateArtifactRunContext(actual,expected,label){
+  assert.ok(actual&&typeof actual==='object',`${label} runContext is required`);
+  for(const key of ['workflow','runId','runAttempt','event','repository','sourceSha'])assert.equal(String(actual[key]??''),String(expected[key]),`${label} runContext mismatch: ${key}`);
+  return actual;
 }
 
 function validateCiGate(checks,releaseSha){
@@ -84,13 +105,20 @@ function promotionFiles(dir){
   return Object.fromEntries(required.map(name=>[name,readJson(path.join(dir,name))]));
 }
 
-function validatePromotionBundle(root,dir,promotionSha){
+function validatePromotionBundle(root,dir,promotionSha,runContext=null){
   const files=promotionFiles(dir),policy=files['PROMOTION_ADMISSION_POLICY.json'],qualification=files['PROMOTION_CORPUS_QUALIFICATION.json'],modelRecord=files['PROMOTION_MODEL_EVAL.json'],governanceLock=files['PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json'],governanceReceipt=files['PROMOTION_REPOSITORY_GOVERNANCE.json'],admission=files['PROMOTION_ADMISSION.json'],report=files['PROMOTION_CALIBRATION_REPORT.json'];
   assert.equal(corpus.promotionEligible,true,'current reviewed promotion corpus is not promotionEligible');
   assert.equal(currentPolicy.reviewed,true,'current Promotion Admission Policy is not reviewed');
   assert.equal(currentLock.reviewed,true,'current Governance Lock is not reviewed');
   assert.equal(policy.policyDigest,currentPolicy.policyDigest,'promotion artifact policy differs from checked-in reviewed policy');
   assert.equal(governanceLock.lockDigest,currentLock.lockDigest,'promotion artifact Governance Lock differs from checked-in reviewed lock');
+  if(runContext){
+    validateArtifactRunContext(qualification.runContext,runContext,'qualification');
+    validateArtifactRunContext(modelRecord.runContext,runContext,'model');
+    validateArtifactRunContext(governanceReceipt.runContext,runContext,'governance');
+    validateArtifactRunContext(admission.runContext,runContext,'admission');
+    validateArtifactRunContext(report.runContext,runContext,'calibration report');
+  }
   const core=currentCore(root);
   validateAdmissionReceipt({admission,policy:currentPolicy,reviewedCorpus:corpus,qualification,modelRecord,governanceLock:currentLock,governanceReceipt,expectedDebugCommit:promotionSha,expectedCoreCommit:core,requirePromotionEligible:true});
   validateCalibrationReport(report);
@@ -107,11 +135,12 @@ function validatePromotionBundle(root,dir,promotionSha){
 function buildReleaseAuthority({root=path.resolve(__dirname,'..'),promotionRun,promotionRunId,promotionDir,ciChecks,releaseGovernance,recordedAt=new Date().toISOString()}={}){
   const repository='jiying2007/codex-debug',releaseSha=currentHead(root),promotionSha=String(promotionRun?.head_sha||'');
   validatePromotionRun(promotionRun,{repository,promotionRunId,promotionSha});
-  const activation=validateActivationCommit(root,promotionSha,releaseSha),gate=validateCiGate(ciChecks,releaseSha),bundle=validatePromotionBundle(root,promotionDir,promotionSha);
+  const runContext=expectedPromotionRunContext(promotionRun,repository,promotionSha);
+  const activation=validateActivationCommit(root,promotionSha,releaseSha),gate=validateCiGate(ciChecks,releaseSha),bundle=validatePromotionBundle(root,promotionDir,promotionSha,runContext);
   validateGovernanceReceipt(releaseGovernance,{expectedRepository:repository,expectedBranch:'main',expectedSourceSha:releaseSha,expectedLockDigest:currentLock.lockDigest});
   const contract=currentContract(root);
   assert.equal(contract.lifecycle,'active','immutable release requires lifecycle=active');
-  const body={schemaVersion:RELEASE_AUTHORITY_VERSION,kind:KIND,recordedAt:new Date(recordedAt).toISOString(),repository,version:contract.productVersion,releaseSha,promotionRunId:String(promotionRunId),promotionSha,activationFiles:activation.changedFiles,coreCommit:bundle.core,policyDigest:bundle.admission.policyDigest,promotionAdmissionDigest:bundle.admission.digest,governanceLockDigest:bundle.admission.governanceLockDigest,promotionGovernanceReceiptDigest:bundle.admission.governanceReceiptDigest,releaseGovernanceReceiptDigest:releaseGovernance.digest,ciGate:{name:'CI Gate',integrationId:GITHUB_ACTIONS_INTEGRATION_ID,checkRunId:gate.id,conclusion:gate.conclusion}};
+  const body={schemaVersion:RELEASE_AUTHORITY_VERSION,kind:KIND,recordedAt:new Date(recordedAt).toISOString(),repository,version:contract.productVersion,releaseSha,promotionRunId:String(promotionRunId),promotionRunAttempt:runContext.runAttempt,promotionSha,activationFiles:activation.changedFiles,coreCommit:bundle.core,policyDigest:bundle.admission.policyDigest,promotionAdmissionDigest:bundle.admission.digest,governanceLockDigest:bundle.admission.governanceLockDigest,promotionGovernanceReceiptDigest:bundle.admission.governanceReceiptDigest,releaseGovernanceReceiptDigest:releaseGovernance.digest,ciGate:{name:'CI Gate',integrationId:GITHUB_ACTIONS_INTEGRATION_ID,checkRunId:gate.id,conclusion:gate.conclusion}};
   body.digest=stableDigest(body);
   return Object.freeze(body);
 }
@@ -119,4 +148,4 @@ function buildReleaseAuthority({root=path.resolve(__dirname,'..'),promotionRun,p
 function parseArgs(argv){const out={promotionRun:'',promotionRunId:'',promotionDir:'',ciChecks:'',releaseGovernance:'',output:'RELEASE_AUTHORITY.json'};for(let i=0;i<argv.length;i++){const arg=argv[i];if(arg==='--promotion-run')out.promotionRun=argv[++i];else if(arg==='--promotion-run-id')out.promotionRunId=argv[++i];else if(arg==='--promotion-dir')out.promotionDir=argv[++i];else if(arg==='--ci-checks')out.ciChecks=argv[++i];else if(arg==='--release-governance')out.releaseGovernance=argv[++i];else if(arg==='--output')out.output=argv[++i];else throw new Error(`Unknown argument: ${arg}`);}return out;}
 function main(){const args=parseArgs(process.argv.slice(2));for(const key of ['promotionRun','promotionRunId','promotionDir','ciChecks','releaseGovernance'])assert.ok(args[key],`--${key.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())} is required`);const receipt=buildReleaseAuthority({promotionRun:readJson(args.promotionRun),promotionRunId:args.promotionRunId,promotionDir:path.resolve(args.promotionDir),ciChecks:readJson(args.ciChecks),releaseGovernance:readJson(args.releaseGovernance)});fs.writeFileSync(path.resolve(args.output),`${JSON.stringify(receipt,null,2)}\n`,'utf8');process.stdout.write(`${JSON.stringify({valid:true,version:receipt.version,releaseSha:receipt.releaseSha,promotionSha:receipt.promotionSha,promotionAdmissionDigest:receipt.promotionAdmissionDigest,digest:receipt.digest})}\n`);}
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={RELEASE_AUTHORITY_VERSION,KIND,EXPECTED_ACTIVATION_FILES,ROADMAP_PENDING,ROADMAP_ACTIVE,validateLifecycleTransition,validateRoadmapTransition,validateActivationCommit,validatePromotionRun,validateCiGate,promotionFiles,validatePromotionBundle,buildReleaseAuthority,parseArgs};
+module.exports={RELEASE_AUTHORITY_VERSION,KIND,PROMOTION_WORKFLOW,PROMOTION_WORKFLOW_PATH,EXPECTED_ACTIVATION_FILES,ROADMAP_PENDING,ROADMAP_ACTIVE,validateLifecycleTransition,validateRoadmapTransition,validateActivationCommit,validatePromotionRun,expectedPromotionRunContext,validateArtifactRunContext,validateCiGate,promotionFiles,validatePromotionBundle,buildReleaseAuthority,parseArgs};
