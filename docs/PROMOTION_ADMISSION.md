@@ -33,6 +33,25 @@ When the policy is later marked `reviewed=true`, all quality thresholds must be 
 
 A reviewed policy is also invalid when its calibration evidence was collected against a different Safe Core gitlink or a different reviewed/evaluation corpus. This prevents an old calibration from silently authorizing thresholds after Core or benchmark identity changes. The calibration Debug SHA itself is historical provenance and is not required to equal the later policy-review commit, because reviewing the policy necessarily changes the repository SHA.
 
+## Deterministic policy review
+
+Reviewed policy candidates must be generated from the actual `PROMOTION_CALIBRATION_REPORT.json`, not assembled by copying digest strings by hand. `scripts/promotion-policy-review.js` validates the Calibration Report self digest and run identity, proves its Safe Core and reviewed/evaluation corpus still match the current repository, preserves the fixed zero-tolerance safety limits and `minimumInsufficientEvidenceAccuracy=1`, then derives `calibrationEvidence` directly from that report.
+
+The reviewer still chooses the assessment threshold, root-cause threshold and token ceiling explicitly. The generator does **not** recommend values. It refuses an assessment or root-cause minimum above the measured calibration accuracy, refuses a token ceiling below the measured calibration mean, and refuses any calibration containing false support, false-fix candidates, patch-policy violations or an insufficient-evidence score below the fixed floor.
+
+Example after a real calibration artifact has been downloaded:
+
+```bash
+node scripts/promotion-policy-review.js \
+  --report PROMOTION_CALIBRATION_REPORT.json \
+  --assessment <reviewed-minimum> \
+  --root-cause <reviewed-minimum> \
+  --max-tokens <reviewed-ceiling> \
+  --output PROMOTION_ADMISSION_POLICY.candidate.json
+```
+
+The candidate is intentionally written to a separate file. Replacing `quality/promotion-admission-policy.json` remains an explicit reviewed repository change; the generator never mutates the checked-in policy automatically.
+
 ## Workflow sequencing
 
 `Promotion Model Evaluation` performs the authority chain in one read-only workflow run after explicit acknowledgement that historical code executes without an OS sandbox:
@@ -51,7 +70,7 @@ For `promotion_mode=true`, the workflow additionally requires the reviewed corpu
 
 1. Run credential-backed calibration with explicit historical-execution acknowledgement.
 2. Review the generated Qualification, Admission Receipt, Calibration Report, model quality, patch-applicability results and token usage.
-3. Set evidence-based RCA thresholds and a token ceiling, copy the exact Calibration Report provenance into `calibrationEvidence`, recompute the policy digest and review that policy change.
+3. Use `promotion-policy-review.js` with explicitly reviewed thresholds and token ceiling to generate a candidate policy directly from that Calibration Report; review the resulting policy change and digest.
 4. Explicitly review the separate `promotionEligible=true` corpus change.
 5. Run `Promotion Model Evaluation` with `promotion_mode=true`; same-run Qualification and Admission must pass, and the reviewed policy calibration must still match the current Safe Core and corpus identity.
 6. Only after that evidence may lifecycle/release governance be considered.
