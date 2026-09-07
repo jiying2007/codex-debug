@@ -24,6 +24,8 @@ function report(overrides={}){
     qualificationDigest:'d'.repeat(64),
     modelRecordDigest:'e'.repeat(64),
     admissionDigest:'f'.repeat(64),
+    governanceLockDigest:null,
+    governanceReceiptDigest:null,
     runContext:{workflow:'Promotion Model Evaluation',runId:'88',runAttempt:'1',event:'workflow_dispatch',repository:'jiying2007/codex-debug',sourceSha:debugCommit},
     admission:{ready:false,gaps:['promotion admission policy is not reviewed']},
     metrics:{assessmentAccuracy:0.9,rootCauseTop1Accuracy:0.8,insufficientEvidenceAccuracy:1,falseSupport:0,falseFixCandidates:0,patchPolicyViolations:0},

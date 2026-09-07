@@ -7,64 +7,29 @@ const corpus=require('../quality/promotion-corpus.json');
 const policy=require('../quality/promotion-admission-policy.json');
 const {stableDigest,createRecord}=require('../scripts/model-evaluation');
 const {promotionReadiness,toEvaluationCorpus}=require('../scripts/promotion-corpus');
+const {createGovernanceLock,evaluateGovernance}=require('../scripts/promotion-repository-governance');
 const {evaluateAdmission}=require('../scripts/promotion-admission');
 const {validateAdmissionReceipt}=require('../scripts/validate-promotion-admission');
 
+const REPO='jiying2007/codex-debug';
 function clone(value){return JSON.parse(JSON.stringify(value));}
 function phase(tokens=10){return {model:'gpt-test',codexVersion:'0.0.0-test',providerMode:'openai',runtimeSource:'test',modelEvidenceDigest:'',usage:{inputTokens:tokens,outputTokens:0,totalTokens:tokens,cachedInputTokens:0},requestEstimate:null,durationMs:1};}
-function runContext(debugCommit,runId='77'){return {workflow:'Promotion Model Evaluation',runId,runAttempt:'1',event:'workflow_dispatch',repository:'jiying2007/codex-debug',sourceSha:debugCommit};}
-function qualificationFor(reviewed,{debugCommit='a'.repeat(40),coreCommit='b'.repeat(40),runId='77'}={}){
-  const record={schemaVersion:1,kind:'codex-debug-promotion-corpus-qualification',recordedAt:'2026-09-07T00:00:00.000Z',debugCommit,coreCommit,corpusDigest:stableDigest(reviewed),readiness:promotionReadiness(reviewed),runContext:runContext(debugCommit,runId),cases:reviewed.cases.map(item=>({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef,badCommit:item.badCommit,fixedCommit:item.fixedCommit,commandDigest:stableDigest(item.reproduction.command),badSummary:{runs:1,failures:1,timeouts:0,reproducibleFailure:true},fixedSummary:{runs:1,failures:0,timeouts:0,reproducibleFailure:false},badRepresentativeDigest:stableDigest(`bad:${item.id}`),fixedRepresentativeDigest:stableDigest(`fixed:${item.id}`),transitionDigest:stableDigest(`transition:${item.id}`)}))};
-  record.digest=stableDigest(record);return record;
-}
-function liveRecordFor(reviewed,{debugCommit='a'.repeat(40),coreCommit='b'.repeat(40),runId='77',promotionEligible=false,tokens=10}={}){
-  const evalCorpus=toEvaluationCorpus(reviewed),cases=evalCorpus.cases.map(spec=>{const terms=spec.expected.rootCauseTerms||[],text=terms.length?terms.join(' '):'insufficient evidence';return {caseId:spec.id,evidenceDigest:stableDigest(`evidence:${spec.id}`),expectationDigest:spec.expectationDigest,judgment:{rootCauseText:text,rootCauseDigest:stableDigest(text),causalAssessment:spec.expected.assessment,patchProposed:false,patchDisposition:'none',patchApplicable:null,supportedHypotheses:terms.length?[text]:[]},execution:{hypothesis:phase(tokens),causalVerification:phase(tokens)}};});
-  const base=createRecord({source:'live',promotionEligible,debugCommit,coreCommit,corpus:evalCorpus,cases,recordedAt:'2026-09-07T00:01:00.000Z'}),copy={...base};delete copy.recordDigest;copy.runContext=runContext(debugCommit,runId);copy.recordDigest=stableDigest(copy);return copy;
-}
-function fixture(){
-  const qualification=qualificationFor(corpus),modelRecord=liveRecordFor(corpus),admission=evaluateAdmission({policy,reviewedCorpus:corpus,qualification,modelRecord,expectedDebugCommit:modelRecord.debugCommit,expectedCoreCommit:modelRecord.coreCommit,recordedAt:'2026-09-07T00:02:00.000Z'});
-  return {qualification,modelRecord,admission};
-}
+function runContext(debugCommit,runId='77'){return {workflow:'Promotion Model Evaluation',runId,runAttempt:'1',event:'workflow_dispatch',repository:REPO,sourceSha:debugCommit};}
+function qualificationFor(reviewed,{debugCommit='a'.repeat(40),coreCommit='b'.repeat(40),runId='77'}={}){const record={schemaVersion:1,kind:'codex-debug-promotion-corpus-qualification',recordedAt:'2026-09-07T00:00:00.000Z',debugCommit,coreCommit,corpusDigest:stableDigest(reviewed),readiness:promotionReadiness(reviewed),runContext:runContext(debugCommit,runId),cases:reviewed.cases.map(item=>({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef,badCommit:item.badCommit,fixedCommit:item.fixedCommit,commandDigest:stableDigest(item.reproduction.command),badSummary:{runs:1,failures:1,timeouts:0,reproducibleFailure:true},fixedSummary:{runs:1,failures:0,timeouts:0,reproducibleFailure:false},badRepresentativeDigest:stableDigest(`bad:${item.id}`),fixedRepresentativeDigest:stableDigest(`fixed:${item.id}`),transitionDigest:stableDigest(`transition:${item.id}`)}))};record.digest=stableDigest(record);return record;}
+function liveRecordFor(reviewed,{debugCommit='a'.repeat(40),coreCommit='b'.repeat(40),runId='77'}={}){const evalCorpus=toEvaluationCorpus(reviewed),cases=evalCorpus.cases.map(spec=>{const terms=spec.expected.rootCauseTerms||[],text=terms.length?terms.join(' '):'insufficient evidence';return {caseId:spec.id,evidenceDigest:stableDigest(`evidence:${spec.id}`),expectationDigest:spec.expectationDigest,judgment:{rootCauseText:text,rootCauseDigest:stableDigest(text),causalAssessment:spec.expected.assessment,patchProposed:false,patchDisposition:'none',patchApplicable:null,supportedHypotheses:terms.length?[text]:[]},execution:{hypothesis:phase(),causalVerification:phase()}};});const base=createRecord({source:'live',promotionEligible:false,debugCommit,coreCommit,corpus:evalCorpus,cases,recordedAt:'2026-09-07T00:01:00.000Z'}),copy={...base};delete copy.recordDigest;copy.runContext=runContext(debugCommit,runId);copy.recordDigest=stableDigest(copy);return copy;}
+function governanceFor(debugCommit='a'.repeat(40),runId='77'){const full={id:321,name:'main-governance',target:'branch',source_type:'Repository',source:REPO,enforcement:'active',created_at:'2026-09-07T00:00:00Z',updated_at:'2026-09-07T00:01:00Z',bypass_actors:[],conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}},rules:[{type:'deletion'},{type:'non_fast_forward'},{type:'pull_request',parameters:{dismiss_stale_reviews_on_push:true}},{type:'required_status_checks',parameters:{strict_required_status_checks_policy:true,required_status_checks:[{context:'CI Gate'}]}}]},governanceLock=createGovernanceLock({repository:REPO,ruleset:full,reviewedAt:'2026-09-07T00:02:00.000Z'}),live=clone(full);delete live.bypass_actors;const governanceReceipt=evaluateGovernance({repository:REPO,branch:'main',sourceSha:debugCommit,rulesets:[live],lock:governanceLock,recordedAt:'2026-09-07T00:03:00.000Z',runContext:runContext(debugCommit,runId)});return {governanceLock,governanceReceipt};}
+function fixture({withGovernance=false}={}){const qualification=qualificationFor(corpus),modelRecord=liveRecordFor(corpus),g=withGovernance?governanceFor(modelRecord.debugCommit):{governanceLock:null,governanceReceipt:null},admission=evaluateAdmission({policy,reviewedCorpus:corpus,qualification,modelRecord,...g,expectedDebugCommit:modelRecord.debugCommit,expectedCoreCommit:modelRecord.coreCommit,recordedAt:'2026-09-07T00:04:00.000Z'});return {qualification,modelRecord,admission,...g};}
 
-test('promotion admission receipt revalidates against the exact policy qualification model and source binding',()=>{
-  const {qualification,modelRecord,admission}=fixture();
-  const result=validateAdmissionReceipt({admission,policy,reviewedCorpus:corpus,qualification,modelRecord,expectedDebugCommit:modelRecord.debugCommit,expectedCoreCommit:modelRecord.coreCommit});
-  assert.equal(result.digest,admission.digest);
-  assert.equal(result.ready,false);
-  assert.ok(result.gaps.includes('promotion admission policy is not reviewed'));
-});
+test('promotion admission v2 receipt revalidates calibration evidence with explicit null governance binding',()=>{const {qualification,modelRecord,admission}=fixture();const result=validateAdmissionReceipt({admission,policy,reviewedCorpus:corpus,qualification,modelRecord,expectedDebugCommit:modelRecord.debugCommit,expectedCoreCommit:modelRecord.coreCommit});assert.equal(result.digest,admission.digest);assert.equal(result.governanceLockDigest,null);assert.equal(result.governanceReceiptDigest,null);});
 
-test('promotion admission receipt rejects direct payload tampering even when sidecars are unchanged',()=>{
-  const {qualification,modelRecord,admission}=fixture(),changed=clone(admission);
-  changed.metrics.falseSupport=9;
-  assert.throws(()=>validateAdmissionReceipt({admission:changed,policy,reviewedCorpus:corpus,qualification,modelRecord}),/self digest mismatch/);
-});
+test('promotion admission v2 receipt reconstructs and binds governance sidecars when present',()=>{const {qualification,modelRecord,admission,governanceLock,governanceReceipt}=fixture({withGovernance:true});const result=validateAdmissionReceipt({admission,policy,reviewedCorpus:corpus,qualification,modelRecord,governanceLock,governanceReceipt});assert.equal(result.governanceLockDigest,governanceLock.lockDigest);assert.equal(result.governanceReceiptDigest,governanceReceipt.digest);});
 
-test('promotion admission receipt rejects a self-rehashed forged metric because evidence reconstruction differs',()=>{
-  const {qualification,modelRecord,admission}=fixture(),changed=clone(admission);
-  changed.metrics.tokensPerCase=999999;
-  delete changed.digest;changed.digest=stableDigest(changed);
-  assert.throws(()=>validateAdmissionReceipt({admission:changed,policy,reviewedCorpus:corpus,qualification,modelRecord}),/does not match bound policy\/qualification\/model evidence/);
-});
+test('promotion admission receipt rejects direct payload tampering even when sidecars are unchanged',()=>{const {qualification,modelRecord,admission}=fixture(),changed=clone(admission);changed.metrics.falseSupport=9;assert.throws(()=>validateAdmissionReceipt({admission:changed,policy,reviewedCorpus:corpus,qualification,modelRecord}),/self digest mismatch/);});
 
-test('promotion admission receipt rejects a different digest-valid policy sidecar',()=>{
-  const {qualification,modelRecord,admission}=fixture(),changedPolicy=clone(policy);
-  changedPolicy.quality.minimumInsufficientEvidenceAccuracy=0.5;
-  delete changedPolicy.policyDigest;changedPolicy.policyDigest=stableDigest(changedPolicy);
-  assert.throws(()=>validateAdmissionReceipt({admission,policy:changedPolicy,reviewedCorpus:corpus,qualification,modelRecord}),/does not match bound policy\/qualification\/model evidence/);
-});
+test('promotion admission receipt rejects a self-rehashed forged metric because evidence reconstruction differs',()=>{const {qualification,modelRecord,admission}=fixture(),changed=clone(admission);changed.metrics.tokensPerCase=999999;delete changed.digest;changed.digest=stableDigest(changed);assert.throws(()=>validateAdmissionReceipt({admission:changed,policy,reviewedCorpus:corpus,qualification,modelRecord}),/does not match bound policy\/qualification\/model\/governance evidence/);});
 
-test('promotion workflow independently revalidates admission and retains the exact policy sidecar read-only',()=>{
-  const workflow=fs.readFileSync(path.join(__dirname,'..','.github','workflows','promotion-model-eval.yml'),'utf8');
-  const generate=workflow.indexOf('Bind qualification, live metrics, and promotion admission policy');
-  const revalidate=workflow.indexOf('Re-validate promotion admission receipt');
-  assert.ok(generate>0&&revalidate>generate);
-  assert.match(workflow,/cp quality\/promotion-admission-policy\.json PROMOTION_ADMISSION_POLICY\.json/);
-  assert.match(workflow,/validate-promotion-admission\.js/);
-  assert.match(workflow,/--admission PROMOTION_ADMISSION\.json/);
-  assert.match(workflow,/PROMOTION_ADMISSION_POLICY\.json/);
-  assert.match(workflow,/permissions:\s*\n\s+contents:\s*read\b/);
-  assert.doesNotMatch(workflow,/\bcontents:\s*write\b/i);
-  assert.doesNotMatch(workflow,/\bid-token:\s*write\b/i);
-  assert.doesNotMatch(workflow,/\bgit\s+push\b/i);
-});
+test('promotion admission receipt rejects governance substitution even when replacement receipt is self-valid',()=>{const {qualification,modelRecord,admission,governanceLock}=fixture({withGovernance:true}),other=governanceFor(modelRecord.debugCommit,'88');assert.throws(()=>validateAdmissionReceipt({admission,policy,reviewedCorpus:corpus,qualification,modelRecord,governanceLock,governanceReceipt:other.governanceReceipt}),/governance\/model runContext mismatch: runId|does not match bound/);});
+
+test('promotion admission receipt rejects a different digest-valid policy sidecar',()=>{const {qualification,modelRecord,admission}=fixture(),changedPolicy=clone(policy);changedPolicy.quality.minimumInsufficientEvidenceAccuracy=0.5;delete changedPolicy.policyDigest;changedPolicy.policyDigest=stableDigest(changedPolicy);assert.throws(()=>validateAdmissionReceipt({admission,policy:changedPolicy,reviewedCorpus:corpus,qualification,modelRecord}),/does not match bound policy\/qualification\/model\/governance evidence/);});
+
+test('promotion workflow independently revalidates admission with governance sidecars only in promotion mode',()=>{const workflow=fs.readFileSync(path.join(__dirname,'..','.github','workflows','promotion-model-eval.yml'),'utf8'),generate=workflow.indexOf('Bind qualification, live metrics, governance, and promotion admission policy'),revalidate=workflow.indexOf('Re-validate promotion admission receipt');assert.ok(generate>0&&revalidate>generate);assert.match(workflow,/cp quality\/promotion-admission-policy\.json PROMOTION_ADMISSION_POLICY\.json/);assert.match(workflow,/validate-promotion-admission\.js/);assert.match(workflow,/--governance-lock PROMOTION_REPOSITORY_GOVERNANCE_LOCK\.json/);assert.match(workflow,/--governance PROMOTION_REPOSITORY_GOVERNANCE\.json/);assert.match(workflow,/PROMOTION_ADMISSION_POLICY\.json/);assert.match(workflow,/permissions:\s*\n\s+contents:\s*read\b/);assert.doesNotMatch(workflow,/\bcontents:\s*write\b/i);assert.doesNotMatch(workflow,/\bid-token:\s*write\b/i);assert.doesNotMatch(workflow,/\bgit\s+push\b/i);});

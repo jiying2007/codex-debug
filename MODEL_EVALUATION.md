@@ -10,7 +10,7 @@ Codex Debug Safe keeps the following layers non-interchangeable:
 2. **Promotion Provenance** — ordinary read-only CI proves reviewed Git refs, direct-parent relationships and ground-truth-file membership without checking out or executing historical code.
 3. **Historical corpus qualification** — explicitly authorized historical execution proves every exact bad commit fails and every exact reviewed direct-child fix passes the same bounded reproduction.
 4. **Live model evaluation** — credential-backed two-pass Debug analysis records RCA, insufficient-evidence behavior, patch disposition/applicability and token usage.
-5. **Promotion Admission v1** — binds same-run Qualification, live model evidence and a reviewed digest-bound admission policy before a promotion-mode run can pass.
+5. **Promotion Admission v2** — binds same-run reviewed repository governance, Qualification, live model evidence and a reviewed digest-bound admission policy before a promotion-mode run can pass.
 
 Synthetic live canaries remain useful smoke evidence but are permanently `promotionEligible=false`.
 
@@ -23,7 +23,7 @@ The development product contract binds:
 - `promotionTransitionVersion = 1`
 - `promotionAdmissionPolicyVersion = 1`
 
-Model Evaluation Record v1 binds corpus expectations, evidence/root-cause digests, patch disposition/applicability, both model phases, usage and a self digest. Qualification records bind Debug/Core identity, the reviewed corpus digest, readiness, GitHub run context, all 12 bad/fixed transition results and a self digest. Promotion Admission v1 additionally binds the policy, Qualification and model-record digests plus the exact same workflow run context.
+Model Evaluation Record v1 binds corpus expectations, evidence/root-cause digests, patch disposition/applicability, both model phases, usage and a self digest. Qualification records bind Debug/Core identity, the reviewed corpus digest, readiness, GitHub run context, all 12 bad/fixed transition results and a self digest. Promotion Admission v2 additionally binds policy, Qualification, model-record, reviewed Governance Lock and live Governance Receipt digests plus the exact same workflow run context.
 
 ## Promotion corpus case contract
 
@@ -76,9 +76,9 @@ Historical repository code is untrusted code. Qualification and Promotion Model 
 
 Historical reproduction receives an allowlisted environment only. It does **not** inherit `OPENAI_API_KEY`, GitHub tokens, SSH agent state, cloud credentials or arbitrary host variables. HOME, XDG config, global Git config and npm user config are redirected to the temporary case directory; Git credential prompting is disabled. Protected model credentials are injected only into the Codex execution authority domain after controller-side evidence acquisition.
 
-## Promotion Admission v1
+## Promotion Admission v2
 
-`quality/promotion-admission-policy.json` is self-digested. Safety gates are already zero-tolerance:
+`quality/promotion-admission-policy.json` remains Promotion Admission Policy v1 and is self-digested. Safety gates are zero-tolerance:
 
 - false support: `0` maximum;
 - false-fix candidates: `0` maximum;
@@ -89,7 +89,9 @@ The current development policy deliberately has `reviewed=false`, `minimumAssess
 
 When a policy is later marked reviewed, both RCA thresholds must be finite values in `[0,1]`, insufficient accuracy remains explicitly bounded, token calibration must be true, and a finite positive token ceiling is required.
 
-Admission rejects Qualification and model records unless they bind the same Debug commit, Safe Core gitlink, GitHub workflow, run id, run attempt, event, repository and source SHA. It also recomputes model metrics instead of trusting a supplied summary.
+Admission v2 rejects Qualification and model records unless they bind the same Debug commit, Safe Core gitlink, GitHub workflow, run id, run attempt, event, repository and source SHA. It also recomputes model metrics instead of trusting a supplied summary.
+
+Calibration mode explicitly records `governanceLockDigest=null` and `governanceReceiptDigest=null`. Promotion mode requires both a reviewed `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json` and a live `PROMOTION_REPOSITORY_GOVERNANCE.json`; the receipt must validate against the lock and share the exact run context with Qualification/model evidence. Both governance digests are part of the Admission v2 self digest and are independently reconstructed during receipt revalidation.
 
 ## Manual workflows
 
@@ -101,13 +103,13 @@ Admission rejects Qualification and model records unless they bind the same Debu
 
 `Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.10 it executes one read-only evidence chain in the same run:
 
-`validate corpus/policy -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> Promotion Admission -> artifact upload`
+`validate corpus/policy -> verify reviewed repository governance when promotion_mode=true -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> Promotion Admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
 
 The workflow retains `contents: read` only and performs no patch apply, repository write, commit, push, release, publication or lifecycle promotion.
 
-`promotion_mode=false` is calibration mode. It records Qualification, live metrics and `PROMOTION_ADMISSION.json`, but the checked-in draft policy causes admission `ready=false` without turning calibration itself into a failed experiment.
+`promotion_mode=false` is calibration mode. It records Qualification, live metrics and `PROMOTION_ADMISSION.json`, but the checked-in draft policy causes admission `ready=false` without turning calibration itself into a failed experiment. Governance digests remain explicitly null.
 
-`promotion_mode=true` is fail-closed promotion evidence. It requires structural readiness, explicit `promotionEligible=true`, claimable live metrics, a reviewed/calibrated admission policy and `PROMOTION_ADMISSION.json.ready=true` from the same run.
+`promotion_mode=true` is fail-closed promotion evidence. It requires a reviewed Governance Lock plus matching live Governance Receipt, structural readiness, explicit `promotionEligible=true`, claimable live metrics, a reviewed/calibrated admission policy and `PROMOTION_ADMISSION.json.ready=true` from the same run.
 
 ## Metrics
 
@@ -119,7 +121,7 @@ Token usage is currently a calibration measurement only. An evidence-based `maxi
 
 Currently allowed statements include:
 
-- Model Evaluation Record v1, Promotion Corpus v2 and Promotion Admission Policy v1 exist and are deterministically tested.
+- Model Evaluation Record v1, Promotion Corpus v2, Promotion Admission Policy v1 and Promotion Admission v2 exist and are deterministically tested.
 - Twelve unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose and Codex Change.
 - Structural coverage is `12/12`, `4/3`, `5/4`, `3/3`, with `15` evaluation views and no structural gap.
 - Promotion Provenance is continuously proven without historical execution.
