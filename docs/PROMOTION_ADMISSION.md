@@ -15,9 +15,21 @@ A promotion-mode model run must bind four independently validated layers from th
 
 Calibration remains explicitly non-authoritative: for `promotion_mode=false`, Admission v2 records `governanceLockDigest=null` and `governanceReceiptDigest=null`. For `promotion_mode=true`, both digests are mandatory, the reviewed Governance Lock must validate, the live Governance Receipt must validate against that exact lock, and its run context must match Qualification/model evidence exactly.
 
+## Shipped schema identity
+
+The 0.1.11 packaged `product-contract.json` explicitly publishes the downstream evidence contract versions instead of requiring Family/release consumers to infer them from repository code:
+
+- `promotionAdmissionPolicyVersion=1`;
+- `promotionAdmissionVersion=2`;
+- `promotionRepositoryGovernanceLockVersion=1`;
+- `promotionRepositoryGovernanceVersion=2`;
+- `promotionCalibrationReportVersion=1`.
+
+These fields describe evidence/control-plane schemas. They do not make the product active, eligible, qualified or released.
+
 ## Checked-in development policy
 
-The 0.1.10 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
+The 0.1.11 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
 
 - `reviewed=false`;
 - `calibrationEvidence=null`;
