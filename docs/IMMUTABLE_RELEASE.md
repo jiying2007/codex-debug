@@ -21,8 +21,9 @@ Any other commit between promotion and activation invalidates the promotion evid
 
 The release authority job is read-only. It verifies:
 
-- the selected run is a successful `Promotion Model Evaluation` `workflow_dispatch` on `main`;
-- its head SHA is the active commit's only direct parent;
+- the selected run is a successful `Promotion Model Evaluation` `workflow_dispatch` on `main` from exact workflow path `.github/workflows/promotion-model-eval.yml`;
+- the selected GitHub run has a valid positive `run_attempt` and its head SHA is the active commit's only direct parent;
+- the retained Qualification, model record, Governance Receipt, Admission v2 and Calibration Report each carry a `runContext` whose `workflow`, `runId`, `runAttempt`, `event`, `repository` and `sourceSha` exactly match that selected GitHub run;
 - the activation diff is exactly the two allowed lifecycle surfaces above;
 - the active Product Contract is `lifecycle=active`;
 - the active SHA has exactly one successful `CI Gate` produced by GitHub Actions App `integration_id=15368`;
@@ -31,7 +32,9 @@ The release authority job is read-only. It verifies:
 - Promotion Admission v2 independently reconstructs as ready with `requirePromotionEligible=true` against the promotion source SHA and current Safe Core;
 - live repository governance still matches the reviewed lock at release time, including stable `refs/heads/main`, source-bound `CI Gate`, strict status checks, PR-only flow, no force-push/deletion bypass and the reviewed no-bypass-actors lock.
 
-The authority job emits digest-bound `RELEASE_AUTHORITY.json`. It never tags or publishes.
+The run-identity comparison matters because internal same-run agreement between artifact files is not enough by itself: the retained bundle must also prove it belongs to the exact GitHub Actions run selected by the release operator. A bundle with self-consistent but different run metadata is rejected.
+
+The authority job emits digest-bound `RELEASE_AUTHORITY.json`, including the selected promotion run id and run attempt. It never tags or publishes.
 
 ## Permission boundary
 
