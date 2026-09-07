@@ -51,6 +51,47 @@ node scripts/promotion-repository-governance-lock.js \
 
 Review the generated candidate in a normal PR before replacing the checked-in draft lock. Never generate the lock inside GitHub Actions and never place an Administration-write token in the promotion workflow.
 
+## Operator bootstrap
+
+`scripts/promotion-authority-bootstrap.js` is the supported operator bridge for the two actions that intentionally require credentials/authority outside the low-privilege ChatGPT/GitHub-App surface. It does not grant promotion authority and is **dry-run by default**:
+
+```bash
+node scripts/promotion-authority-bootstrap.js
+```
+
+The dry run prints the exact Ruleset payload, required acknowledgement flags, lock candidate path and calibration `gh workflow run` arguments without invoking `gh` or mutating GitHub.
+
+To create the required Ruleset when it does not exist, re-read its administrator-visible detail and generate a Governance Lock candidate:
+
+```bash
+node scripts/promotion-authority-bootstrap.js \
+  --apply-ruleset \
+  --acknowledge-ruleset-change
+```
+
+This operation is fail closed:
+
+- a same-name existing Ruleset is validated and never silently patched;
+- multiple same-name Rulesets are rejected as ambiguous;
+- a hidden, malformed or non-empty `bypass_actors` surface is rejected;
+- weak rule semantics are rejected by Governance Lock generation;
+- the only file written is `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.candidate.json` (or the explicit `--lock-output` path);
+- the checked-in lock is never replaced, committed or merged automatically.
+
+The script uses the operator's locally authenticated `gh` process and does not accept, print or persist GitHub/OpenAI secrets.
+
+The first real calibration is a separate explicit action and is always fixed to `promotion_mode=false`:
+
+```bash
+node scripts/promotion-authority-bootstrap.js \
+  --trigger-calibration \
+  --acknowledge-historical-execution
+```
+
+It dispatches `promotion-model-eval.yml` on `main` with `codex_version=latest`, empty model/verifier overrides and explicit historical-execution acknowledgement. Optional `--codex-version x.y.z`, `--model`, and `--verifier-model` values are passed only as workflow inputs. The script never reads or forwards the repository model secret; GitHub Actions resolves the protected secret inside the live-model step.
+
+Both actions may be requested in one operator invocation by supplying both action/acknowledgement pairs. The calibration remains non-authoritative even if the Ruleset was just created because the reviewed lock still requires a normal PR + exact-head/main CI before `promotion_mode=true` can pass.
+
 ## Runtime receipt
 
 For `promotion_mode=true`, `.github/workflows/promotion-model-eval.yml` copies the exact checked-in lock to `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json`, queries the live repository Rulesets API with its normal low-privilege GitHub token, and emits `PROMOTION_REPOSITORY_GOVERNANCE.json`.
