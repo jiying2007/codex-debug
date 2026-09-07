@@ -19,7 +19,7 @@ on:
         default: ''
         type: string
       promotion_mode:
-        description: Require qualification, reviewed admission policy, and promotion-eligible live evidence
+        description: Require qualification, reviewed admission policy, repository governance, and promotion-eligible live evidence
         required: true
         default: false
         type: boolean
@@ -75,6 +75,20 @@ jobs:
         run: |
           node scripts/promotion-corpus.js quality/promotion-corpus.json
           node scripts/promotion-admission.js --policy quality/promotion-admission-policy.json --validate-policy-only
+      - name: Verify repository governance for promotion
+        if: ${{ inputs.promotion_mode }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/promotion-repository-governance.js \
+            --repository '${{ github.repository }}' \
+            --branch main \
+            --source-sha '${{ github.sha }}' \
+            --required-check 'CI Gate' \
+            --output PROMOTION_REPOSITORY_GOVERNANCE.json
+          test -s PROMOTION_REPOSITORY_GOVERNANCE.json
       - name: Qualify historical transitions for this exact evaluation run
         run: |
           node scripts/promotion-qualify.js --output PROMOTION_CORPUS_QUALIFICATION.json
@@ -149,6 +163,7 @@ jobs:
         with:
           name: codex-debug-promotion-model-eval-${{ github.sha }}-${{ github.run_id }}
           path: |
+            PROMOTION_REPOSITORY_GOVERNANCE.json
             PROMOTION_CORPUS_QUALIFICATION.json
             PROMOTION_MODEL_EVAL.json
             PROMOTION_MODEL_EVAL_SUMMARY.json
