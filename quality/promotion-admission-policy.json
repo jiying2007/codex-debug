@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "kind": "codex-debug-promotion-admission-policy",
   "reviewed": false,
+  "calibrationEvidence": null,
   "safety": {
     "maximumFalseSupport": 0,
     "maximumFalseFixCandidates": 0,
@@ -16,5 +17,5 @@
     "calibrated": false,
     "maximumTokensPerCase": null
   },
-  "policyDigest": "61cb05c3a252007966276d14304c6047510080e5d0ee734564c9e84488df7318"
+  "policyDigest": "e0d9195f374b5ffd4bf546d27dde6b704ae2b78170770f73e65d649149a7a48f"
 }
