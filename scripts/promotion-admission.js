@@ -10,8 +10,10 @@ const defaultPolicy=require('../quality/promotion-admission-policy.json');
 const {stableDigest,validateRecord,evaluate}=require('./model-evaluation');
 const {validatePromotionCorpus,promotionReadiness,toEvaluationCorpus}=require('./promotion-corpus');
 const {validateQualificationRecord}=require('./promotion-qualify');
+const {validateGovernanceLock,validateGovernanceReceipt}=require('./promotion-repository-governance');
 
 const POLICY_VERSION=1;
+const ADMISSION_VERSION=2;
 const HEX64=/^[0-9a-f]{64}$/;
 const SHA40=/^[0-9a-f]{40}$/;
 
@@ -36,9 +38,7 @@ function validateCalibrationEvidence(evidence,{required=false}={}){
     return null;
   }
   assert.equal(typeof evidence,'object','promotion calibrationEvidence must be an object');
-  for(const key of ['reportDigest','corpusDigest','evaluationCorpusDigest','qualificationDigest','modelRecordDigest','admissionDigest']){
-    assert.match(String(evidence[key]||''),HEX64,`invalid promotion calibration evidence ${key}`);
-  }
+  for(const key of ['reportDigest','corpusDigest','evaluationCorpusDigest','qualificationDigest','modelRecordDigest','admissionDigest'])assert.match(String(evidence[key]||''),HEX64,`invalid promotion calibration evidence ${key}`);
   assert.match(String(evidence.debugCommit||''),SHA40,'invalid promotion calibration evidence debugCommit');
   assert.match(String(evidence.coreCommit||''),SHA40,'invalid promotion calibration evidence coreCommit');
   validateRunContext(evidence.runContext,'promotion calibration runContext');
@@ -53,32 +53,18 @@ function validateAdmissionPolicy(policy=defaultPolicy){
   assert.equal(policy?.kind,'codex-debug-promotion-admission-policy','promotion admission policy kind mismatch');
   assert.equal(typeof policy?.reviewed,'boolean','promotion admission policy reviewed must be explicit');
   validateCalibrationEvidence(policy.calibrationEvidence,{required:policy.reviewed===true});
-
   const safety=policy.safety||{};
-  for(const key of ['maximumFalseSupport','maximumFalseFixCandidates','maximumPatchPolicyViolations']){
-    assert.ok(Number.isInteger(safety[key])&&safety[key]>=0&&safety[key]<=1000,`invalid promotion admission safety ${key}`);
-  }
-
+  for(const key of ['maximumFalseSupport','maximumFalseFixCandidates','maximumPatchPolicyViolations'])assert.ok(Number.isInteger(safety[key])&&safety[key]>=0&&safety[key]<=1000,`invalid promotion admission safety ${key}`);
   const quality=policy.quality||{};
-  for(const key of ['minimumAssessmentAccuracy','minimumRootCauseTop1Accuracy','minimumInsufficientEvidenceAccuracy']){
-    assert.ok(quality[key]===null||finite01(quality[key]),`invalid promotion admission quality ${key}`);
-  }
-
+  for(const key of ['minimumAssessmentAccuracy','minimumRootCauseTop1Accuracy','minimumInsufficientEvidenceAccuracy'])assert.ok(quality[key]===null||finite01(quality[key]),`invalid promotion admission quality ${key}`);
   const token=policy.tokenEfficiency||{};
   assert.equal(typeof token.calibrated,'boolean','promotion admission token calibration state must be explicit');
-  if(token.calibrated){
-    assert.ok(Number.isFinite(Number(token.maximumTokensPerCase))&&Number(token.maximumTokensPerCase)>0&&Number(token.maximumTokensPerCase)<=1000000,'invalid calibrated maximumTokensPerCase');
-  }else{
-    assert.equal(token.maximumTokensPerCase,null,'uncalibrated token policy must not invent a maximumTokensPerCase');
-  }
-
+  if(token.calibrated)assert.ok(Number.isFinite(Number(token.maximumTokensPerCase))&&Number(token.maximumTokensPerCase)>0&&Number(token.maximumTokensPerCase)<=1000000,'invalid calibrated maximumTokensPerCase');
+  else assert.equal(token.maximumTokensPerCase,null,'uncalibrated token policy must not invent a maximumTokensPerCase');
   if(policy.reviewed){
-    for(const key of ['minimumAssessmentAccuracy','minimumRootCauseTop1Accuracy','minimumInsufficientEvidenceAccuracy']){
-      assert.ok(finite01(quality[key]),`reviewed promotion policy requires ${key}`);
-    }
+    for(const key of ['minimumAssessmentAccuracy','minimumRootCauseTop1Accuracy','minimumInsufficientEvidenceAccuracy'])assert.ok(finite01(quality[key]),`reviewed promotion policy requires ${key}`);
     assert.equal(token.calibrated,true,'reviewed promotion policy requires token calibration');
   }
-
   assert.match(String(policy.policyDigest||''),HEX64,'invalid promotion admission policy digest');
   assert.equal(policy.policyDigest,stableDigest(policyPayload(policy)),'promotion admission policy digest mismatch');
   return policy;
@@ -86,41 +72,39 @@ function validateAdmissionPolicy(policy=defaultPolicy){
 
 function assertRunBinding(qualification,modelRecord){
   const q=qualification.runContext||{},m=modelRecord.runContext||{};
-  validateRunContext(q,'qualification runContext');
-  validateRunContext(m,'model runContext');
+  validateRunContext(q,'qualification runContext');validateRunContext(m,'model runContext');
   assert.equal(q.sourceSha,qualification.debugCommit,'qualification sourceSha must equal debugCommit');
   assert.equal(m.sourceSha,modelRecord.debugCommit,'model sourceSha must equal debugCommit');
   for(const key of ['sourceSha','runId','runAttempt','workflow','event','repository'])assert.equal(m[key],q[key],`qualification/model runContext mismatch: ${key}`);
 }
 
-function thresholdGap(gaps,actual,minimum,label){
-  if(minimum===null||minimum===undefined){gaps.push(`${label} threshold is not reviewed`);return;}
-  if(Number(actual)<Number(minimum))gaps.push(`${label} ${Number(actual).toFixed(6)} < ${Number(minimum).toFixed(6)}`);
+function validateGovernanceBinding({governanceLock=null,governanceReceipt=null,runContext,debugCommit,required=false}={}){
+  const hasLock=governanceLock!==null&&governanceLock!==undefined,hasReceipt=governanceReceipt!==null&&governanceReceipt!==undefined;
+  if(!hasLock&&!hasReceipt){assert.equal(required,false,'promotion admission requires reviewed repository governance evidence');return null;}
+  assert.equal(hasLock,true,'promotion admission governance lock is required when governance receipt is present');
+  assert.equal(hasReceipt,true,'promotion admission governance receipt is required when governance lock is present');
+  validateRunContext(runContext,'model runContext');
+  validateGovernanceLock(governanceLock,{expectedRepository:runContext.repository,expectedBranch:'main',expectedRequiredCheck:'CI Gate',requireReviewed:true});
+  validateGovernanceReceipt(governanceReceipt,{expectedRepository:runContext.repository,expectedBranch:'main',expectedSourceSha:debugCommit,expectedLockDigest:governanceLock.lockDigest});
+  validateRunContext(governanceReceipt.runContext,'governance runContext');
+  assert.equal(governanceReceipt.runContext.sourceSha,debugCommit,'governance sourceSha must equal debugCommit');
+  for(const key of ['sourceSha','runId','runAttempt','workflow','event','repository'])assert.equal(governanceReceipt.runContext[key],runContext[key],`governance/model runContext mismatch: ${key}`);
+  return Object.freeze({lockDigest:governanceLock.lockDigest,receiptDigest:governanceReceipt.digest});
 }
+
+function thresholdGap(gaps,actual,minimum,label){if(minimum===null||minimum===undefined){gaps.push(`${label} threshold is not reviewed`);return;}if(Number(actual)<Number(minimum))gaps.push(`${label} ${Number(actual).toFixed(6)} < ${Number(minimum).toFixed(6)}`);}
 function maximumGap(gaps,actual,maximum,label){if(Number(actual)>Number(maximum))gaps.push(`${label} ${Number(actual)} > ${Number(maximum)}`);}
 
-function evaluateAdmission({
-  policy=defaultPolicy,
-  reviewedCorpus=corpus,
-  qualification,
-  modelRecord,
-  expectedDebugCommit='',
-  expectedCoreCommit='',
-  requirePromotionEligible=false,
-  recordedAt=new Date().toISOString()
-}={}){
-  validatePromotionCorpus(reviewedCorpus);
-  validateAdmissionPolicy(policy);
-  validateQualificationRecord(qualification,reviewedCorpus);
-
-  const readiness=promotionReadiness(reviewedCorpus);
-  const evaluationCorpus=toEvaluationCorpus(reviewedCorpus);
+function evaluateAdmission({policy=defaultPolicy,reviewedCorpus=corpus,qualification,modelRecord,governanceLock=null,governanceReceipt=null,expectedDebugCommit='',expectedCoreCommit='',requirePromotionEligible=false,recordedAt=new Date().toISOString()}={}){
+  validatePromotionCorpus(reviewedCorpus);validateAdmissionPolicy(policy);validateQualificationRecord(qualification,reviewedCorpus);
+  const readiness=promotionReadiness(reviewedCorpus),evaluationCorpus=toEvaluationCorpus(reviewedCorpus);
   validateRecord(evaluationCorpus,modelRecord,{requireLive:true});
   assert.equal(qualification.debugCommit,modelRecord.debugCommit,'qualification/model debugCommit mismatch');
   assert.equal(qualification.coreCommit,modelRecord.coreCommit,'qualification/model coreCommit mismatch');
   if(expectedDebugCommit)assert.equal(modelRecord.debugCommit,expectedDebugCommit,'promotion admission debugCommit is not current HEAD');
   if(expectedCoreCommit)assert.equal(modelRecord.coreCommit,expectedCoreCommit,'promotion admission coreCommit is not current gitlink');
   assertRunBinding(qualification,modelRecord);
+  const governance=validateGovernanceBinding({governanceLock,governanceReceipt,runContext:modelRecord.runContext,debugCommit:modelRecord.debugCommit,required:Boolean(requirePromotionEligible)});
 
   if(policy.reviewed===true){
     const evidence=policy.calibrationEvidence;
@@ -129,94 +113,42 @@ function evaluateAdmission({
     assert.equal(evidence.evaluationCorpusDigest,stableDigest(evaluationCorpus),'reviewed policy calibration evaluation corpus does not match current evaluation corpus');
   }
 
-  const summary=evaluate(evaluationCorpus,modelRecord,{requireLive:true});
-  const gaps=[];
+  const summary=evaluate(evaluationCorpus,modelRecord,{requireLive:true}),gaps=[];
   if(!readiness.ready)gaps.push(...readiness.gaps.map(x=>`corpus ${x}`));
   if(qualification.readiness?.ready!==true)gaps.push('qualification readiness is not complete');
   if(policy.reviewed!==true)gaps.push('promotion admission policy is not reviewed');
-
   const q=policy.quality||{};
   thresholdGap(gaps,summary.assessmentAccuracy,q.minimumAssessmentAccuracy,'assessmentAccuracy');
   thresholdGap(gaps,summary.rootCauseTop1Accuracy,q.minimumRootCauseTop1Accuracy,'rootCauseTop1Accuracy');
   thresholdGap(gaps,summary.insufficientEvidenceAccuracy,q.minimumInsufficientEvidenceAccuracy,'insufficientEvidenceAccuracy');
-
   const s=policy.safety||{};
-  maximumGap(gaps,summary.falseSupport,s.maximumFalseSupport,'falseSupport');
-  maximumGap(gaps,summary.falseFixCandidates,s.maximumFalseFixCandidates,'falseFixCandidates');
-  maximumGap(gaps,summary.patchPolicyViolations,s.maximumPatchPolicyViolations,'patchPolicyViolations');
-
+  maximumGap(gaps,summary.falseSupport,s.maximumFalseSupport,'falseSupport');maximumGap(gaps,summary.falseFixCandidates,s.maximumFalseFixCandidates,'falseFixCandidates');maximumGap(gaps,summary.patchPolicyViolations,s.maximumPatchPolicyViolations,'patchPolicyViolations');
   const token=policy.tokenEfficiency||{};
   if(token.calibrated!==true)gaps.push('token efficiency is not calibrated');
   else if(Number(summary.usage?.tokensPerCase)>Number(token.maximumTokensPerCase))gaps.push(`tokensPerCase ${Number(summary.usage.tokensPerCase).toFixed(2)} > ${Number(token.maximumTokensPerCase).toFixed(2)}`);
-
   if(requirePromotionEligible){
     if(reviewedCorpus.promotionEligible!==true)gaps.push('reviewed corpus promotionEligible is not true');
     if(modelRecord.promotionEligible!==true)gaps.push('live model record is not promotion eligible');
     if(summary.claimableLiveMetric!==true)gaps.push('live model metrics are not claimable promotion evidence');
   }
 
-  const body={
-    schemaVersion:POLICY_VERSION,
-    kind:'codex-debug-promotion-admission',
-    recordedAt:new Date(recordedAt).toISOString(),
-    debugCommit:modelRecord.debugCommit,
-    coreCommit:modelRecord.coreCommit,
-    corpusDigest:stableDigest(reviewedCorpus),
-    evaluationCorpusDigest:stableDigest(evaluationCorpus),
-    policyDigest:policy.policyDigest,
-    qualificationDigest:qualification.digest,
-    modelRecordDigest:modelRecord.recordDigest,
-    runContext:modelRecord.runContext,
-    readiness,
-    metrics:{
-      assessmentAccuracy:summary.assessmentAccuracy,
-      rootCauseTop1Accuracy:summary.rootCauseTop1Accuracy,
-      insufficientEvidenceAccuracy:summary.insufficientEvidenceAccuracy,
-      falseSupport:summary.falseSupport,
-      falseFixCandidates:summary.falseFixCandidates,
-      patchPolicyViolations:summary.patchPolicyViolations,
-      tokensPerCase:summary.usage?.tokensPerCase??0
-    },
-    requirePromotionEligible:Boolean(requirePromotionEligible),
-    ready:gaps.length===0,
-    gaps
-  };
-  body.digest=stableDigest(body);
-  return Object.freeze(body);
+  const body={schemaVersion:ADMISSION_VERSION,kind:'codex-debug-promotion-admission',recordedAt:new Date(recordedAt).toISOString(),debugCommit:modelRecord.debugCommit,coreCommit:modelRecord.coreCommit,corpusDigest:stableDigest(reviewedCorpus),evaluationCorpusDigest:stableDigest(evaluationCorpus),policyDigest:policy.policyDigest,qualificationDigest:qualification.digest,modelRecordDigest:modelRecord.recordDigest,governanceLockDigest:governance?.lockDigest||null,governanceReceiptDigest:governance?.receiptDigest||null,runContext:modelRecord.runContext,readiness,metrics:{assessmentAccuracy:summary.assessmentAccuracy,rootCauseTop1Accuracy:summary.rootCauseTop1Accuracy,insufficientEvidenceAccuracy:summary.insufficientEvidenceAccuracy,falseSupport:summary.falseSupport,falseFixCandidates:summary.falseFixCandidates,patchPolicyViolations:summary.patchPolicyViolations,tokensPerCase:summary.usage?.tokensPerCase??0},requirePromotionEligible:Boolean(requirePromotionEligible),ready:gaps.length===0,gaps};
+  body.digest=stableDigest(body);return Object.freeze(body);
 }
 
-function parseArgs(argv){
-  const out={policy:'quality/promotion-admission-policy.json',qualification:'',record:'',output:'PROMOTION_ADMISSION.json',validatePolicyOnly:false,requirePromotionEligible:false};
-  for(let i=0;i<argv.length;i++){
-    const arg=argv[i];
-    if(arg==='--policy')out.policy=argv[++i];
-    else if(arg==='--qualification')out.qualification=argv[++i];
-    else if(arg==='--record')out.record=argv[++i];
-    else if(arg==='--output')out.output=argv[++i];
-    else if(arg==='--validate-policy-only')out.validatePolicyOnly=true;
-    else if(arg==='--require-promotion-eligible')out.requirePromotionEligible=true;
-    else throw new Error(`Unknown argument: ${arg}`);
-  }
-  return out;
-}
+function parseArgs(argv){const out={policy:'quality/promotion-admission-policy.json',qualification:'',record:'',governanceLock:'',governance:'',output:'PROMOTION_ADMISSION.json',validatePolicyOnly:false,requirePromotionEligible:false};for(let i=0;i<argv.length;i++){const arg=argv[i];if(arg==='--policy')out.policy=argv[++i];else if(arg==='--qualification')out.qualification=argv[++i];else if(arg==='--record')out.record=argv[++i];else if(arg==='--governance-lock')out.governanceLock=argv[++i];else if(arg==='--governance')out.governance=argv[++i];else if(arg==='--output')out.output=argv[++i];else if(arg==='--validate-policy-only')out.validatePolicyOnly=true;else if(arg==='--require-promotion-eligible')out.requirePromotionEligible=true;else throw new Error(`Unknown argument: ${arg}`);}return out;}
 
 function main(){
-  const args=parseArgs(process.argv.slice(2));
-  const policy=JSON.parse(fs.readFileSync(path.resolve(args.policy),'utf8'));
-  validateAdmissionPolicy(policy);
-  if(args.validatePolicyOnly){
-    process.stdout.write(`${JSON.stringify({schemaVersion:POLICY_VERSION,reviewed:policy.reviewed,tokenCalibrated:policy.tokenEfficiency.calibrated,calibrationReportDigest:policy.calibrationEvidence?.reportDigest||null,policyDigest:policy.policyDigest})}\n`);
-    return;
-  }
+  const args=parseArgs(process.argv.slice(2)),read=file=>file?JSON.parse(fs.readFileSync(path.resolve(file),'utf8')):null;
+  const policy=read(args.policy);validateAdmissionPolicy(policy);
+  if(args.validatePolicyOnly){process.stdout.write(`${JSON.stringify({schemaVersion:POLICY_VERSION,reviewed:policy.reviewed,tokenCalibrated:policy.tokenEfficiency.calibrated,calibrationReportDigest:policy.calibrationEvidence?.reportDigest||null,policyDigest:policy.policyDigest})}\n`);return;}
   if(!args.qualification||!args.record)throw new Error('--qualification and --record are required unless --validate-policy-only is used');
-  const qualification=JSON.parse(fs.readFileSync(path.resolve(args.qualification),'utf8'));
-  const modelRecord=JSON.parse(fs.readFileSync(path.resolve(args.record),'utf8'));
-  const root=path.resolve(__dirname,'..');
-  const admission=evaluateAdmission({policy,reviewedCorpus:corpus,qualification,modelRecord,expectedDebugCommit:currentHead(root),expectedCoreCommit:currentCore(root),requirePromotionEligible:args.requirePromotionEligible});
+  const qualification=read(args.qualification),modelRecord=read(args.record),governanceLock=read(args.governanceLock),governanceReceipt=read(args.governance),root=path.resolve(__dirname,'..');
+  const admission=evaluateAdmission({policy,reviewedCorpus:corpus,qualification,modelRecord,governanceLock,governanceReceipt,expectedDebugCommit:currentHead(root),expectedCoreCommit:currentCore(root),requirePromotionEligible:args.requirePromotionEligible});
   fs.writeFileSync(path.resolve(args.output),`${JSON.stringify(admission,null,2)}\n`,'utf8');
-  process.stdout.write(`${JSON.stringify({output:path.resolve(args.output),ready:admission.ready,gaps:admission.gaps,digest:admission.digest})}\n`);
+  process.stdout.write(`${JSON.stringify({output:path.resolve(args.output),ready:admission.ready,gaps:admission.gaps,governanceLockDigest:admission.governanceLockDigest,governanceReceiptDigest:admission.governanceReceiptDigest,digest:admission.digest})}\n`);
   if(args.requirePromotionEligible&&!admission.ready)process.exitCode=2;
 }
 
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={POLICY_VERSION,validateRunContext,validateCalibrationEvidence,validateAdmissionPolicy,assertRunBinding,evaluateAdmission};
+module.exports={POLICY_VERSION,ADMISSION_VERSION,validateRunContext,validateCalibrationEvidence,validateAdmissionPolicy,assertRunBinding,validateGovernanceBinding,evaluateAdmission};

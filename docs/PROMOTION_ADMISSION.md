@@ -1,16 +1,19 @@
 # Promotion Admission Contract
 
-Promotion Admission v1 closes the authority gap between structural corpus readiness and any future `development -> active` decision. It does not grant release, publication, mutation, or lifecycle authority.
+Promotion Admission v2 closes the authority gap between structural corpus readiness and any future `development -> active` decision. It does not grant release, publication, mutation, or lifecycle authority.
 
 ## Evidence chain
 
-A promotion-mode model run must bind three independently validated layers from the **same GitHub Actions run and source commit**:
+A promotion-mode model run must bind four independently validated layers from the **same GitHub Actions run and source commit**:
 
-1. `PROMOTION_CORPUS_QUALIFICATION.json` — every reviewed bad commit reproduces and every exact direct-child fixed commit passes the same bounded command.
-2. `PROMOTION_MODEL_EVAL.json` — credential-backed two-pass live model evidence over all 15 evaluation views.
-3. `quality/promotion-admission-policy.json` — digest-bound reviewed quality, safety and token-efficiency policy.
+1. `PROMOTION_REPOSITORY_GOVERNANCE.json` + the exact reviewed `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json` — repository governance is still active, matches the administrator-reviewed Ruleset identity/projection, and is not using a stale reviewed lock.
+2. `PROMOTION_CORPUS_QUALIFICATION.json` — every reviewed bad commit reproduces and every exact direct-child fixed commit passes the same bounded command.
+3. `PROMOTION_MODEL_EVAL.json` — credential-backed two-pass live model evidence over all 15 evaluation views.
+4. `quality/promotion-admission-policy.json` — digest-bound reviewed quality, safety and token-efficiency policy.
 
-`PROMOTION_ADMISSION.json` binds the Debug commit, Safe Core gitlink, reviewed-corpus digest, evaluation-corpus digest, qualification digest, model-record digest, policy digest, workflow run context, metrics, gaps and a self digest. Qualification and model evidence from different run ids, attempts, workflows, repositories, events or source SHAs are rejected.
+`PROMOTION_ADMISSION.json` v2 binds the Debug commit, Safe Core gitlink, reviewed-corpus digest, evaluation-corpus digest, qualification digest, model-record digest, policy digest, Governance Lock digest, Governance Receipt digest, workflow run context, metrics, gaps and a self digest. Qualification, model and governance evidence from different run ids, attempts, workflows, repositories, events or source SHAs are rejected.
+
+Calibration remains explicitly non-authoritative: for `promotion_mode=false`, Admission v2 records `governanceLockDigest=null` and `governanceReceiptDigest=null`. For `promotion_mode=true`, both digests are mandatory, the reviewed Governance Lock must validate, the live Governance Receipt must validate against that exact lock, and its run context must match Qualification/model evidence exactly.
 
 ## Checked-in development policy
 
@@ -56,23 +59,24 @@ The candidate is intentionally written to a separate file. Replacing `quality/pr
 
 `Promotion Model Evaluation` performs the authority chain in one read-only workflow run after explicit acknowledgement that historical code executes without an OS sandbox:
 
-`validate corpus/policy -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> promotion admission -> receipt revalidation -> calibration review report -> artifact upload`
+`validate corpus/policy -> verify reviewed repository governance (promotion mode only) -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> promotion admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
 
 The workflow retains `contents: read` only. Historical reproduction receives the existing isolated HOME/Git/npm environment and cannot inherit model or GitHub credentials.
 
 The protected model credential follows an additional least-privilege boundary: `OPENAI_API_KEY` is **not** defined at job scope and is injected only into the `Record historical live-model evaluation` step. Checkout, dependency installation, corpus/policy validation, the complete 12-transition Qualification step, Admission, Receipt revalidation, Calibration Report generation, and artifact upload do not receive the model credential through workflow environment. The live-model step itself fails closed before model execution when the protected credential is absent. Historical reproduction executed inside live evaluation continues to receive the scrubbed historical environment rather than the model process environment.
 
-For `promotion_mode=false`, the workflow records qualification, live calibration, Admission and the digest-bound review-only Calibration Report, but the current draft policy causes `ready=false` without failing the calibration run. This is how RCA accuracy, insufficient-evidence accuracy, patch applicability and token usage are collected before choosing thresholds.
+For `promotion_mode=false`, the workflow records qualification, live calibration, Admission and the digest-bound review-only Calibration Report, but the current draft policy causes `ready=false` without failing the calibration run. This is how RCA accuracy, insufficient-evidence accuracy, patch applicability and token usage are collected before choosing thresholds. Admission v2 explicitly records null governance digests in this mode so calibration cannot later be mistaken for active-promotion authority.
 
-For `promotion_mode=true`, the workflow additionally requires the reviewed corpus and live record to be promotion eligible and requires `PROMOTION_ADMISSION.json.ready=true`. Any missing calibration provenance, draft threshold, uncalibrated token ceiling, stale Core/corpus calibration, safety regression, quality miss, SHA/Core mismatch or cross-run evidence assembly fails closed.
+For `promotion_mode=true`, the workflow additionally requires a reviewed Governance Lock plus matching live Governance Receipt, requires the reviewed corpus and live record to be promotion eligible, and requires `PROMOTION_ADMISSION.json.ready=true`. Any missing/stale governance evidence, cross-run governance assembly, missing calibration provenance, draft threshold, uncalibrated token ceiling, stale Core/corpus calibration, safety regression, quality miss, SHA/Core mismatch or cross-run Qualification/model assembly fails closed.
 
 ## Required sequence before active promotion
 
 1. Run credential-backed calibration with explicit historical-execution acknowledgement.
 2. Review the generated Qualification, Admission Receipt, Calibration Report, model quality, patch-applicability results and token usage.
 3. Use `promotion-policy-review.js` with explicitly reviewed thresholds and token ceiling to generate a candidate policy directly from that Calibration Report; review the resulting policy change and digest.
-4. Explicitly review the separate `promotionEligible=true` corpus change.
-5. Run `Promotion Model Evaluation` with `promotion_mode=true`; same-run Qualification and Admission must pass, and the reviewed policy calibration must still match the current Safe Core and corpus identity.
-6. Only after that evidence may lifecycle/release governance be considered.
+4. Create the required main Ruleset and merge the administrator-snapshot-derived reviewed Governance Lock.
+5. Explicitly review the separate `promotionEligible=true` corpus change.
+6. Run `Promotion Model Evaluation` with `promotion_mode=true`; reviewed Governance Lock + same-run live Governance Receipt + Qualification + model evidence must all bind into Admission v2 and pass.
+7. Only after that evidence may lifecycle/release governance be considered.
 
-Structural readiness (`12/12`, `4/3`, `5/4`, `3/3`, 15 views) remains distinct from qualification, model quality, policy calibration provenance, promotion admission, lifecycle authority and release authority.
+Structural readiness (`12/12`, `4/3`, `5/4`, `3/3`, 15 views) remains distinct from qualification, repository governance, model quality, policy calibration provenance, promotion admission, lifecycle authority and release authority.

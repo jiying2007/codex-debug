@@ -130,7 +130,7 @@ jobs:
             process.exit(2);
           }
           NODE
-      - name: Bind qualification, live metrics, and promotion admission policy
+      - name: Bind qualification, live metrics, governance, and promotion admission policy
         env:
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
         shell: bash
@@ -138,7 +138,9 @@ jobs:
           set -euo pipefail
           cp quality/promotion-admission-policy.json PROMOTION_ADMISSION_POLICY.json
           args=(--policy PROMOTION_ADMISSION_POLICY.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --output PROMOTION_ADMISSION.json)
-          if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-eligible); fi
+          if [[ "$PROMOTION_MODE" == true ]]; then
+            args+=(--governance-lock PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json --governance PROMOTION_REPOSITORY_GOVERNANCE.json --require-promotion-eligible)
+          fi
           node scripts/promotion-admission.js "${args[@]}"
           test -s PROMOTION_ADMISSION.json
           test -s PROMOTION_ADMISSION_POLICY.json
@@ -149,18 +151,21 @@ jobs:
         run: |
           set -euo pipefail
           args=(--policy PROMOTION_ADMISSION_POLICY.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --admission PROMOTION_ADMISSION.json)
-          if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-eligible); fi
+          if [[ "$PROMOTION_MODE" == true ]]; then
+            args+=(--governance-lock PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json --governance PROMOTION_REPOSITORY_GOVERNANCE.json --require-promotion-eligible)
+          fi
           node scripts/validate-promotion-admission.js "${args[@]}"
       - name: Build calibration review report
+        env:
+          PROMOTION_MODE: ${{ inputs.promotion_mode }}
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/promotion-calibration-report.js \
-            --policy PROMOTION_ADMISSION_POLICY.json \
-            --qualification PROMOTION_CORPUS_QUALIFICATION.json \
-            --record PROMOTION_MODEL_EVAL.json \
-            --admission PROMOTION_ADMISSION.json \
-            --output PROMOTION_CALIBRATION_REPORT.json
+          args=(--policy PROMOTION_ADMISSION_POLICY.json --qualification PROMOTION_CORPUS_QUALIFICATION.json --record PROMOTION_MODEL_EVAL.json --admission PROMOTION_ADMISSION.json --output PROMOTION_CALIBRATION_REPORT.json)
+          if [[ "$PROMOTION_MODE" == true ]]; then
+            args+=(--governance-lock PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json --governance PROMOTION_REPOSITORY_GOVERNANCE.json)
+          fi
+          node scripts/promotion-calibration-report.js "${args[@]}"
           test -s PROMOTION_CALIBRATION_REPORT.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
