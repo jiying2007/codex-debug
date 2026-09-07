@@ -7,7 +7,7 @@ Promotion Admission v2 closes the authority gap between structural corpus readin
 A promotion-mode model run must bind four independently validated layers from the **same GitHub Actions run and source commit**:
 
 1. `PROMOTION_REPOSITORY_GOVERNANCE.json` + the exact reviewed `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json` — repository governance is still active, matches the administrator-reviewed Ruleset identity/projection, and is not using a stale reviewed lock.
-2. `PROMOTION_CORPUS_QUALIFICATION.json` — every reviewed bad commit reproduces and every exact direct-child fixed commit passes the same bounded command.
+2. `PROMOTION_CORPUS_QUALIFICATION.json` — Promotion Qualification v1 proving every reviewed bad commit reproduces and every exact direct-child fixed commit passes the same bounded command.
 3. `PROMOTION_MODEL_EVAL.json` — credential-backed two-pass live model evidence over all 15 evaluation views.
 4. `quality/promotion-admission-policy.json` — digest-bound reviewed quality, safety and token-efficiency policy.
 
@@ -17,19 +17,23 @@ Calibration remains explicitly non-authoritative: for `promotion_mode=false`, Ad
 
 ## Shipped schema identity
 
-The 0.1.11 packaged `product-contract.json` explicitly publishes the downstream evidence contract versions instead of requiring Family/release consumers to infer them from repository code:
+The 0.1.12 packaged `product-contract.json` explicitly publishes the complete downstream Promotion evidence contract instead of requiring Family/release consumers to infer versions from repository code:
 
+- `promotionTransitionVersion=1`;
+- `promotionQualificationVersion=1`;
 - `promotionAdmissionPolicyVersion=1`;
 - `promotionAdmissionVersion=2`;
 - `promotionRepositoryGovernanceLockVersion=1`;
 - `promotionRepositoryGovernanceVersion=2`;
 - `promotionCalibrationReportVersion=1`.
 
+Model Evaluation Record v1 and Promotion Corpus v2 are also published by the Product Contract. The manifest gate imports the implementation modules' exported schema constants and requires all of these Product Contract values to match the implementation versions exactly. A future implementation schema bump without a matching shipped contract update therefore fails CI.
+
 These fields describe evidence/control-plane schemas. They do not make the product active, eligible, qualified or released.
 
 ## Checked-in development policy
 
-The 0.1.11 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
+The 0.1.12 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
 
 - `reviewed=false`;
 - `calibrationEvidence=null`;

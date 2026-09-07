@@ -16,18 +16,21 @@ Synthetic live canaries remain useful smoke evidence but are permanently `promot
 
 ## Versioned contracts
 
-The shipped 0.1.11 development Product Contract binds both model-quality and promotion-authority evidence schemas:
+The shipped 0.1.12 development Product Contract binds the complete downstream model-quality and promotion-authority evidence schema set:
 
 - `modelEvaluationRecordVersion = 1`
 - `promotionCorpusVersion = 2`
 - `promotionTransitionVersion = 1`
+- `promotionQualificationVersion = 1`
 - `promotionAdmissionPolicyVersion = 1`
 - `promotionAdmissionVersion = 2`
 - `promotionRepositoryGovernanceLockVersion = 1`
 - `promotionRepositoryGovernanceVersion = 2`
 - `promotionCalibrationReportVersion = 1`
 
-Model Evaluation Record v1 binds corpus expectations, evidence/root-cause digests, patch disposition/applicability, both model phases, usage and a self digest. Qualification records bind Debug/Core identity, the reviewed corpus digest, readiness, GitHub run context, all 12 bad/fixed transition results and a self digest. Promotion Admission v2 additionally binds policy, Qualification, model-record, reviewed Governance Lock and live Governance Receipt digests plus the exact same workflow run context. These versions are part of the packaged `product-contract.json`; downstream Family/release consumers do not need to infer evidence schemas from script names or repository history.
+Model Evaluation Record v1 binds corpus expectations, evidence/root-cause digests, patch disposition/applicability, both model phases, usage and a self digest. Promotion Qualification v1 binds Debug/Core identity, the reviewed corpus digest, readiness, GitHub run context, all 12 bad/fixed transition results and a self digest. Promotion Admission v2 additionally binds policy, Qualification, model-record, reviewed Governance Lock and live Governance Receipt digests plus the exact same workflow run context. These versions are part of the packaged `product-contract.json`; downstream Family/release consumers do not need to infer evidence schemas from script names or repository history.
+
+The manifest gate also imports the implementation modules' exported schema constants and requires every Product Contract field above to equal the implementation version. A schema implementation bump without a matching shipped Product Contract update therefore fails CI.
 
 ## Promotion corpus case contract
 
@@ -101,11 +104,11 @@ Calibration mode explicitly records `governanceLockDigest=null` and `governanceR
 
 ### Promotion Corpus Qualification
 
-`Promotion Corpus Qualification` requires no model credential. It validates the manifest, executes all 12 reviewed transitions under isolated historical execution and emits `PROMOTION_CORPUS_QUALIFICATION.json`.
+`Promotion Corpus Qualification` requires no model credential. It validates the manifest, executes all 12 reviewed transitions under isolated historical execution and emits `PROMOTION_CORPUS_QUALIFICATION.json` using Promotion Qualification v1.
 
 ### Promotion Model Evaluation
 
-`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.11 it executes one read-only evidence chain in the same run:
+`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.12 it executes one read-only evidence chain in the same run:
 
 `validate corpus/policy -> verify reviewed repository governance when promotion_mode=true -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> Promotion Admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
 
@@ -125,7 +128,7 @@ Token usage is currently a calibration measurement only. An evidence-based `maxi
 
 Currently allowed statements include:
 
-- Model Evaluation Record v1, Promotion Corpus v2, Promotion Admission Policy v1, Promotion Admission v2, Governance Lock v1, Governance Receipt v2 and Calibration Report v1 are contract-versioned and deterministically tested.
+- Model Evaluation Record v1, Promotion Corpus v2, Promotion Qualification v1, Promotion Admission Policy v1, Promotion Admission v2, Governance Lock v1, Governance Receipt v2 and Calibration Report v1 are contract-versioned and deterministically tested.
 - Twelve unique reviewed direct-parent transitions span Codex Debug, Safe Core, Codex Diagnose and Codex Change.
 - Structural coverage is `12/12`, `4/3`, `5/4`, `3/3`, with `15` evaluation views and no structural gap.
 - Promotion Provenance is continuously proven without historical execution.
