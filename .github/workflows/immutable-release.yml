@@ -1,0 +1,262 @@
+name: Immutable Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      promotion_run_id:
+        description: Successful promotion-mode Promotion Model Evaluation run id on the direct parent of the active commit
+        required: true
+        type: string
+      acknowledge_immutable_release:
+        description: I acknowledge this creates an immutable GitHub tag/release from an active, promotion-authorized commit
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: immutable-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  authority:
+    name: Validate immutable release authority
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      tag: ${{ steps.identity.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 2
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require explicit immutable-release authority on main
+        env:
+          ACK: ${{ inputs.acknowledge_immutable_release }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$ACK" = true || { echo 'Explicit immutable-release acknowledgement is required.' >&2; exit 2; }
+          test "$GITHUB_REF" = refs/heads/main || { echo "Immutable release must run from refs/heads/main, got $GITHUB_REF" >&2; exit 2; }
+          node - <<'NODE'
+          const contract=require('./product-contract.json');
+          if(contract.lifecycle!=='active'){console.error(`immutable release requires lifecycle=active, got ${contract.lifecycle}`);process.exit(2);}
+          NODE
+      - id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          contract_version=$(node -p "require('./product-contract.json').productVersion")
+          test "$version" = "$contract_version"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "package version must be MAJOR.MINOR.PATCH: $version" >&2; exit 2; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+      - name: Fetch exact promotion run, promotion artifact, and current CI Gate evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PROMOTION_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'promotion_run_id must be numeric' >&2; exit 2; }
+          mkdir -p release-authority/promotion
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROMOTION_RUN_ID}" > release-authority/promotion-run.json
+          promotion_sha=$(node -p "require('./release-authority/promotion-run.json').head_sha")
+          [[ "$promotion_sha" =~ ^[0-9a-f]{40}$ ]] || { echo 'promotion run head SHA is invalid' >&2; exit 2; }
+          artifact="codex-debug-promotion-model-eval-${promotion_sha}-${PROMOTION_RUN_ID}"
+          gh run download "$PROMOTION_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$artifact" --dir release-authority/promotion
+          gh api -H 'Accept: application/vnd.github+json' "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" > release-authority/ci-checks.json
+      - name: Re-verify live repository governance at release time
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp quality/promotion-repository-governance-lock.json release-authority/PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json
+          node scripts/promotion-repository-governance.js \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch main \
+            --source-sha "$GITHUB_SHA" \
+            --required-check 'CI Gate' \
+            --lock release-authority/PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json \
+            --output release-authority/RELEASE_REPOSITORY_GOVERNANCE.json
+      - name: Validate direct-parent activation and Promotion Admission v2 authority
+        env:
+          PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/immutable-release-authority.js \
+            --promotion-run release-authority/promotion-run.json \
+            --promotion-run-id "$PROMOTION_RUN_ID" \
+            --promotion-dir release-authority/promotion \
+            --ci-checks release-authority/ci-checks.json \
+            --release-governance release-authority/RELEASE_REPOSITORY_GOVERNANCE.json \
+            --output release-authority/RELEASE_AUTHORITY.json
+          test -s release-authority/RELEASE_AUTHORITY.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-debug-release-authority-${{ github.sha }}
+          path: |
+            release-authority/RELEASE_AUTHORITY.json
+            release-authority/RELEASE_REPOSITORY_GOVERNANCE.json
+            release-authority/PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json
+          if-no-files-found: error
+          retention-days: 30
+
+  package:
+    name: Build immutable release payload
+    needs: authority
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 1
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Re-check active source before packaging
+        run: npm run check
+      - name: Download validated release authority sidecars from this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p immutable-release
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "codex-debug-release-authority-${GITHUB_SHA}" --dir immutable-release/authority
+          test -s immutable-release/authority/RELEASE_AUTHORITY.json
+      - name: Build two byte-identical VSIX candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.authority.outputs.version }}"
+          vsix="codex-debug-safe-${version}.vsix"
+          npx --yes @vscode/vsce@3.9.2 --version
+          epoch=$(git show -s --format=%ct HEAD)
+          export SOURCE_DATE_EPOCH="$epoch"
+          while IFS= read -r -d '' file; do touch -h -d "@${epoch}" "$file"; done < <(find . -path './.git' -prune -o -path './node_modules' -prune -o -path './immutable-release' -prune -o -print0)
+          npx --yes @vscode/vsce@3.9.2 package --no-dependencies --out immutable-release/a.vsix
+          npx --yes @vscode/vsce@3.9.2 package --no-dependencies --out immutable-release/b.vsix
+          sha_a=$(sha256sum immutable-release/a.vsix | awk '{print $1}')
+          sha_b=$(sha256sum immutable-release/b.vsix | awk '{print $1}')
+          test "$sha_a" = "$sha_b" || { echo "VSIX is not reproducible: ${sha_a} != ${sha_b}" >&2; exit 2; }
+          mv immutable-release/a.vsix "immutable-release/$vsix"
+          rm immutable-release/b.vsix
+          unzip -Z1 "immutable-release/$vsix" > /tmp/vsix-files.txt
+          grep -Fx 'extension/extension.js' /tmp/vsix-files.txt
+          grep -Fx 'extension/src/debug.js' /tmp/vsix-files.txt
+          grep -Fx 'extension/src/platform-symbols.js' /tmp/vsix-files.txt
+          grep -Fx 'extension/src/codex-safe-core/index.js' /tmp/vsix-files.txt
+          if grep -E '^extension/(test|quality|scripts|\.github|\.codex-debug|\.git)(/|$)' /tmp/vsix-files.txt; then echo 'VSIX contains development/private surfaces' >&2; exit 2; fi
+      - name: Generate release Consumer Receipt, SPDX SBOM, and checksums
+        env:
+          CI_SOURCE_SHA: ${{ github.sha }}
+          CI_WORKFLOW_NAME: Immutable Release
+          CI_RUN_ID: ${{ github.run_id }}
+          CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          CI_EVENT: ${{ github.event_name }}
+          CI_SUITES: main-ci-gate,promotion-admission-v2,release-governance,direct-parent-activation,reproducible-vsix,sbom
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.authority.outputs.version }}"
+          vsix="codex-debug-safe-${version}.vsix"
+          node src/codex-safe-core/scripts/generate-consumer-ci-receipt.js --output immutable-release/CONSUMER_CI_RECEIPT.json
+          npm sbom --sbom-format spdx > immutable-release/SBOM.spdx.json
+          cp immutable-release/authority/RELEASE_AUTHORITY.json immutable-release/RELEASE_AUTHORITY.json
+          cp immutable-release/authority/RELEASE_REPOSITORY_GOVERNANCE.json immutable-release/RELEASE_REPOSITORY_GOVERNANCE.json
+          rm -rf immutable-release/authority
+          (cd immutable-release && sha256sum "$vsix" CONSUMER_CI_RECEIPT.json SBOM.spdx.json RELEASE_AUTHORITY.json RELEASE_REPOSITORY_GOVERNANCE.json > SHA256SUMS)
+          test -s immutable-release/SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-debug-immutable-release-${{ github.sha }}
+          path: immutable-release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Attest and publish immutable GitHub Release
+    needs: [authority, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download already-validated immutable payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "codex-debug-immutable-release-${GITHUB_SHA}" --dir immutable-release
+          test -s immutable-release/RELEASE_AUTHORITY.json
+          test -s immutable-release/SHA256SUMS
+      - name: Re-verify immutable payload checksums
+        shell: bash
+        run: (cd immutable-release && sha256sum -c SHA256SUMS)
+      - name: Attest immutable release provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            immutable-release/codex-debug-safe-${{ needs.authority.outputs.version }}.vsix
+            immutable-release/SBOM.spdx.json
+            immutable-release/CONSUMER_CI_RECEIPT.json
+            immutable-release/RELEASE_AUTHORITY.json
+            immutable-release/RELEASE_REPOSITORY_GOVERNANCE.json
+            immutable-release/SHA256SUMS
+      - name: Ensure immutable release tag points to exact active source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.authority.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/tmp/tag.json 2>/dev/null; then
+            tag_sha=$(node -p "require('/tmp/tag.json').object.sha")
+            test "$tag_sha" = "$GITHUB_SHA" || { echo "existing tag $RELEASE_TAG points to $tag_sha, not $GITHUB_SHA" >&2; exit 2; }
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${RELEASE_TAG}" -f sha="$GITHUB_SHA" >/dev/null
+          fi
+      - name: Publish once; never overwrite an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.authority.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; immutable assets will not be overwritten." >&2
+            exit 2
+          fi
+          gh release create "$RELEASE_TAG" immutable-release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Codex Debug Safe ${{ needs.authority.outputs.version }}" \
+            --generate-notes \
+            --verify-tag
