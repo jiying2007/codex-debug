@@ -55,6 +55,22 @@ jobs:
           const contract=require('./product-contract.json');
           if(contract.lifecycle!=='active'){console.error(`immutable release requires lifecycle=active, got ${contract.lifecycle}`);process.exit(2);}
           NODE
+      - name: Require GitHub platform Immutable Releases
+        env:
+          GH_TOKEN: ${{ secrets.CODEX_DEBUG_RELEASE_ADMIN_READ_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}" || { echo 'CODEX_DEBUG_RELEASE_ADMIN_READ_TOKEN with Repository Administration(read) is required.' >&2; exit 2; }
+          mkdir -p release-authority
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/immutable-releases" > release-authority/GITHUB_IMMUTABLE_RELEASES.json
+          node - <<'NODE'
+          const state=require('./release-authority/GITHUB_IMMUTABLE_RELEASES.json');
+          if(state.enabled!==true){console.error('GitHub repository Immutable Releases must be enabled before release authority is granted.');process.exit(2);}
+          NODE
       - id: identity
         shell: bash
         run: |
@@ -115,6 +131,7 @@ jobs:
             release-authority/RELEASE_AUTHORITY.json
             release-authority/RELEASE_REPOSITORY_GOVERNANCE.json
             release-authority/PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json
+            release-authority/GITHUB_IMMUTABLE_RELEASES.json
           if-no-files-found: error
           retention-days: 30
 
@@ -148,6 +165,7 @@ jobs:
           mkdir -p immutable-release
           gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "codex-debug-release-authority-${GITHUB_SHA}" --dir immutable-release/authority
           test -s immutable-release/authority/RELEASE_AUTHORITY.json
+          test -s immutable-release/authority/GITHUB_IMMUTABLE_RELEASES.json
       - name: Build two byte-identical VSIX candidates
         shell: bash
         run: |
@@ -178,7 +196,7 @@ jobs:
           CI_RUN_ID: ${{ github.run_id }}
           CI_RUN_ATTEMPT: ${{ github.run_attempt }}
           CI_EVENT: ${{ github.event_name }}
-          CI_SUITES: main-ci-gate,promotion-admission-v2,release-governance,direct-parent-activation,reproducible-vsix,sbom
+          CI_SUITES: main-ci-gate,promotion-admission-v2,release-governance,platform-immutable-releases,direct-parent-activation,reproducible-vsix,sbom
         shell: bash
         run: |
           set -euo pipefail
@@ -188,8 +206,9 @@ jobs:
           npm sbom --sbom-format spdx > immutable-release/SBOM.spdx.json
           cp immutable-release/authority/RELEASE_AUTHORITY.json immutable-release/RELEASE_AUTHORITY.json
           cp immutable-release/authority/RELEASE_REPOSITORY_GOVERNANCE.json immutable-release/RELEASE_REPOSITORY_GOVERNANCE.json
+          cp immutable-release/authority/GITHUB_IMMUTABLE_RELEASES.json immutable-release/GITHUB_IMMUTABLE_RELEASES.json
           rm -rf immutable-release/authority
-          (cd immutable-release && sha256sum "$vsix" CONSUMER_CI_RECEIPT.json SBOM.spdx.json RELEASE_AUTHORITY.json RELEASE_REPOSITORY_GOVERNANCE.json > SHA256SUMS)
+          (cd immutable-release && sha256sum "$vsix" CONSUMER_CI_RECEIPT.json SBOM.spdx.json RELEASE_AUTHORITY.json RELEASE_REPOSITORY_GOVERNANCE.json GITHUB_IMMUTABLE_RELEASES.json > SHA256SUMS)
           test -s immutable-release/SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -217,6 +236,7 @@ jobs:
           set -euo pipefail
           gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "codex-debug-immutable-release-${GITHUB_SHA}" --dir immutable-release
           test -s immutable-release/RELEASE_AUTHORITY.json
+          test -s immutable-release/GITHUB_IMMUTABLE_RELEASES.json
           test -s immutable-release/SHA256SUMS
       - name: Re-verify immutable payload checksums
         shell: bash
@@ -230,7 +250,23 @@ jobs:
             immutable-release/CONSUMER_CI_RECEIPT.json
             immutable-release/RELEASE_AUTHORITY.json
             immutable-release/RELEASE_REPOSITORY_GOVERNANCE.json
+            immutable-release/GITHUB_IMMUTABLE_RELEASES.json
             immutable-release/SHA256SUMS
+      - name: Re-require GitHub platform Immutable Releases immediately before publish
+        env:
+          GH_TOKEN: ${{ secrets.CODEX_DEBUG_RELEASE_ADMIN_READ_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}" || { echo 'CODEX_DEBUG_RELEASE_ADMIN_READ_TOKEN with Repository Administration(read) is required.' >&2; exit 2; }
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/immutable-releases" > /tmp/github-immutable-releases.json
+          node - <<'NODE'
+          const state=require('/tmp/github-immutable-releases.json');
+          if(state.enabled!==true){console.error('GitHub repository Immutable Releases must remain enabled immediately before publication.');process.exit(2);}
+          NODE
       - name: Ensure immutable release tag points to exact active source
         env:
           GH_TOKEN: ${{ github.token }}
@@ -244,7 +280,7 @@ jobs:
           else
             gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${RELEASE_TAG}" -f sha="$GITHUB_SHA" >/dev/null
           fi
-      - name: Publish once; never overwrite an existing release
+      - name: Publish once and verify GitHub immutable-release attestation
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.authority.outputs.tag }}
@@ -260,3 +296,7 @@ jobs:
             --title "Codex Debug Safe ${{ needs.authority.outputs.version }}" \
             --generate-notes \
             --verify-tag
+          gh release verify "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
+          for asset in immutable-release/*; do
+            gh release verify-asset "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
+          done
