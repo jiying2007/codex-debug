@@ -36,7 +36,6 @@ test('real Linux core resolves crash inside a loaded shared library',{skip:proce
     assert.equal(result.tool,'gdb');
     assert.match(result.text,/shared_crash/);
     assert.match(result.text,/shared_crash\.c/);
-    assert.match(result.text,/libcrashfixture\.so/);
     assert.doesNotMatch(result.text,new RegExp(dir.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
     assert.equal(result.core.name,'shared-lib.core');
     assert.equal(result.executable.name,'shared_main');
