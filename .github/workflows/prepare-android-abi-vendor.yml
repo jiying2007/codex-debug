@@ -38,8 +38,12 @@ jobs:
             case "$file" in
               .github/workflows/prepare-android-abi-vendor.yml|scripts/prepare-android-abi-vendor.js) continue ;;
             esac
-            sed -i 's/0\.1\.12/0.1.13/g' "$file"
+            perl -0pi -e 's/0\.1\.12/0.1.13/g' "$file"
           done < <(git grep -l '0.1.12' || true)
+          for file in .github/workflows/ci.yml .github/workflows/immutable-release.yml .github/workflows/live-model-eval.yml .github/workflows/promotion-corpus-qualify.yml .github/workflows/promotion-model-eval.yml; do
+            perl -0pi -e 's/0\.1\.12/0.1.13/g' "$file"
+            grep -F '0.1.13' "$file" >/dev/null || { echo "$file did not receive 0.1.13 identity" >&2; exit 1; }
+          done
       - name: Write shell-safe Android ABI vendor fixture
         shell: bash
         run: |
