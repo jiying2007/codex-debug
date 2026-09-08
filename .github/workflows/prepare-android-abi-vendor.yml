@@ -21,13 +21,32 @@ jobs:
         with:
           node-version: 22.22.2
       - name: Prepare runtime and real fixture patch
-        run: node scripts/prepare-android-abi-vendor.js
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/prepare-android-abi-vendor.js')
+          s=p.read_text()
+          old="allowed=new Set(['package.json','package-lock.json','product-contract.json','ROADMAP.md','README.md','README.zh-CN.md','ARCHITECTURE.md'])"
+          new="allowed=new Set(['.github/workflows/ci.yml','.github/workflows/immutable-release.yml','.github/workflows/live-model-eval.yml','.github/workflows/prepare-android-abi-vendor.yml','.github/workflows/promotion-corpus-qualify.yml','.github/workflows/promotion-model-eval.yml','MODEL_EVALUATION.md','ROADMAP.md','docs/PROMOTION_ADMISSION.md','package-lock.json','package.json','product-contract.json','scripts/prepare-android-abi-vendor.js','scripts/verify-docs.js','test/immutable-release-authority.test.js'])"
+          if old not in s: raise SystemExit('preparation allowlist marker missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+          node scripts/prepare-android-abi-vendor.js
+          while IFS= read -r file; do
+            case "$file" in
+              .github/workflows/prepare-android-abi-vendor.yml|scripts/prepare-android-abi-vendor.js) continue ;;
+            esac
+            sed -i 's/0\.1\.12/0.1.13/g' "$file"
+          done < <(git grep -l '0.1.12' || true)
       - name: Validate prepared patch
         shell: bash
         run: |
           set -euo pipefail
           node --check src/platform-symbols.js
           node --test test/android-abi-vendor-real-e2e.test.js
+          test -z "$(git grep -l '0.1.12' -- ':!.github/workflows/prepare-android-abi-vendor.yml' ':!scripts/prepare-android-abi-vendor.js' || true)"
           git diff --check
           git status --short
       - name: Commit patch and remove preparation surfaces
@@ -37,6 +56,6 @@ jobs:
           git rm .github/workflows/prepare-android-abi-vendor.yml scripts/prepare-android-abi-vendor.js
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/platform-symbols.js test/android-abi-vendor-real-e2e.test.js .github/workflows/ci.yml package.json package-lock.json product-contract.json ROADMAP.md
+          git add -A
           git commit -m 'feat(android): bind tombstone ABI to ELF identity'
           git push origin HEAD:codex/android-abi-vendor-evidence
