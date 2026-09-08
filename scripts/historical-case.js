@@ -10,6 +10,9 @@ const {runReproductionSeries}=require('../src/reproduction');
 const {stableDigest}=require('./model-evaluation');
 
 const SAFE_ENV_KEYS=new Set(['PATH','Path','SYSTEMROOT','SystemRoot','WINDIR','windir','COMSPEC','ComSpec','PATHEXT','TEMP','TMP','TMPDIR','LANG','LC_ALL','CI','NUMBER_OF_PROCESSORS','PROCESSOR_ARCHITECTURE','PROCESSOR_IDENTIFIER']);
+const TRUSTED_CORE_PATH='src/codex-safe-core';
+const TRUSTED_CORE_URL='https://github.com/jiying2007/codex-safe-core.git';
+const SHA40=/^[0-9a-f]{40}$/;
 function isolatedHistoricalEnv(home){
   const env={};
   for(const key of SAFE_ENV_KEYS)if(process.env[key]!==undefined)env[key]=process.env[key];
@@ -27,14 +30,57 @@ function isolatedHistoricalEnv(home){
   return Object.freeze(env);
 }
 function git(args,cwd,env){return execFileSync('git',args,{cwd,env,encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:120000,maxBuffer:4*1024*1024}).trim();}
-function cleanCheckout(root,commit,env){git(['-c','submodule.recurse=false','checkout','--detach','--force',commit],root,env);git(['clean','-fdx'],root,env);return git(['rev-parse','HEAD'],root,env);}
+function parseSubmoduleConfig(text){
+  const rows=[];let current=null;
+  for(const raw of String(text||'').split(/\r?\n/)){
+    const section=raw.match(/^\s*\[submodule\s+"([^"]+)"\]\s*$/);
+    if(section){current={name:section[1],path:'',url:''};rows.push(current);continue;}
+    if(!current)continue;
+    const pair=raw.match(/^\s*(path|url)\s*=\s*(.*?)\s*$/);
+    if(pair)current[pair[1]]=pair[2];
+  }
+  return rows;
+}
+function trustedCoreGitlink(root,commit,env,{corePath=TRUSTED_CORE_PATH}={}){
+  const entry=git(['ls-tree',commit,'--',corePath],root,env);
+  if(!entry)return '';
+  const match=entry.match(/^160000\s+commit\s+([0-9a-f]{40})\t(.+)$/);
+  assert.ok(match&&match[2]===corePath,`historical ${corePath} must be an exact gitlink when present`);
+  return match[1];
+}
+function resetTrustedCore(root,{corePath=TRUSTED_CORE_PATH}={}){
+  fs.rmSync(path.join(root,...corePath.split('/')),{recursive:true,force:true});
+  fs.rmSync(path.join(root,'.git','modules',...corePath.split('/')),{recursive:true,force:true});
+}
+function materializeTrustedCore(root,commit,env,{corePath=TRUSTED_CORE_PATH,trustedCoreUrl=TRUSTED_CORE_URL,allowedProtocols='https'}={}){
+  const pin=trustedCoreGitlink(root,commit,env,{corePath});
+  resetTrustedCore(root,{corePath});
+  if(!pin)return '';
+  assert.match(pin,SHA40,'historical Core gitlink must be a 40-hex commit');
+  const modules=git(['show',`${commit}:.gitmodules`],root,env),matches=parseSubmoduleConfig(modules).filter(row=>row.path===corePath);
+  assert.equal(matches.length,1,`historical ${corePath} must have exactly one .gitmodules mapping`);
+  assert.equal(matches[0].url,trustedCoreUrl,`historical ${corePath} must use the reviewed trusted Core repository`);
+  const submoduleEnv={...env,GIT_ALLOW_PROTOCOL:String(allowedProtocols||'https')};
+  git(['submodule','update','--init','--force','--depth=1','--',corePath],root,submoduleEnv);
+  const actual=git(['rev-parse','HEAD'],path.join(root,...corePath.split('/')),submoduleEnv);
+  assert.equal(actual,pin,`historical ${corePath} checkout does not match the parent gitlink`);
+  return pin;
+}
+function cleanCheckout(root,commit,env,coreOptions={}){
+  resetTrustedCore(root,coreOptions);
+  git(['-c','submodule.recurse=false','checkout','--detach','--force',commit],root,env);
+  git(['clean','-fdx'],root,env);
+  const head=git(['rev-parse','HEAD'],root,env);
+  materializeTrustedCore(root,commit,env,coreOptions);
+  return head;
+}
 function digestRepresentative(result){return stableDigest({exitCode:result?.exitCode??null,signal:result?.signal||'',timedOut:Boolean(result?.timedOut),stdoutDigest:stableDigest(String(result?.stdout||'')),stderrDigest:stableDigest(String(result?.stderr||''))});}
-function runTransitionInRepo(root,item,{env=process.env}={}){
-  const badHead=cleanCheckout(root,item.badCommit,env);
+function runTransitionInRepo(root,item,{env=process.env,coreOptions={}}={}){
+  const badHead=cleanCheckout(root,item.badCommit,env,coreOptions);
   assert.equal(badHead,item.badCommit,`bad checkout mismatch for ${item.id}`);
   const bad=runReproductionSeries(item.reproduction.command,{runs:item.reproduction.runs,cwd:root,timeoutMs:item.reproduction.timeoutMs,maxBuffer:4*1024*1024,env});
   assert.equal(bad.summary.reproducibleFailure,true,`bad commit does not reproduce a stable failure for ${item.id}`);
-  const fixedHead=cleanCheckout(root,item.fixedCommit,env);
+  const fixedHead=cleanCheckout(root,item.fixedCommit,env,coreOptions);
   assert.equal(fixedHead,item.fixedCommit,`fixed checkout mismatch for ${item.id}`);
   const fixed=runReproductionSeries(item.reproduction.command,{runs:item.reproduction.runs,cwd:root,timeoutMs:item.reproduction.timeoutMs,maxBuffer:4*1024*1024,env});
   assert.equal(fixed.summary.failures,0,`fixed commit still fails the exact reproduction for ${item.id}`);
@@ -56,10 +102,9 @@ function materializeHistoricalCase(item){
     const parent=git(['rev-parse',`${item.fixedCommit}^`],repo,env);
     assert.equal(parent,item.badCommit,`fixedCommit must be a direct child of badCommit for ${item.id}`);
     const transition=runTransitionInRepo(repo,item,{env});
-    cleanCheckout(repo,item.badCommit,env);
     return {temp,home,repo,env,transition,cleanup(){fs.rmSync(temp,{recursive:true,force:true});}};
   }catch(error){fs.rmSync(temp,{recursive:true,force:true});throw error;}
 }
 function main(){throw new Error('historical-case.js is a library; use promotion-live-eval.js or the unit tests.');}
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={isolatedHistoricalEnv,runTransitionInRepo,materializeHistoricalCase};
+module.exports={TRUSTED_CORE_PATH,TRUSTED_CORE_URL,isolatedHistoricalEnv,parseSubmoduleConfig,trustedCoreGitlink,resetTrustedCore,materializeTrustedCore,cleanCheckout,runTransitionInRepo,materializeHistoricalCase};
