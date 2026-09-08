@@ -19,28 +19,10 @@
       "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
       "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
       "failureKind": "test",
-      "reproduction": {
-        "command": "node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "record digest",
-          "fixture"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["record digest","fixture"],"patchPolicy":"optional"},
       "expectationDigest": "f8104b28f67dd75d7b0a2a6a1ae42cec645c126d7e623af4e6e1c49ac2467eca",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
-        "files": [
-          "quality/model-eval-contract-results.json"
-        ],
-        "summary": "The contract fixture stored a non-canonical recordDigest; the evaluator correctly rejected it until the fixture digest was recomputed with the product's canonical JavaScript stable digest."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"f25ddc273c8ed3ddc693e0f8cb71e40e1700638c","files":["quality/model-eval-contract-results.json"],"summary":"The contract fixture stored a non-canonical recordDigest; the evaluator correctly rejected it until the fixture digest was recomputed with the product's canonical JavaScript stable digest."},
       "groundTruthDigest": "ce45ae021fdf819db10bfbdad1dd01c763050d647311c7668fa38c79ba2d7efa"
     },
     {
@@ -52,43 +34,12 @@
       "badCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
       "fixedCommit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
       "failureKind": "infra",
-      "reproduction": {
-        "command": "node -e \"const {detectFailureKind}=require('./src/parsers');const k=detectFailureKind('Tests failed: runner service unavailable');if(k!=='infra'){console.error(k);process.exit(1)}\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "infra",
-          "service unavailable"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const {detectFailureKind}=require('./src/parsers');const k=detectFailureKind('Tests failed: runner service unavailable');if(k!=='infra'){console.error(k);process.exit(1)}\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["infra","service unavailable"],"patchPolicy":"optional"},
       "expectationDigest": "9281f16c8a42d33cfdf95c7a426b64cb32a48ae4fcc295ae11ea27752ec0af6c",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
-        "files": [
-          "src/parsers.js"
-        ],
-        "summary": "Failure classification checked generic test wording before causal infrastructure signals; the fix moved infra precedence ahead of test and added runner/service-unavailable patterns."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"434c7a83759f74d2fd73b797e6962bcbe84ded12","files":["src/parsers.js"],"summary":"Failure classification checked generic test wording before causal infrastructure signals; the fix moved infra precedence ahead of test and added runner/service-unavailable patterns."},
       "groundTruthDigest": "fa550be424b76d729f82e5ec4acc572aed9bbe2322752936e0925a7430001482",
-      "insufficientVariant": {
-        "id": "codex-debug-infra-precedence-insufficient-20260906",
-        "expected": {
-          "assessment": "insufficient",
-          "rootCauseTerms": [],
-          "patchPolicy": "forbidden"
-        },
-        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
-        "evidenceProjection": {
-          "version": 1,
-          "mode": "summary-only"
-        },
-        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
-      }
+      "insufficientVariant": {"id":"codex-debug-infra-precedence-insufficient-20260906","expected":{"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},"expectationDigest":"d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a","evidenceProjection":{"version":1,"mode":"summary-only"},"evidenceProjectionDigest":"cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"}
     },
     {
       "id": "safe-core-actions-list-marker-20260906",
@@ -99,43 +50,12 @@
       "badCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
       "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
       "failureKind": "build",
-      "reproduction": {
-        "command": "node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\\\n  - uses: actions/checkout@v4\\\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "uses",
-          "unpinned"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\\\n  - uses: actions/checkout@v4\\\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["uses","unpinned"],"patchPolicy":"optional"},
       "expectationDigest": "7e751cb1c6070d340d6a41ce5343c957f518627d56e09d1c3d37942684d7c5ce",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "825dcce16ba4862639ba3a17ebd413d75044070a",
-        "files": [
-          "scripts/verify-actions-pins.js"
-        ],
-        "summary": "The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"825dcce16ba4862639ba3a17ebd413d75044070a","files":["scripts/verify-actions-pins.js"],"summary":"The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."},
       "groundTruthDigest": "4e14e2245292950d94eaae7db5d2ac7be520829dcaf05ef5732bb27be2589323",
-      "insufficientVariant": {
-        "id": "safe-core-actions-list-marker-insufficient-20260906",
-        "expected": {
-          "assessment": "insufficient",
-          "rootCauseTerms": [],
-          "patchPolicy": "forbidden"
-        },
-        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
-        "evidenceProjection": {
-          "version": 1,
-          "mode": "summary-only"
-        },
-        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
-      }
+      "insufficientVariant": {"id":"safe-core-actions-list-marker-insufficient-20260906","expected":{"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},"expectationDigest":"d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a","evidenceProjection":{"version":1,"mode":"summary-only"},"evidenceProjectionDigest":"cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"}
     },
     {
       "id": "codex-diagnose-gitlab-stream-limit-20260903",
@@ -146,43 +66,12 @@
       "badCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
       "fixedCommit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
       "failureKind": "performance",
-      "reproduction": {
-        "command": "node -e \"const {GitLabDiagnoseClient}=require('./src/gitlab');global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(6),Buffer.alloc(6)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{},releaseLock:()=>{}}}},arrayBuffer:async()=>{throw new Error('UNBOUNDED_ARRAYBUFFER')}});new GitLabDiagnoseClient({baseUrl:'https://gitlab.example',token:'x'}).request('GET','/x',{accept:'text',maxBytes:8}).then(()=>process.exit(1),e=>{if(e.code!=='EGITLABSIZE'){console.error(e.code||e.message);process.exit(1)}})\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "streaming",
-          "response limit"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const {GitLabDiagnoseClient}=require('./src/gitlab');global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(6),Buffer.alloc(6)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{},releaseLock:()=>{}}}},arrayBuffer:async()=>{throw new Error('UNBOUNDED_ARRAYBUFFER')}});new GitLabDiagnoseClient({baseUrl:'https://gitlab.example',token:'x'}).request('GET','/x',{accept:'text',maxBytes:8}).then(()=>process.exit(1),e=>{if(e.code!=='EGITLABSIZE'){console.error(e.code||e.message);process.exit(1)}})\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["streaming","response limit"],"patchPolicy":"optional"},
       "expectationDigest": "0ba316dd57fc685c469106904674d1aef0e0f1f63757352b4077f9ae5ae20c32",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
-        "files": [
-          "src/gitlab.js"
-        ],
-        "summary": "The GitLab client buffered unknown-length responses with arrayBuffer() before enforcing maxBytes; the fix streams response chunks, cancels on overflow, and raises EGITLABSIZE as soon as the byte limit is crossed."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"bea058d9ebd274731a41b0973dfe0d1da8d4511e","files":["src/gitlab.js"],"summary":"The GitLab client buffered unknown-length responses with arrayBuffer() before enforcing maxBytes; the fix streams response chunks, cancels on overflow, and raises EGITLABSIZE as soon as the byte limit is crossed."},
       "groundTruthDigest": "9706cfc766e73a6b74181b496aa13169d69c5365e4695b8c9feba42e7cb7db54",
-      "insufficientVariant": {
-        "id": "codex-diagnose-gitlab-stream-limit-insufficient-20260906",
-        "expected": {
-          "assessment": "insufficient",
-          "rootCauseTerms": [],
-          "patchPolicy": "forbidden"
-        },
-        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
-        "evidenceProjection": {
-          "version": 1,
-          "mode": "summary-only"
-        },
-        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
-      }
+      "insufficientVariant": {"id":"codex-diagnose-gitlab-stream-limit-insufficient-20260906","expected":{"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},"expectationDigest":"d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a","evidenceProjection":{"version":1,"mode":"summary-only"},"evidenceProjectionDigest":"cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"}
     },
     {
       "id": "codex-change-ghes-api-derivation-20260831",
@@ -193,28 +82,10 @@
       "badCommit": "904fef2477cb4164702642aa5393edc7faeefb84",
       "fixedCommit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
       "failureKind": "infra",
-      "reproduction": {
-        "command": "node -e \"const {parseRemote}=require('./src/remote'),{createProvider}=require('./src/provider-factory');const p=createProvider(parseRemote('git@ghe.example:org/repo.git'),{provider:'github',githubApiBaseUrl:'https://api.github.com'});if(p.client.baseUrl!=='https://ghe.example/api/v3'){console.error(p.client.baseUrl);process.exit(1)}\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "api.github.com",
-          "api/v3"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const {parseRemote}=require('./src/remote'),{createProvider}=require('./src/provider-factory');const p=createProvider(parseRemote('git@ghe.example:org/repo.git'),{provider:'github',githubApiBaseUrl:'https://api.github.com'});if(p.client.baseUrl!=='https://ghe.example/api/v3'){console.error(p.client.baseUrl);process.exit(1)}\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["api.github.com","api/v3"],"patchPolicy":"optional"},
       "expectationDigest": "f4507c4b168ad36bd1539ef01c34922ac624a9eaa1905da2b54bcc04503dd7d1",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
-        "files": [
-          "src/provider-factory.js"
-        ],
-        "summary": "The GitHub Enterprise remote incorrectly inherited the GitHub.com API default, causing host-binding refusal instead of deriving the GHES /api/v3 endpoint from the Git remote host."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"f596f44c29e949b12b3541015c14eb424f62ae8d","files":["src/provider-factory.js"],"summary":"The GitHub Enterprise remote incorrectly inherited the GitHub.com API default, causing host-binding refusal instead of deriving the GHES /api/v3 endpoint from the Git remote host."},
       "groundTruthDigest": "ddb797e29819f7bc8975b80997bb7fb84f17b21f81106581e4caf1418ea3497c"
     },
     {
@@ -226,28 +97,10 @@
       "badCommit": "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
       "fixedCommit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
       "failureKind": "infra",
-      "reproduction": {
-        "command": "node -e \"(async()=>{const {HttpClient}=require('./src/http-client');global.fetch=async(u,o)=>{if(o.redirect!=='error')throw new Error('MISSING_REDIRECT_ERROR');return{status:200,headers:{get:()=>''},text:async()=>''}};await new HttpClient({baseUrl:'https://ghe.example',token:'x',tokenHeader:'Authorization'}).request('GET','/x')})().catch(e=>{console.error(e.cause?.message||e.message);process.exit(1)})\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "redirect",
-          "credential"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"(async()=>{const {HttpClient}=require('./src/http-client');global.fetch=async(u,o)=>{if(o.redirect!=='error')throw new Error('MISSING_REDIRECT_ERROR');return{status:200,headers:{get:()=>''},text:async()=>''}};await new HttpClient({baseUrl:'https://ghe.example',token:'x',tokenHeader:'Authorization'}).request('GET','/x')})().catch(e=>{console.error(e.cause?.message||e.message);process.exit(1)})\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["redirect","credential"],"patchPolicy":"optional"},
       "expectationDigest": "38179002e0c358eb48fa0ffc0635130605261e5713607df7fb57198b0634eee8",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
-        "files": [
-          "src/http-client.js"
-        ],
-        "summary": "SCM HTTP requests did not explicitly reject redirects, so credential-bearing requests could follow an unvalidated 3xx hop; the fix sets fetch redirect mode to error."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"4e7b754b06485a3168a0e12a84cabb24e0e3c3ef","files":["src/http-client.js"],"summary":"SCM HTTP requests did not explicitly reject redirects, so credential-bearing requests could follow an unvalidated 3xx hop; the fix sets fetch redirect mode to error."},
       "groundTruthDigest": "5c31140154d1127a138c4130b31ad9a08f112850a459051310a272176ba297bd"
     },
     {
@@ -259,28 +112,10 @@
       "badCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
       "fixedCommit": "128d6668eb3e947e584fc1d660dfcba69c674661",
       "failureKind": "performance",
-      "reproduction": {
-        "command": "node -e \"(async()=>{const {HttpClient}=require('./src/http-client');let cancelled=false;global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(5*1024*1024),Buffer.alloc(4*1024*1024)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await new HttpClient({baseUrl:'https://api.github.com',token:'',tokenHeader:'Authorization',getRetries:0}).request('GET','/x');process.exit(1)}catch(e){if(e.code!=='ESCMOUTPUT'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "response.text",
-          "streaming"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"(async()=>{const {HttpClient}=require('./src/http-client');let cancelled=false;global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(5*1024*1024),Buffer.alloc(4*1024*1024)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await new HttpClient({baseUrl:'https://api.github.com',token:'',tokenHeader:'Authorization',getRetries:0}).request('GET','/x');process.exit(1)}catch(e){if(e.code!=='ESCMOUTPUT'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["response.text","streaming"],"patchPolicy":"optional"},
       "expectationDigest": "d9cf65a5e6d3f3afb9f2c50e3e951fb2eed96ba9d24cdf9fde6c8d1c1460e4ac",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "128d6668eb3e947e584fc1d660dfcba69c674661",
-        "files": [
-          "src/http-client.js"
-        ],
-        "summary": "The shared SCM HTTP client consumed response.text() without any body limit; the fix added an 8 MiB byte-bounded streaming reader, cancels on overflow, and fails closed with ESCMOUTPUT."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"128d6668eb3e947e584fc1d660dfcba69c674661","files":["src/http-client.js"],"summary":"The shared SCM HTTP client consumed response.text() without any body limit; the fix added an 8 MiB byte-bounded streaming reader, cancels on overflow, and fails closed with ESCMOUTPUT."},
       "groundTruthDigest": "1b0816684571728b9cda69bab1b81d2a93a67555332472074be2bb82146c362c"
     },
     {
@@ -292,28 +127,10 @@
       "badCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
       "fixedCommit": "27f03f79da14be3e3951734247deef3b8361182b",
       "failureKind": "performance",
-      "reproduction": {
-        "command": "node -e \"(async()=>{const {notifyDiagnosis}=require('./src/notify');let cancelled=false;global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(32768),Buffer.alloc(40000)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await notifyDiagnosis({provider:'feishu',webhookEnv:'HOOK',env:{HOOK:'https://open.feishu.cn/open-apis/bot/v2/hook/test'},diagnosis:{classification:'test',rootCause:'x',confidence:1,retryRecommended:false},evidence:{subject:{jobName:'x'}}});process.exit(1)}catch(e){if(e.code!=='ENOTIFYPROTOCOL'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "response.text",
-          "64 KiB"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"(async()=>{const {notifyDiagnosis}=require('./src/notify');let cancelled=false;global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(32768),Buffer.alloc(40000)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await notifyDiagnosis({provider:'feishu',webhookEnv:'HOOK',env:{HOOK:'https://open.feishu.cn/open-apis/bot/v2/hook/test'},diagnosis:{classification:'test',rootCause:'x',confidence:1,retryRecommended:false},evidence:{subject:{jobName:'x'}}});process.exit(1)}catch(e){if(e.code!=='ENOTIFYPROTOCOL'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["response.text","64 KiB"],"patchPolicy":"optional"},
       "expectationDigest": "eec50e368ee3b0a54777ad73afb9a052642d47513779868605938463c2c1c4a0",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "27f03f79da14be3e3951734247deef3b8361182b",
-        "files": [
-          "src/notify.js"
-        ],
-        "summary": "Notification delivery consumed webhook response.text() in full before slicing it for logs; the fix added a 64 KiB byte-bounded streaming reader, cancels on overflow, and fails closed with ENOTIFYPROTOCOL."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"27f03f79da14be3e3951734247deef3b8361182b","files":["src/notify.js"],"summary":"Notification delivery consumed webhook response.text() in full before slicing it for logs; the fix added a 64 KiB byte-bounded streaming reader, cancels on overflow, and fails closed with ENOTIFYPROTOCOL."},
       "groundTruthDigest": "426df7ad2e465555ace5bd367d31a12ba33ba519b62a67b4693b2e590178a648"
     },
     {
@@ -325,28 +142,10 @@
       "badCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
       "fixedCommit": "1755262f51d5e15d74e432add38863d2383bb495",
       "failureKind": "dependency",
-      "reproduction": {
-        "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'lic-')),x=p.join(d,'node_modules','x');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'package.json'),JSON.stringify({name:'x',version:'1',license:'(MIT OR GPL-3.0-or-later)'}));const r=cp.spawnSync(process.execPath,['scripts/verify-package-licenses.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(r.status===0?0:1)\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "SPDX OR",
-          "license"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'lic-')),x=p.join(d,'node_modules','x');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'package.json'),JSON.stringify({name:'x',version:'1',license:'(MIT OR GPL-3.0-or-later)'}));const r=cp.spawnSync(process.execPath,['scripts/verify-package-licenses.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(r.status===0?0:1)\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["SPDX OR","license"],"patchPolicy":"optional"},
       "expectationDigest": "593efb2297a5d7ac894c9bd7892af7a31ba7e7a3d733992a7c189ea080da97f3",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "1755262f51d5e15d74e432add38863d2383bb495",
-        "files": [
-          "scripts/verify-package-licenses.js"
-        ],
-        "summary": "The dependency-license verifier treated any GPL/AGPL token as forbidden even when a permissive SPDX OR alternative was available; the fix evaluates OR alternatives and rejects only when every alternative remains forbidden."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"1755262f51d5e15d74e432add38863d2383bb495","files":["scripts/verify-package-licenses.js"],"summary":"The dependency-license verifier treated any GPL/AGPL token as forbidden even when a permissive SPDX OR alternative was available; the fix evaluates OR alternatives and rejects only when every alternative remains forbidden."},
       "groundTruthDigest": "7dfeec52209f7066abd4701e4b70cffd473339f015d4b6c7df11f7cbcd13096f"
     },
     {
@@ -358,28 +157,10 @@
       "badCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
       "fixedCommit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
       "failureKind": "build",
-      "reproduction": {
-        "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'fam-'));for(const r of ['codex-commit','codex-review','codex-pr','codex-review-service']){const x=p.join(d,r,'src','codex-safe-core');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'x.js'),'function buildReviewEvidenceChunks() {}')}const q=cp.spawnSync(process.execPath,['scripts/verify-consumer-boundaries.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(q.status===0?0:1)\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "src/codex-safe-core",
-          "boundary scan"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'fam-'));for(const r of ['codex-commit','codex-review','codex-pr','codex-review-service']){const x=p.join(d,r,'src','codex-safe-core');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'x.js'),'function buildReviewEvidenceChunks() {}')}const q=cp.spawnSync(process.execPath,['scripts/verify-consumer-boundaries.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(q.status===0?0:1)\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["src/codex-safe-core","boundary scan"],"patchPolicy":"optional"},
       "expectationDigest": "724258a0b2dae77561144ca45e4ac912bdb827b2c747cf1318dfa6e79f83d757",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
-        "files": [
-          "scripts/verify-consumer-boundaries.js"
-        ],
-        "summary": "The consumer ownership walker compared directory entry names against the full path src/codex-safe-core, so it scanned the embedded canonical Core and falsely reported Core-owned implementations as consumer violations; the fix excludes that exact relative subtree."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"72363d4f648171242810ac5871d713b2fa9b3bb6","files":["scripts/verify-consumer-boundaries.js"],"summary":"The consumer ownership walker compared directory entry names against the full path src/codex-safe-core, so it scanned the embedded canonical Core and falsely reported Core-owned implementations as consumer violations; the fix excludes that exact relative subtree."},
       "groundTruthDigest": "afb35d88b2bddee44b59e24bcbcbc7d7d94ea0053b4faafdecff9c88d3c62699"
     },
     {
@@ -391,28 +172,10 @@
       "badCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
       "fixedCommit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
       "failureKind": "test",
-      "reproduction": {
-        "command": "node -e \"const {validateDiagnosisReceipt}=require('./diagnosis-platform');const r={schemaVersion:1,kind:'codex-diagnose',subject:{commitSha:'abc'},evidenceDigest:'a'.repeat(64),classification:'unknown',confidence:.5,diagnosisFingerprint:'b'.repeat(64),model:'',codexVersion:'',createdAt:'2026-08-30T12:00:00+08:00'};try{validateDiagnosisReceipt(r);process.exit(1)}catch(e){if(e.code!=='EDIAGNOSISRECEIPT'){console.error(e.code||e.message);process.exit(1)}}\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "createdAt",
-          "canonical UTC"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const {validateDiagnosisReceipt}=require('./diagnosis-platform');const r={schemaVersion:1,kind:'codex-diagnose',subject:{commitSha:'abc'},evidenceDigest:'a'.repeat(64),classification:'unknown',confidence:.5,diagnosisFingerprint:'b'.repeat(64),model:'',codexVersion:'',createdAt:'2026-08-30T12:00:00+08:00'};try{validateDiagnosisReceipt(r);process.exit(1)}catch(e){if(e.code!=='EDIAGNOSISRECEIPT'){console.error(e.code||e.message);process.exit(1)}}\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["createdAt","canonical UTC"],"patchPolicy":"optional"},
       "expectationDigest": "03c6a24a31e96be0b42329d5b5f953f51a69a77dc74883585e8fcc15e73f1758",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
-        "files": [
-          "diagnosis-platform.js"
-        ],
-        "summary": "Diagnosis Receipt validation accepted any Date.parse-compatible createdAt value, including offset-local timestamps; the fix requires the canonical millisecond ISO-8601 UTC Z form and round-trip equality."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8","files":["diagnosis-platform.js"],"summary":"Diagnosis Receipt validation accepted any Date.parse-compatible createdAt value, including offset-local timestamps; the fix requires the canonical millisecond ISO-8601 UTC Z form and round-trip equality."},
       "groundTruthDigest": "f4f1fae7ad1ac0ca2a477efe1ada1c65f0410e75d25a76ec206e69f1ac39402e"
     },
     {
@@ -424,28 +187,10 @@
       "badCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
       "fixedCommit": "76418b80533c644e3ab01045290cd3cdd355622c",
       "failureKind": "build",
-      "reproduction": {
-        "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),core=require('./core-contract.json'),{verify}=require('./scripts/verify-consumer-product-contract');const d=fs.mkdtempSync(p.join(os.tmpdir(),'pc-')),pin='d'.repeat(40),v='9.9.9';cp.execFileSync('git',['init','-q'],{cwd:d});fs.mkdirSync(p.join(d,'src'));fs.writeFileSync(p.join(d,'package.json'),JSON.stringify({version:v}));fs.writeFileSync(p.join(d,'product-contract.json'),JSON.stringify({...core,productId:'codex-change-safe',productVersion:v,safeCoreVersion:core.coreVersion,safeCoreCommit:pin}));cp.execFileSync('git',['update-index','--add','--cacheinfo','160000,'+pin+',src/codex-safe-core'],{cwd:d});verify(d,pin,'codex-change-safe')\"",
-        "runs": 1,
-        "timeoutMs": 120000
-      },
-      "expected": {
-        "assessment": "supported",
-        "rootCauseTerms": [
-          "change-safe",
-          "productId"
-        ],
-        "patchPolicy": "optional"
-      },
+      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),core=require('./core-contract.json'),{verify}=require('./scripts/verify-consumer-product-contract');const d=fs.mkdtempSync(p.join(os.tmpdir(),'pc-')),pin='d'.repeat(40),v='9.9.9';cp.execFileSync('git',['init','-q'],{cwd:d});fs.mkdirSync(p.join(d,'src'));fs.writeFileSync(p.join(d,'package.json'),JSON.stringify({version:v}));fs.writeFileSync(p.join(d,'product-contract.json'),JSON.stringify({...core,productId:'codex-change-safe',productVersion:v,safeCoreVersion:core.coreVersion,safeCoreCommit:pin}));cp.execFileSync('git',['update-index','--add','--cacheinfo','160000,'+pin+',src/codex-safe-core'],{cwd:d});verify(d,pin,'codex-change-safe')\"","runs":1,"timeoutMs":120000},
+      "expected": {"assessment":"supported","rootCauseTerms":["change-safe","productId"],"patchPolicy":"optional"},
       "expectationDigest": "9afbf920aae50936cffb22f6a07a1d20654126ebce11a72a31cf8e17224720d7",
-      "groundTruth": {
-        "type": "fix-commit",
-        "commit": "76418b80533c644e3ab01045290cd3cdd355622c",
-        "files": [
-          "scripts/verify-consumer-product-contract.js"
-        ],
-        "summary": "The active-consumer Product Contract verifier omitted codex-change-safe from its allowed productId set, so valid Change consumers failed Family validation; the fix adds Change to the canonical accepted product identities."
-      },
+      "groundTruth": {"type":"fix-commit","commit":"76418b80533c644e3ab01045290cd3cdd355622c","files":["scripts/verify-consumer-product-contract.js"],"summary":"The active-consumer Product Contract verifier omitted codex-change-safe from its allowed productId set, so valid Change consumers failed Family validation; the fix adds Change to the canonical accepted product identities."},
       "groundTruthDigest": "dbb908f6ed26b689a422bfa191fb8f2c7a67d7c9afad548774aa8212f376b732"
     }
   ]
