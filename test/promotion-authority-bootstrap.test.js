@@ -27,6 +27,10 @@ test('bootstrap is dry-run by default and performs no gh operation',()=>{
   assert.deepEqual(result.ruleset.mutationRequires,['--apply-ruleset','--acknowledge-ruleset-change']);
   assert.equal(result.ruleset.payload.bypass_actors.length,0);
   assert.deepEqual(result.calibration.mutationRequires,['--trigger-calibration','--acknowledge-historical-execution']);
+  assert.equal(result.calibration.providerMode,'openai');
+  assert.equal(result.calibration.providerBaseUrl,'');
+  assert.ok(result.calibration.ghArgs.includes('provider_mode=openai'));
+  assert.ok(result.calibration.ghArgs.includes('provider_base_url='));
   assert.ok(result.calibration.ghArgs.includes('promotion_mode=false'));
 });
 
@@ -96,12 +100,27 @@ test('calibration trigger is fixed to promotion_mode=false and contains no crede
   const args={...parseArgs([]),triggerCalibration:true,acknowledgeHistoricalExecution:true},calls=[];
   const runGh=(values)=>{calls.push(values);return 'https://github.com/jiying2007/codex-debug/actions/runs/123';};
   const result=triggerCalibration(args,runGh);
-  assert.equal(result.triggered,true);assert.equal(result.promotionMode,false);assert.deepEqual(calls,[calibrationArgs(args)]);
+  assert.equal(result.triggered,true);assert.equal(result.promotionMode,false);assert.equal(result.providerMode,'openai');assert.deepEqual(calls,[calibrationArgs(args)]);
   const command=calls[0].join(' ');
-  assert.match(command,/promotion_mode=false/);assert.match(command,/acknowledge_historical_execution=true/);assert.doesNotMatch(command,/OPENAI_API_KEY|CODEX_DEBUG_CANARY_OPENAI_API_KEY/);
+  assert.match(command,/provider_mode=openai/);assert.match(command,/provider_base_url=/);assert.match(command,/promotion_mode=false/);assert.match(command,/acknowledge_historical_execution=true/);assert.doesNotMatch(command,/API_KEY|TOKEN|SECRET/);
 });
 
-test('bootstrap parser rejects unknown flags and invalid Codex versions',()=>{
+test('bootstrap supports explicit HTTPS OpenAI-compatible calibration without embedding credentials',()=>{
+  const args={...parseArgs(['--provider-mode','openai-compatible','--provider-base-url','https://relay.example/v1','--model','gpt-5.6']),triggerCalibration:true,acknowledgeHistoricalExecution:true},calls=[];
+  const runGh=(values)=>{calls.push(values);return 'https://github.com/jiying2007/codex-debug/actions/runs/456';};
+  assert.doesNotThrow(()=>validateArgs(args));
+  const result=triggerCalibration(args,runGh);
+  assert.equal(result.providerMode,'openai-compatible');assert.equal(result.providerBaseUrl,'https://relay.example/v1');
+  const command=calls[0].join(' ');
+  assert.match(command,/provider_mode=openai-compatible/);assert.match(command,/provider_base_url=https:\/\/relay\.example\/v1/);assert.match(command,/model=gpt-5\.6/);assert.doesNotMatch(command,/API_KEY|TOKEN|SECRET/);
+});
+
+test('bootstrap parser rejects unknown flags, invalid Codex versions, and unsafe provider endpoints',()=>{
   assert.throws(()=>parseArgs(['--unknown']),/Unknown argument/);
   assert.throws(()=>validateArgs({...parseArgs([]),codexVersion:'latest;rm -rf /'}),/codex-version/);
+  assert.throws(()=>validateArgs({...parseArgs([]),providerMode:'other'}),/provider-mode/);
+  assert.throws(()=>validateArgs({...parseArgs([]),providerMode:'openai-compatible'}),/provider-base-url is required/);
+  assert.throws(()=>validateArgs({...parseArgs([]),providerMode:'openai-compatible',providerBaseUrl:'http://relay.example/v1'}),/must use HTTPS/);
+  assert.throws(()=>validateArgs({...parseArgs([]),providerMode:'openai-compatible',providerBaseUrl:'https://user:pass@relay.example/v1'}),/must not contain credentials/);
+  assert.throws(()=>validateArgs({...parseArgs([]),providerMode:'openai',providerBaseUrl:'https://relay.example/v1'}),/must be empty/);
 });
