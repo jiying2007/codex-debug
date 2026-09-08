@@ -57,10 +57,10 @@ test('real optimized GNU Arm LTO fixture preserves Cortex-M fault source identit
 
     const common=['-mcpu=cortex-m3','-mthumb','-g3','-O2','-flto','-ffreestanding','-fno-builtin','-ffunction-sections','-fdata-sections'];
     execFileSync('arm-none-eabi-gcc',[...common,`-fdebug-prefix-map=${build}=${workspace}`,'-c',externalSource,'-o',obj],{cwd:build,stdio:'pipe'});
-    const objectSections=execFileSync('arm-none-eabi-readelf',['-S',obj],{cwd:build,encoding:'utf8'});
+    const objectSections=execFileSync('arm-none-eabi-readelf',['-SW',obj],{cwd:build,encoding:'utf8'});
     assert.match(objectSections,/\.gnu\.lto_/,'fixture object does not contain GCC LTO IR sections');
 
-    execFileSync('arm-none-eabi-gcc',[...common,'-nostdlib',`-Wl,-T,${linker}` ,`-Wl,-Map,${map}`,'-Wl,--gc-sections','-Wl,-e,fault_handler','-o',elf,obj],{cwd:build,stdio:'pipe'});
+    execFileSync('arm-none-eabi-gcc',[...common,'-nostdlib',`-Wl,-T,${linker}`,`-Wl,-Map,${map}`,'-Wl,--gc-sections','-Wl,-e,fault_handler','-o',elf,obj],{cwd:build,stdio:'pipe'});
     const nm=execFileSync('arm-none-eabi-nm',['-n',elf],{cwd:build,encoding:'utf8'});
     const match=nm.match(/^([0-9a-fA-F]+)\s+[Tt]\s+fault_handler$/m);
     assert.ok(match,'fault_handler address missing after optimized LTO link');
