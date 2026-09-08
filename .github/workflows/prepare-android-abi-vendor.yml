@@ -58,7 +58,11 @@ jobs:
           set -euo pipefail
           node --check src/platform-symbols.js
           node --test test/android-abi-vendor-real-e2e.test.js
-          test -z "$(git grep -l '0.1.12' -- ':!.github/workflows/prepare-android-abi-vendor.yml' ':!scripts/prepare-android-abi-vendor.js' || true)"
+          remaining=$(grep -RIl --exclude='prepare-android-abi-vendor.yml' --exclude='prepare-android-abi-vendor.js' '0.1.12' .github MODEL_EVALUATION.md ROADMAP.md docs package.json package-lock.json product-contract.json scripts test || true)
+          if [[ -n "$remaining" ]]; then
+            printf 'stale 0.1.12 references remain in worktree:\n%s\n' "$remaining" >&2
+            exit 1
+          fi
           git diff --check
           git status --short
       - name: Commit patch and remove preparation surfaces
