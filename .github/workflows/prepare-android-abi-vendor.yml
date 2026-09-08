@@ -1,0 +1,102 @@
+name: Prepare Android ABI vendor evidence
+
+on:
+  push:
+    branches: [codex/android-abi-vendor-evidence]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+          submodules: recursive
+          fetch-depth: 1
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+      - name: Patch ABI-bound Android symbolization and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          files=subprocess.check_output(['git','grep','-l','0.1.12'],text=True).splitlines()
+          allowed={'package.json','package-lock.json','product-contract.json','ROADMAP.md','README.md','README.zh-CN.md','ARCHITECTURE.md'}
+          unexpected=sorted(set(files)-allowed)
+          print('0.1.12 references:', files)
+          if unexpected:
+              raise SystemExit(f'unexpected 0.1.12 references: {unexpected}')
+
+          p=Path('src/platform-symbols.js')
+          s=p.read_text()
+          marker="function parseAndroidSymbolSpec(spec,cwd=process.cwd()){"
+          insert="""const ANDROID_ABI_ELF=Object.freeze({arm64:Object.freeze({elfClass:'ELF64',machine:'AArch64'}),'arm64-v8a':Object.freeze({elfClass:'ELF64',machine:'AArch64'}),arm:Object.freeze({elfClass:'ELF32',machine:'ARM'}),'armeabi-v7a':Object.freeze({elfClass:'ELF32',machine:'ARM'}),x86:Object.freeze({elfClass:'ELF32',machine:'Intel 80386'}),x86_64:Object.freeze({elfClass:'ELF64',machine:'Advanced Micro Devices X86-64'}),riscv64:Object.freeze({elfClass:'ELF64',machine:'RISC-V'})});\nfunction elfAndroidIdentity(file,{tool='auto',cwd=process.cwd(),timeoutMs=30000}={}){const resolved=resolveReadelf(tool),run=spawnSync(resolved,['-h','-n',file],{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:Math.max(1000,Math.min(120000,Number(timeoutMs)||30000)),maxBuffer:2*1024*1024,windowsHide:true,env:{...process.env,DEBUGINFOD_URLS:'',DEBUGINFOD_PROGRESS:'0'}});if(run.error&&run.error.code==='ETIMEDOUT')throw Object.assign(new Error(`${resolved} Android ELF identity inspection timed out.`),{code:'EREADELFTIMEOUT'});const text=[run.stdout||'',run.stderr||''].join('\\n'),build=text.match(/Build ID:\\s*([0-9a-f]+)/i),cls=text.match(/Class:\\s*(ELF(?:32|64))/i),machine=text.match(/Machine:\\s*([^\\r\\n]+)/i);return freeze({tool:resolved,buildId:String(build?.[1]||'').toLowerCase(),elfClass:String(cls?.[1]||''),machine:String(machine?.[1]||'').trim(),exitCode:Number.isInteger(run.status)?run.status:null,outputDigest:stableDigest(text.slice(0,2*1024*1024))});}\nfunction androidAbiCompatibility(abi,identity){const raw=String(abi||'').trim().toLowerCase();if(!raw)return freeze({status:'not-provided',expectedAbi:'',expectedElfClass:'',expectedMachine:'',elfClass:String(identity?.elfClass||''),elfMachine:String(identity?.machine||'')});const expected=ANDROID_ABI_ELF[raw];if(!expected)return freeze({status:'unsupported',expectedAbi:raw,expectedElfClass:'',expectedMachine:'',elfClass:String(identity?.elfClass||''),elfMachine:String(identity?.machine||'')});const cls=String(identity?.elfClass||''),machine=String(identity?.machine||''),classMatch=cls===expected.elfClass,machineMatch=machine===expected.machine;return freeze({status:classMatch&&machineMatch?'matched':'mismatch',expectedAbi:raw,expectedElfClass:expected.elfClass,expectedMachine:expected.machine,elfClass:cls,elfMachine:machine,classMatch,machineMatch});}\n"""
+          if insert.strip() not in s:
+              if marker not in s: raise SystemExit('parseAndroidSymbolSpec marker missing')
+              s=s.replace(marker,insert+marker,1)
+
+          old="let identity=buildIds.get(spec.file);if(!identity){identity=elfBuildId(spec.file,{tool:readelf,cwd,timeoutMs});buildIds.set(spec.file,identity);}const expected=String(frame.buildId||'').toLowerCase(),actual=String(identity.buildId||'').toLowerCase(),safeSpec=safeAndroidSpec(spec);if(!expected){"
+          new="let identity=buildIds.get(spec.file);if(!identity){identity=elfAndroidIdentity(spec.file,{tool:readelf,cwd,timeoutMs});buildIds.set(spec.file,identity);}const expected=String(frame.buildId||'').toLowerCase(),actual=String(identity.buildId||'').toLowerCase(),safeSpec=safeAndroidSpec(spec),abi=androidAbiCompatibility(android.abi,identity),abiFields={expectedAbi:abi.expectedAbi,expectedElfClass:abi.expectedElfClass,expectedMachine:abi.expectedMachine,elfClass:abi.elfClass,elfMachine:abi.elfMachine};if(abi.status==='unsupported'){resolutions.push({frameIndex:frame.index,module:frame.module,moduleBase:frame.moduleBase,pc:frame.pc,...abiFields,status:'abi-unsupported',symbolFile:safeSpec});continue;}if(abi.status==='mismatch'){resolutions.push({frameIndex:frame.index,module:frame.module,moduleBase:frame.moduleBase,pc:frame.pc,...abiFields,abiMatch:false,status:'abi-mismatch',symbolFile:safeSpec});continue;}if(!expected){"
+          if old not in s: raise SystemExit('Android identity block marker missing')
+          s=s.replace(old,new,1)
+
+          old2="expectedBuildId:expected,actualBuildId:actual,buildIdMatch:true,function:fn.slice(0,500),location,status:ok?'resolved':'symbolizer-failed'"
+          new2="expectedBuildId:expected,actualBuildId:actual,buildIdMatch:true,...abiFields,abiMatch:abi.status==='matched'?true:null,function:fn.slice(0,500),location,status:ok?'resolved':'symbolizer-failed'"
+          if old2 not in s: raise SystemExit('resolved Android row marker missing')
+          s=s.replace(old2,new2,1)
+
+          old3="module.exports={READELF_TOOLS,HOST_ADDR2LINE_TOOLS,HOST_NM_TOOLS,platformFile,sha256File,resolveFixedTool,resolveReadelf,resolveHostAddr2line,resolveHostNm,elfBuildId,parseAndroidSymbolSpec"
+          new3="module.exports={READELF_TOOLS,HOST_ADDR2LINE_TOOLS,HOST_NM_TOOLS,ANDROID_ABI_ELF,platformFile,sha256File,resolveFixedTool,resolveReadelf,resolveHostAddr2line,resolveHostNm,elfBuildId,elfAndroidIdentity,androidAbiCompatibility,parseAndroidSymbolSpec"
+          if old3 not in s: raise SystemExit('module exports marker missing')
+          s=s.replace(old3,new3,1)
+          p.write_text(s)
+
+          test=Path('test/android-abi-vendor-real-e2e.test.js')
+          test.write_text(r'''\
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {execFileSync,spawnSync}=require('node:child_process');const {symbolizePlatform,androidAbiCompatibility}=require('../src/platform-symbols');
+function exists(cmd){return spawnSync('sh',['-lc',`command -v ${cmd}`],{stdio:'ignore'}).status===0;}
+function buildId(elf){const out=execFileSync('readelf',['-n',elf],{encoding:'utf8'}),m=out.match(/Build ID:\s*([0-9a-f]+)/i);assert.ok(m);return m[1].toLowerCase();}
+function symbolAddress(elf,name){const out=execFileSync('nm',['-D','-n',elf],{encoding:'utf8'}),m=out.match(new RegExp(`^([0-9a-fA-F]+)\\s+[TtWw]\\s+${name}$`,'m'));assert.ok(m);return m[1].toLowerCase();}
+test('Android ABI compatibility maps supported tombstone ABIs to exact ELF identities',()=>{assert.equal(androidAbiCompatibility('x86_64',{elfClass:'ELF64',machine:'Advanced Micro Devices X86-64'}).status,'matched');assert.equal(androidAbiCompatibility('arm64',{elfClass:'ELF64',machine:'Advanced Micro Devices X86-64'}).status,'mismatch');assert.equal(androidAbiCompatibility('future-abi',{elfClass:'ELF64',machine:'Future'}).status,'unsupported');assert.equal(androidAbiCompatibility('',{elfClass:'ELF64',machine:'AArch64'}).status,'not-provided');});
+test('real Android vendor/system same-basename fixture binds exact vendor ELF and rejects ABI mismatch',{skip:process.platform!=='linux'},()=>{for(const tool of ['cc','nm','readelf','addr2line'])assert.equal(exists(tool),true,`Linux Android ABI/vendor fixture requires ${tool}`);const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-android-vendor-'));try{for(const area of ['vendor','system'])fs.mkdirSync(path.join(root,area),{recursive:true});const vendorSrc=path.join(root,'vendor','vendor.c'),systemSrc=path.join(root,'system','system.c'),vendorElf=path.join(root,'vendor','libcollision.so'),systemElf=path.join(root,'system','libcollision.so');fs.writeFileSync(vendorSrc,'__attribute__((visibility("default"),noinline)) void vendor_crash_fixture(void) { volatile int *p = 0; *p = 11; }\n');fs.writeFileSync(systemSrc,'__attribute__((visibility("default"),noinline)) void system_crash_fixture(void) { volatile int *p = 0; *p = 22; }\n');execFileSync('cc',['-shared','-fPIC','-g','-O0','-Wl,--build-id=sha1','-o',vendorElf,vendorSrc],{stdio:'pipe'});execFileSync('cc',['-shared','-fPIC','-g','-O0','-Wl,--build-id=sha1','-o',systemElf,systemSrc],{stdio:'pipe'});const id=buildId(vendorElf),pc=symbolAddress(vendorElf,'vendor_crash_fixture'),module='/vendor/lib64/libcollision.so',text=`ABI: 'x86_64'\n#00 pc ${pc} ${module} (vendor_crash_fixture+0) (BuildId: ${id})\n`,specs=[`/system/lib64/libcollision.so=${systemElf}`,`/vendor/lib64/libcollision.so=${vendorElf}`],symbols=symbolizePlatform({text,androidSymbolSpecs:specs,cwd:root}),row=symbols.android.resolutions[0];assert.equal(row.status,'resolved');assert.equal(row.abiMatch,true);assert.equal(row.expectedAbi,'x86_64');assert.equal(row.elfClass,'ELF64');assert.equal(row.elfMachine,'Advanced Micro Devices X86-64');assert.equal(row.function,'vendor_crash_fixture');assert.match(row.location,/vendor\/vendor\.c:1/);assert.equal(row.symbolFile.fileName,'libcollision.so');const mismatch=symbolizePlatform({text:text.replace("ABI: 'x86_64'","ABI: 'arm64'"),androidSymbolSpecs:specs,cwd:root}).android.resolutions[0];assert.equal(mismatch.status,'abi-mismatch');assert.equal(mismatch.abiMatch,false);assert.equal(mismatch.expectedAbi,'arm64');assert.equal(mismatch.expectedMachine,'AArch64');assert.equal(mismatch.elfMachine,'Advanced Micro Devices X86-64');assert.equal(mismatch.function,undefined);assert.equal(mismatch.location,undefined);}finally{fs.rmSync(root,{recursive:true,force:true});}});
+''')
+
+          for name in ['package.json','package-lock.json','product-contract.json']:
+              q=Path(name); text=q.read_text();
+              if '0.1.12' not in text: raise SystemExit(f'{name} missing 0.1.12')
+              q.write_text(text.replace('0.1.12','0.1.13'))
+
+          q=Path('ROADMAP.md'); text=q.read_text().replace('`0.1.12` for this line','`0.1.13` for this line').replace('checked-in 0.1.12 admission policy','checked-in 0.1.13 admission policy')
+          anchor='- [x] Android BuildId-bound ELF symbolization, non-zero-KASLR `System.map` resolution and BuildId-bound relocatable kernel-module symbolization\n'
+          addition='- [x] Android ABI-to-ELF architecture binding with vendor/system same-basename exact-module disambiguation\n'
+          if addition not in text:
+              if anchor not in text: raise SystemExit('ROADMAP Android anchor missing')
+              text=text.replace(anchor,anchor+addition,1)
+          q.write_text(text)
+
+          q=Path('.github/workflows/ci.yml'); text=q.read_text(); old='android-buildid,kernel-system-map'; new='android-buildid,android-abi-vendor,kernel-system-map'
+          if old not in text: raise SystemExit('CI suite marker missing')
+          q.write_text(text.replace(old,new,1))
+          PY
+          node --check src/platform-symbols.js
+          node --test test/android-abi-vendor-real-e2e.test.js
+          git diff --check
+          git status --short
+      - name: Commit final patch and self-delete
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/prepare-android-abi-vendor.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/platform-symbols.js test/android-abi-vendor-real-e2e.test.js .github/workflows/ci.yml package.json package-lock.json product-contract.json ROADMAP.md
+          git commit -m 'feat(android): bind tombstone ABI to ELF identity'
+          git push origin HEAD:codex/android-abi-vendor-evidence
