@@ -42,8 +42,7 @@ test('current exact Qualification closes deterministic work but never grants ext
 });
 
 test('stale Qualification is rejected as deterministic evidence for current HEAD',()=>{
-  const qualification=syntheticQualification();qualification.debugCommit='0'.repeat(40);qualification.runContext.sourceSha=qualification.debugCommit;qualification.digest=stableDigest({...qualification,digest:undefined});
-  // Rebuild the canonical digest after removing the old digest field.
+  const qualification=syntheticQualification();qualification.debugCommit='0'.repeat(40);qualification.runContext.sourceSha=qualification.debugCommit;
   const copy={...qualification};delete copy.digest;qualification.digest=stableDigest(copy);
   const receipt=buildReadinessReceipt({qualification});
   assert.equal(receipt.deterministicReady,false);
