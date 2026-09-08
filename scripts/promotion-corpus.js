@@ -62,7 +62,9 @@ function validatePromotionCorpus(corpus){
     assert.ok(!fixedCommits.has(item.fixedCommit),`duplicate fixedCommit across promotion cases: ${item.fixedCommit}`);fixedCommits.add(item.fixedCommit);
     assert.ok(KINDS.has(item.failureKind),`invalid failureKind for ${item.id}`);
     const repro=item.reproduction||{};
-    assert.ok(String(repro.command||'').length>=1&&String(repro.command).length<=1000&&!/[\0\r\n]/.test(repro.command),`invalid reproduction command for ${item.id}`);
+    const command=String(repro.command||'');
+    assert.ok(command.length>=1&&command.length<=1000&&!/[\0\r\n]/.test(command),`invalid reproduction command for ${item.id}`);
+    assert.ok(!command.includes('`')&&!command.includes('${')&&!command.includes('$('),`reproduction command for ${item.id} must not contain shell interpolation metacharacters`);
     assert.ok(Number.isInteger(repro.runs)&&repro.runs>=1&&repro.runs<=5,`invalid reproduction runs for ${item.id}`);
     assert.ok(Number.isInteger(repro.timeoutMs)&&repro.timeoutMs>=1000&&repro.timeoutMs<=600000,`invalid reproduction timeout for ${item.id}`);
     const expected=item.expected||{};validateExpected(expected,item.id);
