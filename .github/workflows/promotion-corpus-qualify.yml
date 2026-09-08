@@ -37,9 +37,25 @@ jobs:
         run: node scripts/promotion-corpus.js quality/promotion-corpus.json
       - name: Prove historical bad-to-fix transitions
         run: node scripts/promotion-qualify.js --output PROMOTION_CORPUS_QUALIFICATION.json
+      - name: Build deterministic promotion readiness receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/promotion-readiness.js \
+            --qualification PROMOTION_CORPUS_QUALIFICATION.json \
+            --output PROMOTION_READINESS.json
+          node - <<'NODE'
+          const r=require('./PROMOTION_READINESS.json');
+          if(r.deterministicReady!==true){
+            console.error(JSON.stringify({deterministicBlockers:r.deterministicBlockers}));
+            process.exit(2);
+          }
+          NODE
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codex-debug-promotion-corpus-qualification-${{ github.sha }}-${{ github.run_id }}
-          path: PROMOTION_CORPUS_QUALIFICATION.json
+          path: |
+            PROMOTION_CORPUS_QUALIFICATION.json
+            PROMOTION_READINESS.json
           if-no-files-found: error
           retention-days: 14
