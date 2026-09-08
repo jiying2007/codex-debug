@@ -14,6 +14,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] protected patch surfaces, stale-workspace apply gates, private snapshots and drift-safe rollback
 - [x] GDB/LLDB real native-core fixture, Cortex-M map/ELF symbolization and real GNU Arm Embedded fixture
 - [x] Android BuildId-bound ELF symbolization, non-zero-KASLR `System.map` resolution and BuildId-bound relocatable kernel-module symbolization
+- [x] Android ABI-to-ELF architecture binding with vendor/system same-basename exact-module disambiguation
 - [x] bounded first-parent Safe Bisect with explicit historical-execution authority, isolated HOME/Git config and credential scrubbing
 - [x] deterministic security/context/verification/package/workflow governance gates
 - [x] reproducible development VSIX gate with exact VSCE 3.9.2 and byte-identical dual packaging
@@ -36,7 +37,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] Admission v2 self-digest and independent reconstruction bind repository governance, Qualification, model evidence and admission policy into one downstream authority record
 - [x] shipped Product Contract exposes Promotion Transition v1, Promotion Qualification v1, Admission Policy v1, Admission v2, Governance Lock v1, Governance Receipt v2 and Calibration Report v1
 - [x] manifest gate cross-checks shipped Promotion schema versions directly against implementation module constants
-- [x] package / package-lock / product-contract development identity gated as one version (`0.1.12` for this line)
+- [x] package / package-lock / product-contract development identity gated as one version (`0.1.13` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
@@ -62,4 +63,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.12 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.13 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.

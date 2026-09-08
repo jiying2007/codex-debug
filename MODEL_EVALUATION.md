@@ -16,7 +16,7 @@ Synthetic live canaries remain useful smoke evidence but are permanently `promot
 
 ## Versioned contracts
 
-The shipped 0.1.12 development Product Contract binds the complete downstream model-quality and promotion-authority evidence schema set:
+The shipped 0.1.13 development Product Contract binds the complete downstream model-quality and promotion-authority evidence schema set:
 
 - `modelEvaluationRecordVersion = 1`
 - `promotionCorpusVersion = 2`
@@ -108,7 +108,7 @@ Calibration mode explicitly records `governanceLockDigest=null` and `governanceR
 
 ### Promotion Model Evaluation
 
-`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.12 it executes one read-only evidence chain in the same run:
+`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.13 it executes one read-only evidence chain in the same run:
 
 `validate corpus/policy -> verify reviewed repository governance when promotion_mode=true -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> Promotion Admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
 

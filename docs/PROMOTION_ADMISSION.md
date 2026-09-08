@@ -17,7 +17,7 @@ Calibration remains explicitly non-authoritative: for `promotion_mode=false`, Ad
 
 ## Shipped schema identity
 
-The 0.1.12 packaged `product-contract.json` explicitly publishes the complete downstream Promotion evidence contract instead of requiring Family/release consumers to infer versions from repository code:
+The 0.1.13 packaged `product-contract.json` explicitly publishes the complete downstream Promotion evidence contract instead of requiring Family/release consumers to infer versions from repository code:
 
 - `promotionTransitionVersion=1`;
 - `promotionQualificationVersion=1`;
@@ -33,7 +33,7 @@ These fields describe evidence/control-plane schemas. They do not make the produ
 
 ## Checked-in development policy
 
-The 0.1.12 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
+The 0.1.13 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
 
 - `reviewed=false`;
 - `calibrationEvidence=null`;

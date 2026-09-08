@@ -14,10 +14,10 @@ function writeJson(file,value){fs.writeFileSync(file,JSON.stringify(value,null,2
 function makeActivationRepo(){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-release-'));
   git(dir,['init']);git(dir,['config','user.email','test@example.invalid']);git(dir,['config','user.name','Codex Debug Test']);
-  writeJson(path.join(dir,'product-contract.json'),{productId:'codex-debug-safe',productVersion:'0.1.12',lifecycle:'development',safeCoreCommit:'a'.repeat(40)});
+  writeJson(path.join(dir,'product-contract.json'),{productId:'codex-debug-safe',productVersion:'0.1.13',lifecycle:'development',safeCoreCommit:'a'.repeat(40)});
   fs.writeFileSync(path.join(dir,'ROADMAP.md'),`# Roadmap\n\n${ROADMAP_PENDING}\n`);
   git(dir,['add','.']);git(dir,['commit','-m','promotion source']);const promotionSha=git(dir,['rev-parse','HEAD']);
-  writeJson(path.join(dir,'product-contract.json'),{productId:'codex-debug-safe',productVersion:'0.1.12',lifecycle:'active',safeCoreCommit:'a'.repeat(40)});
+  writeJson(path.join(dir,'product-contract.json'),{productId:'codex-debug-safe',productVersion:'0.1.13',lifecycle:'active',safeCoreCommit:'a'.repeat(40)});
   fs.writeFileSync(path.join(dir,'ROADMAP.md'),`# Roadmap\n\n${ROADMAP_ACTIVE}\n`);
   git(dir,['add','.']);git(dir,['commit','-m','activate']);const releaseSha=git(dir,['rev-parse','HEAD']);
   return {dir,promotionSha,releaseSha};
