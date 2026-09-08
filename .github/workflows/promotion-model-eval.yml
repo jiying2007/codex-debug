@@ -143,24 +143,20 @@ jobs:
           test -s PROMOTION_CORPUS_QUALIFICATION.json
       - name: Record historical live-model evaluation
         env:
-          OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_PROVIDER_API_KEY || secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           CODEX_DEBUG_PROVIDER_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_PROVIDER_API_KEY || secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
         shell: bash
         run: |
           set -euo pipefail
+          test -n "${CODEX_DEBUG_PROVIDER_API_KEY:-}" || {
+            echo 'CODEX_DEBUG_CANARY_PROVIDER_API_KEY (preferred), CODEX_DEBUG_CANARY_OPENAI_API_KEY, or OPENAI_API_KEY is unavailable; refusing live promotion evaluation.' >&2
+            exit 2
+          }
           case "$CODEX_DEBUG_PROVIDER_MODE" in
             openai)
-              test -n "${OPENAI_API_KEY:-}" || {
-                echo 'CODEX_DEBUG_CANARY_PROVIDER_API_KEY, CODEX_DEBUG_CANARY_OPENAI_API_KEY, or OPENAI_API_KEY is unavailable; refusing live OpenAI promotion evaluation.' >&2
-                exit 2
-              }
+              export OPENAI_API_KEY="$CODEX_DEBUG_PROVIDER_API_KEY"
               ;;
             openai-compatible)
-              test -n "${CODEX_DEBUG_PROVIDER_API_KEY:-}" || {
-                echo 'CODEX_DEBUG_CANARY_PROVIDER_API_KEY is unavailable; refusing live OpenAI-compatible promotion evaluation.' >&2
-                exit 2
-              }
               ;;
             *)
               echo "unsupported provider mode $CODEX_DEBUG_PROVIDER_MODE" >&2
