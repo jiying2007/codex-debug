@@ -1,0 +1,42 @@
+name: Normalize promotion corpus diff
+on:
+  push:
+    branches:
+      - codex/fix-promotion-repro-shell-safety
+permissions:
+  contents: write
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore reviewed formatting and keep one semantic command change
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git clone --branch codex/fix-promotion-repro-shell-safety "https://github.com/${GITHUB_REPOSITORY}.git" repo
+          cd repo
+          git fetch origin main
+          git show origin/main:quality/promotion-corpus.json > quality/promotion-corpus.json
+          node <<'NODE'
+          'use strict';
+          const fs=require('node:fs');
+          const assert=require('node:assert/strict');
+          const file='quality/promotion-corpus.json';
+          let text=fs.readFileSync(file,'utf8');
+          const unsafe='`160000,${pin},src/codex-safe-core`';
+          const safe="'160000,'+pin+',src/codex-safe-core'";
+          assert.equal(text.split(unsafe).length-1,1,'expected exactly one unsafe reproduction template literal');
+          text=text.replace(unsafe,safe);
+          fs.writeFileSync(file,text,'utf8');
+          NODE
+          node scripts/promotion-corpus.js quality/promotion-corpus.json
+          node --test test/promotion-eval.test.js
+          git rm .github/workflows/normalize-promotion-corpus-diff.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add quality/promotion-corpus.json
+          git commit -m "chore(promotion): preserve reviewed corpus formatting"
+          git push origin HEAD:codex/fix-promotion-repro-shell-safety
