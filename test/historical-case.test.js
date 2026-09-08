@@ -33,8 +33,8 @@ test('historical checkout materializes the exact Core gitlink and switches pins'
   try{
     const core=path.join(temp,'core'),parent=path.join(temp,'parent');
     initRepo(core);
-    const coreA=commitFile(core,'marker.txt','core-a\n','core a');
-    const coreB=commitFile(core,'marker.txt','core-b\n','core b');
+    const coreA=commitFile(core,'marker.txt','core-a','core a');
+    const coreB=commitFile(core,'marker.txt','core-b','core b');
     const coreUrl=pathToFileURL(core).href;
 
     initRepo(parent);
@@ -51,11 +51,11 @@ test('historical checkout materializes the exact Core gitlink and switches pins'
     const options={trustedCoreUrl:coreUrl,allowedProtocols:'file'};
     assert.equal(cleanCheckout(parent,bad,process.env,options),bad);
     assert.equal(git(path.join(parent,'src','codex-safe-core'),['rev-parse','HEAD']),coreA);
-    assert.equal(fs.readFileSync(path.join(parent,'src','codex-safe-core','marker.txt'),'utf8'),'core-a\n');
+    assert.equal(fs.readFileSync(path.join(parent,'src','codex-safe-core','marker.txt'),'utf8'),'core-a');
 
     assert.equal(cleanCheckout(parent,fixed,process.env,options),fixed);
     assert.equal(git(path.join(parent,'src','codex-safe-core'),['rev-parse','HEAD']),coreB);
-    assert.equal(fs.readFileSync(path.join(parent,'src','codex-safe-core','marker.txt'),'utf8'),'core-b\n');
+    assert.equal(fs.readFileSync(path.join(parent,'src','codex-safe-core','marker.txt'),'utf8'),'core-b');
 
     assert.throws(
       ()=>cleanCheckout(parent,bad,process.env,{trustedCoreUrl:'https://github.com/jiying2007/codex-safe-core.git',allowedProtocols:'https'}),
