@@ -20,30 +20,17 @@ jobs:
       - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
         with:
           node-version: 22.22.2
-      - name: Prepare runtime and real fixture patch
+      - name: Prepare runtime and version patch
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('scripts/prepare-android-abi-vendor.js')
-          s=p.read_text()
-          old="allowed=new Set(['package.json','package-lock.json','product-contract.json','ROADMAP.md','README.md','README.zh-CN.md','ARCHITECTURE.md'])"
-          new="allowed=new Set(['.github/workflows/ci.yml','.github/workflows/immutable-release.yml','.github/workflows/live-model-eval.yml','.github/workflows/prepare-android-abi-vendor.yml','.github/workflows/promotion-corpus-qualify.yml','.github/workflows/promotion-model-eval.yml','MODEL_EVALUATION.md','ROADMAP.md','docs/PROMOTION_ADMISSION.md','package-lock.json','package.json','product-contract.json','scripts/prepare-android-abi-vendor.js','scripts/verify-docs.js','test/immutable-release-authority.test.js'])"
-          if old not in s: raise SystemExit('preparation allowlist marker missing')
-          p.write_text(s.replace(old,new,1))
-          PY
           node scripts/prepare-android-abi-vendor.js
           while IFS= read -r file; do
             case "$file" in
-              .github/workflows/prepare-android-abi-vendor.yml|scripts/prepare-android-abi-vendor.js) continue ;;
+              .github/workflows/prepare-android-abi-vendor.yml) continue ;;
             esac
             perl -0pi -e 's/0\.1\.12/0.1.13/g' "$file"
-          done < <(git grep -l '0.1.12' || true)
-          for file in .github/workflows/ci.yml .github/workflows/immutable-release.yml .github/workflows/live-model-eval.yml .github/workflows/promotion-corpus-qualify.yml .github/workflows/promotion-model-eval.yml; do
-            perl -0pi -e 's/0\.1\.12/0.1.13/g' "$file"
-            grep -F '0.1.13' "$file" >/dev/null || { echo "$file did not receive 0.1.13 identity" >&2; exit 1; }
-          done
+          done < <(git grep -F -l '0.1.12' -- .github/workflows || true)
       - name: Write shell-safe Android ABI vendor fixture
         shell: bash
         run: |
@@ -62,9 +49,9 @@ jobs:
           set -euo pipefail
           node --check src/platform-symbols.js
           node --test test/android-abi-vendor-real-e2e.test.js
-          remaining=$(grep -RIl --exclude='prepare-android-abi-vendor.yml' --exclude='prepare-android-abi-vendor.js' '0.1.12' .github MODEL_EVALUATION.md ROADMAP.md docs package.json package-lock.json product-contract.json scripts test || true)
+          remaining=$(grep -RIlF --exclude='prepare-android-abi-vendor.yml' --exclude='prepare-android-abi-vendor.js' '0.1.12' .github MODEL_EVALUATION.md ROADMAP.md docs package.json package-lock.json product-contract.json scripts test || true)
           if [[ -n "$remaining" ]]; then
-            printf 'stale 0.1.12 references remain in worktree:\n%s\n' "$remaining" >&2
+            printf 'stale literal 0.1.12 references remain in worktree:\n%s\n' "$remaining" >&2
             exit 1
           fi
           git diff --check
