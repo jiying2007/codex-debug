@@ -18,6 +18,19 @@ on:
         required: false
         default: ''
         type: string
+      provider_mode:
+        description: Live model provider mode
+        required: true
+        default: openai
+        type: choice
+        options:
+          - openai
+          - openai-compatible
+      provider_base_url:
+        description: HTTPS Responses-compatible base URL; required only for openai-compatible
+        required: false
+        default: ''
+        type: string
       promotion_mode:
         description: Require qualification, reviewed admission policy, locked repository governance, and promotion-eligible live evidence
         required: true
@@ -41,7 +54,10 @@ jobs:
       CODEX_DEBUG_VERIFIER_MODEL: ${{ inputs.verifier_model }}
       CODEX_DEBUG_MODEL_SELECTION_STRATEGY: ${{ inputs.model != '' && 'fixed' || 'auto' }}
       CODEX_DEBUG_MODEL_COMPATIBILITY_POLICY: strict
-      CODEX_DEBUG_PROVIDER_MODE: openai
+      CODEX_DEBUG_PROVIDER_MODE: ${{ inputs.provider_mode }}
+      CODEX_DEBUG_PROVIDER_BASE_URL: ${{ inputs.provider_base_url }}
+      CODEX_DEBUG_PROVIDER_API_KEY_ENV: CODEX_DEBUG_PROVIDER_API_KEY
+      CODEX_DEBUG_PROVIDER_CREDENTIAL_SOURCE: env
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -59,6 +75,35 @@ jobs:
         run: |
           echo 'Historical promotion evaluation executes reviewed old repository code and is not an OS sandbox. Explicit acknowledgement is required.' >&2
           exit 2
+      - name: Validate provider selection
+        env:
+          PROVIDER_MODE: ${{ inputs.provider_mode }}
+          PROVIDER_BASE_URL: ${{ inputs.provider_base_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$PROVIDER_MODE" in
+            openai)
+              test -z "$PROVIDER_BASE_URL" || {
+                echo 'provider_base_url must be empty for provider_mode=openai.' >&2
+                exit 2
+              }
+              ;;
+            openai-compatible)
+              test -n "$PROVIDER_BASE_URL" || {
+                echo 'provider_base_url is required for provider_mode=openai-compatible.' >&2
+                exit 2
+              }
+              node -e "const u=new URL(process.argv[1]);if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash)process.exit(2)" "$PROVIDER_BASE_URL" || {
+                echo 'openai-compatible promotion calibration requires a credential-free HTTPS base URL without query/fragment.' >&2
+                exit 2
+              }
+              ;;
+            *)
+              echo "unsupported provider_mode=$PROVIDER_MODE" >&2
+              exit 2
+              ;;
+          esac
       - name: Install selected Codex CLI
         env:
           CODEX_VERSION: ${{ inputs.codex_version }}
@@ -98,15 +143,30 @@ jobs:
           test -s PROMOTION_CORPUS_QUALIFICATION.json
       - name: Record historical live-model evaluation
         env:
-          OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_PROVIDER_API_KEY || secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
+          CODEX_DEBUG_PROVIDER_API_KEY: ${{ secrets.CODEX_DEBUG_CANARY_PROVIDER_API_KEY || secrets.CODEX_DEBUG_CANARY_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${OPENAI_API_KEY:-}" || {
-            echo 'CODEX_DEBUG_CANARY_OPENAI_API_KEY (preferred) or OPENAI_API_KEY is unavailable; refusing live promotion evaluation.' >&2
-            exit 2
-          }
+          case "$CODEX_DEBUG_PROVIDER_MODE" in
+            openai)
+              test -n "${OPENAI_API_KEY:-}" || {
+                echo 'CODEX_DEBUG_CANARY_PROVIDER_API_KEY, CODEX_DEBUG_CANARY_OPENAI_API_KEY, or OPENAI_API_KEY is unavailable; refusing live OpenAI promotion evaluation.' >&2
+                exit 2
+              }
+              ;;
+            openai-compatible)
+              test -n "${CODEX_DEBUG_PROVIDER_API_KEY:-}" || {
+                echo 'CODEX_DEBUG_CANARY_PROVIDER_API_KEY is unavailable; refusing live OpenAI-compatible promotion evaluation.' >&2
+                exit 2
+              }
+              ;;
+            *)
+              echo "unsupported provider mode $CODEX_DEBUG_PROVIDER_MODE" >&2
+              exit 2
+              ;;
+          esac
           args=(--output PROMOTION_MODEL_EVAL.json --summary PROMOTION_MODEL_EVAL_SUMMARY.json --transitions PROMOTION_TRANSITIONS.json)
           if [[ "$PROMOTION_MODE" == true ]]; then args+=(--require-promotion-ready); fi
           node scripts/promotion-live-eval.js "${args[@]}"
