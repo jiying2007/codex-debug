@@ -1,0 +1,62 @@
+name: Prepare shell-safe promotion replay fix
+on:
+  push:
+    branches:
+      - codex/fix-promotion-repro-shell-safety
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Patch corpus validator and regression test
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git clone --branch codex/fix-promotion-repro-shell-safety "https://github.com/${GITHUB_REPOSITORY}.git" repo
+          cd repo
+          node <<'NODE'
+          'use strict';
+          const fs=require('node:fs');
+          const assert=require('node:assert/strict');
+
+          const corpusPath='quality/promotion-corpus.json';
+          const corpus=JSON.parse(fs.readFileSync(corpusPath,'utf8'));
+          const item=corpus.cases.find(x=>x.id==='safe-core-change-product-contract-20260831');
+          assert.ok(item,'target promotion case is required');
+          const unsafe='`160000,${pin},src/codex-safe-core`';
+          const safe="'160000,'+pin+',src/codex-safe-core'";
+          assert.ok(item.reproduction.command.includes(unsafe),'expected unsafe template literal is missing');
+          item.reproduction.command=item.reproduction.command.replace(unsafe,safe);
+          assert.ok(!item.reproduction.command.includes('`'));
+          assert.ok(!item.reproduction.command.includes('${'));
+          fs.writeFileSync(corpusPath,`${JSON.stringify(corpus,null,2)}\n`,'utf8');
+
+          function replaceOnce(file,from,to){
+            const text=fs.readFileSync(file,'utf8');
+            assert.equal(text.split(from).length-1,1,`expected exactly one replacement anchor in ${file}`);
+            fs.writeFileSync(file,text.replace(from,to),'utf8');
+          }
+
+          const validator='scripts/promotion-corpus.js';
+          const oldValidation="    assert.ok(String(repro.command||'').length>=1&&String(repro.command).length<=1000&&!/[\\0\\r\\n]/.test(repro.command),`invalid reproduction command for ${item.id}`);";
+          const newValidation="    const command=String(repro.command||'');\n    assert.ok(command.length>=1&&command.length<=1000&&!/[\\0\\r\\n]/.test(command),`invalid reproduction command for ${item.id}`);\n    assert.ok(!command.includes('`')&&!command.includes('${')&&!command.includes('$('),`reproduction command for ${item.id} must not contain shell interpolation metacharacters`);";
+          replaceOnce(validator,oldValidation,newValidation);
+
+          const testFile='test/promotion-eval.test.js';
+          const anchor="test('ground-truth and expectation tampering fail closed',()=>{const changed=clone(corpus);changed.cases[0].groundTruth.summary+=' tampered';assert.throws(()=>validatePromotionCorpus(changed),/ground-truth digest mismatch/);const changed2=clone(corpus);changed2.cases[0].expected.rootCauseTerms=['anything'];assert.throws(()=>validatePromotionCorpus(changed2),/expectation digest mismatch/);});";
+          const regression="test('reproduction commands reject shell interpolation metacharacters before qualification',()=>{for(const token of ['`','${','$(']){const changed=clone(corpus);changed.cases[0].reproduction.command+=token;assert.throws(()=>validatePromotionCorpus(changed),/shell interpolation metacharacters/);}});";
+          replaceOnce(testFile,anchor,`${anchor}\n${regression}`);
+          NODE
+          node --check scripts/promotion-corpus.js
+          node scripts/promotion-corpus.js quality/promotion-corpus.json
+          node --test test/promotion-eval.test.js
+          git rm .github/workflows/prepare-promotion-repro-shell-safety.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add quality/promotion-corpus.json scripts/promotion-corpus.js test/promotion-eval.test.js
+          git commit -m "fix(promotion): reject shell-interpolated reproductions"
+          git push origin HEAD:codex/fix-promotion-repro-shell-safety
