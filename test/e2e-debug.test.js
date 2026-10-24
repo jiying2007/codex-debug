@@ -10,11 +10,12 @@ const {createDebugReceipt,makeSessionId,validateStoredSession,stableDigest}=requ
 const {writeSession,readSession}=require('../src/session-store');
 const {createWorkspaceSnapshot,finalizeWorkspaceSnapshot,writeWorkspaceSnapshot,snapshotDirectory}=require('../src/workspace-snapshot');
 
-function init(){
+function init({autocrlf}={}){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-e2e-'));
   execFileSync('git',['init','-q'],{cwd:dir});
   execFileSync('git',['config','user.name','fixture'],{cwd:dir});
   execFileSync('git',['config','user.email','fixture@example.invalid'],{cwd:dir});
+  if(autocrlf!==undefined)execFileSync('git',['config','core.autocrlf',String(autocrlf)],{cwd:dir});
   fs.writeFileSync(path.join(dir,'state.txt'),'bad\n');
   fs.writeFileSync(path.join(dir,'reproduce.js'),"const fs=require('node:fs');const bad=fs.readFileSync('state.txt','utf8').trim()==='bad';if(bad)console.error('fatal error: deterministic fixture');process.exit(bad?1:0);\n");
   execFileSync('git',['add','.'],{cwd:dir});
@@ -153,22 +154,25 @@ test('an unrelated green command cannot verify or resolve the original failing r
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
-for(const relabel of [false,true])test(`rollback rejects a different valid snapshot before restoring any file (relabel=${relabel})`,async()=>{
-  const dir=init();
+for(const autocrlf of [false,true])for(const relabel of [false,true])test(`rollback rejects a different valid snapshot before restoring any file (autocrlf=${autocrlf}, relabel=${relabel})`,async()=>{
+  const dir=init({autocrlf});
   try{
     const first=await runDebugSession({workspace:dir,command:'node reproduce.js',reproRuns:2,deterministicOnly:true,persist:true});
     const proposed=withFixturePatch(first,dir),applied=await applyDebugSessionPatch({workspace:dir,sessionId:proposed.sessionId});
+    const stateBeforeRollback=fs.readFileSync(path.join(dir,'state.txt'));
+    assert.deepEqual(stateBeforeRollback,Buffer.from(autocrlf?'good\r\n':'good\n'));
     fs.writeFileSync(path.join(dir,'unrelated.txt'),'unrelated-before\n');
     const other=createWorkspaceSnapshot(dir,['unrelated.txt']);
     fs.writeFileSync(path.join(dir,'unrelated.txt'),'unrelated-after\n');
+    const unrelatedBeforeRollback=fs.readFileSync(path.join(dir,'unrelated.txt'));
     let replacement=finalizeWorkspaceSnapshot(dir,other);
     if(relabel){const payload={...replacement,snapshotId:applied.patch.snapshotId};delete payload.digest;replacement={...payload,digest:stableDigest(payload)};}
     writeWorkspaceSnapshot(dir,replacement);
     const destination=path.join(snapshotDirectory(dir),`${applied.patch.snapshotId}.json`);
     fs.writeFileSync(destination,JSON.stringify(replacement));
     assert.throws(()=>rollbackDebugSession({workspace:dir,sessionId:applied.sessionId}),error=>error.code==='ESNAPSHOTBINDING');
-    assert.equal(fs.readFileSync(path.join(dir,'state.txt'),'utf8'),'good\n');
-    assert.equal(fs.readFileSync(path.join(dir,'unrelated.txt'),'utf8'),'unrelated-after\n');
+    assert.deepEqual(fs.readFileSync(path.join(dir,'state.txt')),stateBeforeRollback);
+    assert.deepEqual(fs.readFileSync(path.join(dir,'unrelated.txt')),unrelatedBeforeRollback);
     assert.equal(fs.existsSync(path.join(snapshotDirectory(dir),'staging')),false);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
