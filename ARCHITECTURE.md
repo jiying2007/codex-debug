@@ -64,7 +64,7 @@ A recent commit, blame line, symbolized address or high model confidence is neve
 
 A successful before/after reproduction can prove that a workspace change resolves the observed failure while the root cause remains unconfirmed. Hypothesis state therefore follows `open/refuted/supported → confirmed`; only an already `supported` hypothesis may become `confirmed` after successful bound runtime verification.
 
-Fix states are `unresolved`, `diagnosed`, `proposed`, `applied-unverified`, `verified`, and `regressed`. `verified` requires an observed reproducible failing baseline, an independently observed workspace mutation, and every bounded post-change run passing. `passed-unbound` is not a fix status. Runtime verification separately records `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or `unbound` failure transition.
+Fix states are `unresolved`, `diagnosed`, `proposed`, `applied-unverified`, `verified`, and `regressed`. `verified` requires an observed reproducible failing baseline, an independently observed workspace mutation, and every bounded post-change run passing with the original reproduction `commandDigest`. Reproduction summaries, evidence and verification all carry this identity; a different or missing command identity remains unbound. Stored verified sessions independently validate the original baseline and post-change command binding. `passed-unbound` is not a fix status. Runtime verification separately records `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or `unbound` failure transition.
 
 Rollback is an operation, not another fix state. When an applied or verified patch is successfully rolled back, the new child session returns to `proposed`: the causal patch proposal remains known, but the current workspace no longer contains the applied fix. A rollback child is therefore forbidden from retaining `verified` or `applied-unverified`.
 
@@ -96,7 +96,7 @@ record exact post-state identity
 
 ## Receipt-bound rollback operation
 
-Rollback first verifies **all** targets still match the snapshot's recorded post-patch identity. Any user drift causes refusal before restoration, and no rollback child session is written. Restore bytes are staged privately before mutation. Filesystem races that still produce a partial restore are surfaced explicitly rather than hidden.
+Rollback first validates the parent Receipt-bound snapshot id, digest and exact patch path set, then validates internal before/after path identities and original restore bytes. It verifies **all** targets still match the snapshot's recorded post-patch identity. Any user drift causes refusal before restoration, and no rollback child session is written. Restore bytes are staged privately before mutation. Filesystem races that still produce a partial restore are surfaced explicitly rather than hidden.
 
 A successful rollback is then persisted as a new append-only child session rather than returned as an unrecorded transient result. The child binds:
 

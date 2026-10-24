@@ -42,8 +42,15 @@ function validateRollbackBinding(session){
 function validateStoredSession(session){
   if(!session||typeof session!=='object'||Array.isArray(session))throw Object.assign(new Error('Stored Debug session is invalid.'),{code:'EDEBUGSESSION'});
   const receipt=validateReceipt(session.receipt);
-  if(receipt.sessionId!==session.sessionId||receipt.evidenceDigest!==session.evidence?.digest||receipt.investigationDigest!==computeInvestigationDigest(session.investigation)||receipt.ledgerDigest!==stableDigest(session.ledger||{})||receipt.verificationDigest!==stableDigest(session.verification||{})||receipt.patchStateDigest!==stableDigest(session.patch||{})||receipt.lineageDigest!==stableDigest(session.lineage||{}))throw Object.assign(new Error('Stored Debug session binding is stale or modified.'),{code:'EDEBUGSESSIONBINDING'});
+  if(receipt.sessionId!==session.sessionId||receipt.fixStatus!==session.fixStatus||receipt.evidenceDigest!==session.evidence?.digest||receipt.investigationDigest!==computeInvestigationDigest(session.investigation)||receipt.ledgerDigest!==stableDigest(session.ledger||{})||receipt.verificationDigest!==stableDigest(session.verification||{})||receipt.patchStateDigest!==stableDigest(session.patch||{})||receipt.lineageDigest!==stableDigest(session.lineage||{}))throw Object.assign(new Error('Stored Debug session binding is stale or modified.'),{code:'EDEBUGSESSIONBINDING'});
   if(!hasAuthorizedPatch(session.investigation))throw Object.assign(new Error('Stored Debug session contains a patch without supported causal-verifier authorization.'),{code:'EDEBUGPATCHAUTH'});
+  const verification=session.verification||{};
+  if(session.fixStatus==='verified'||verification.status==='passed'){
+    const baseline=session.evidence?.reproduction,after=verification.afterSummary,commandDigest=session.evidence?.command?.commandDigest;
+    const bound=/^[0-9a-f]{64}$/.test(String(commandDigest||''))&&commandDigest===baseline?.commandDigest&&commandDigest===after?.commandDigest&&commandDigest===verification.commandDigest;
+    const baselineMatches=baseline&&stableDigest(baseline)===stableDigest(verification.baselineSummary);
+    if(session.fixStatus!=='verified'||verification.status!=='passed'||!bound||!baselineMatches||!baseline.reproducibleFailure||!baseline.failures||!verification.baselineObserved||!verification.mutationObserved||!(after.runs>0)||after.failures!==0||after.passes!==after.runs||verification.failureTransition?.status!=='resolved')throw Object.assign(new Error('Verified Debug state requires a bound reproduction command, observed mutation, and a resolved failing baseline.'),{code:'EDEBUGVERIFICATIONBINDING'});
+  }
   validateRollbackBinding(session);
   return freeze(session);
 }

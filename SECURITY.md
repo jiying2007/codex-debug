@@ -19,6 +19,7 @@ Every failure input may be attacker controlled: logs, source snippets, commit su
 - `git apply --check --whitespace=error-all` is mandatory before mutation.
 - Applying a persisted patch requires the current workspace content-state fingerprint to match the evidence-time state; stale model patches fail closed.
 - Applied paths are privately snapshotted before mutation. Symlink/junction parents, symlink targets, non-regular files and hard-linked files are rejected.
+- Rollback rejects a substituted snapshot unless its id, digest and path set match the parent Receipt; internal before/after paths and restore bytes are validated before any mutation.
 - Rollback verifies every current target still equals its recorded post-patch identity before staging any restore. User edits after apply cause refusal instead of overwrite.
 - Successful rollback is itself append-only state: it creates a new child session and new Debug Receipt rather than mutating the applied/verified parent.
 - A completed rollback child cannot retain `verified` or `applied-unverified`; it returns to `proposed` because the current workspace no longer contains the applied fix.
@@ -27,7 +28,7 @@ Every failure input may be attacker controlled: logs, source snippets, commit su
 - Sessions are append-only: an existing session ID is never overwritten. Session IDs include random entropy, and session directories/files reject symlink/hardlink aliasing.
 - Debug Receipts self-digest metadata and bind evidence, investigation, ledger, verification, patch state and lineage. Receipts are integrity records, not signatures from a remote trust authority.
 - Automatic source-window/test-impact reads remain inside the workspace real path and reject symlink/junction escape.
-- A successful unbound command never upgrades a fix to `verified`.
+- A successful unbound command never upgrades a fix to `verified`. Original and post-change command digests must match; stored verified state independently rechecks command identity, baseline identity, observed mutation and all-pass counts.
 - A verified fix does not automatically confirm a root-cause hypothesis; only a verifier-supported hypothesis may transition to `confirmed` when runtime evidence also succeeds.
 - VS Code execution surfaces require Workspace Trust.
 - Provider secret values are sourced through environment/auth configuration and are not accepted as CLI secret values.
@@ -154,7 +155,7 @@ This is still **not an OS sandbox**. Historical code can execute with the curren
 
 ## Patch snapshot and receipt-bound rollback safety
 
-`--apply-session` and the VS Code Apply command snapshot only validated patch paths. The snapshot records original bytes plus expected post-apply identity. `--rollback-session` restores only if every target still matches the expected post-patch identity.
+`--apply-session` and the VS Code Apply command snapshot only validated patch paths. The snapshot records original bytes plus expected post-apply identity. Its loaded id, digest and exact path set must match the parent Receipt, and the original restore bytes must match their declared size and hash; substitution or re-labelling of a different valid snapshot fails before any write. `--rollback-session` restores only if every target still matches the expected post-patch identity.
 
 Rollback rejects path traversal, internal product state, symlink/junction traversal, symlink targets, non-regular targets and hard-linked files. Restore bytes are staged before mutation. A partial restore caused by an external race/filesystem failure is reported explicitly.
 

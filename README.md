@@ -67,10 +67,10 @@ A successful command alone is **not** a verified fix. `verified` requires:
 1. an observed explicit reproduction failure;
 2. a sufficiently reproducible baseline (`1/1` failure, or at least two repeated failures sharing one normalized failure signature);
 3. an independently observed workspace content-state mutation after that baseline;
-4. every bounded post-change verification run passes;
+4. every bounded post-change verification run passes and its `commandDigest` exactly matches the original reproduction command;
 5. the stored session still validates its evidence, investigation, ledger, verification, patch-state and lineage digests.
 
-A log plus an unrelated green test is `passed-unbound`, not `verified`. Runtime verification also records whether the failure transition is `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or unbound.
+A log plus an unrelated green test is `passed-unbound`, not `verified`. An unrelated command remains unbound even when an original failing baseline and a workspace mutation both exist; it cannot mark that original failure resolved or confirm a hypothesis. Persisted `verified` state independently rechecks this command and baseline binding. Older sessions that did not record the reproduction command identity cannot acquire verified status from a new green run; collect a new failing baseline first. Runtime verification also records whether the failure transition is `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or unbound.
 
 **A verified fix does not by itself confirm a root-cause hypothesis.** `verified` proves the observed failure transition after a workspace mutation. A hypothesis can become `confirmed` only when it was already causally `supported` and the bound runtime verification then succeeds. Deterministic-only classification can therefore verify that a change resolved a failure without inventing a causal explanation.
 
@@ -189,7 +189,7 @@ codex-debug --rollback-session dbg-fedcba9876543210
 
 `--apply-session` first requires the current workspace content-state fingerprint to match the evidence-time state and rechecks that the persisted patch still has `supported + accept` causal-verifier authorization. It validates the patch, then writes a private bounded snapshot under `.codex-debug/snapshots/`.
 
-`--rollback-session` restores only recorded patch paths and **refuses** when any path has drifted after patch application, so later user edits are never overwritten. On success, rollback does not mutate the source session: it writes a new append-only child session with a new random session id and a new Debug Receipt. The child binds its parent session/fingerprint, exact snapshot id, restored paths, rollback digest, workspace fingerprints before/after rollback, `patch.applied=false`, `patch.rolledBack=true`, and verification-side rollback observation through the existing lineage/patch-state/verification digests. The CLI returns that new child id and Receipt.
+`--rollback-session` first matches the loaded snapshot against the parent Receipt's `snapshotId`, `snapshotDigest` and exact patch path set. Internal snapshot ids, before/after path sets and original restore bytes must agree; another valid snapshot cannot substitute for the bound one (`ESNAPSHOTBINDING`). It restores only recorded patch paths and **refuses** when any path has drifted after patch application, so later user edits are never overwritten. On success, rollback does not mutate the source session: it writes a new append-only child session with a new random session id and a new Debug Receipt. The child binds its parent session/fingerprint, exact snapshot id, restored paths, rollback digest, workspace fingerprints before/after rollback, `patch.applied=false`, `patch.rolledBack=true`, and verification-side rollback observation through the existing lineage/patch-state/verification digests. The CLI returns that new child id and Receipt.
 
 A rollback child returns to `proposed`, even when its parent was `verified`. Re-consuming the completed rollback child is rejected with `EROLLBACKCONSUMED`. Semantically inconsistent persisted rollback metadata is rejected with `EDEBUGROLLBACKBINDING`. If drift blocks rollback, no child Receipt is written that could falsely claim restoration.
 

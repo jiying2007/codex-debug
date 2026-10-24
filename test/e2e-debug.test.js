@@ -6,8 +6,9 @@ const os=require('node:os');
 const path=require('node:path');
 const {execFileSync}=require('node:child_process');
 const {runDebugSession,resumeDebugSession,applyDebugSessionPatch,rollbackDebugSession}=require('../src/debug');
-const {createDebugReceipt,makeSessionId,validateStoredSession}=require('../src/contracts');
+const {createDebugReceipt,makeSessionId,validateStoredSession,stableDigest}=require('../src/contracts');
 const {writeSession,readSession}=require('../src/session-store');
+const {createWorkspaceSnapshot,finalizeWorkspaceSnapshot,writeWorkspaceSnapshot,snapshotDirectory}=require('../src/workspace-snapshot');
 
 function init(){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-e2e-'));
@@ -131,5 +132,43 @@ test('apply entrypoint rejects a receipt-valid patch without supported causal au
     const unauthorized=withUnauthorizedFixturePatch(first,dir);
     await assert.rejects(()=>applyDebugSessionPatch({workspace:dir,sessionId:unauthorized.sessionId}),error=>error?.code==='EDEBUGPATCHAUTH');
     assert.equal(fs.readFileSync(target,'utf8').trim(),'bad');
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('an unrelated green command cannot verify or resolve the original failing reproduction',async()=>{
+  const dir=init();
+  try{
+    const first=await runDebugSession({workspace:dir,command:'node reproduce.js',reproRuns:2,deterministicOnly:true,persist:true});
+    fs.writeFileSync(path.join(dir,'README.md'),'unrelated change\n');
+    const resumed=await resumeDebugSession({workspace:dir,resume:first.sessionId,verifyCommand:'node -e "process.exit(0)"',verifyRuns:2,persist:true});
+    assert.equal(resumed.verification.afterSummary.passes,2);
+    assert.equal(resumed.verification.mutationObserved,true);
+    assert.equal(resumed.verification.status,'passed-unbound');
+    assert.equal(resumed.verification.failureTransition.status,'unbound');
+    assert.equal(resumed.fixStatus,'diagnosed');
+    assert.notEqual(resumed.evidence.reproduction.commandDigest,resumed.verification.afterSummary.commandDigest);
+    assert.equal(resumed.ledger.entries.some(h=>h.status==='confirmed'),false);
+    assert.equal(validateStoredSession(readSession(dir,resumed.sessionId)).fixStatus,'diagnosed');
+    assert.throws(()=>execFileSync('node',['reproduce.js'],{cwd:dir,stdio:'pipe'}),error=>error.status===1);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+for(const relabel of [false,true])test(`rollback rejects a different valid snapshot before restoring any file (relabel=${relabel})`,async()=>{
+  const dir=init();
+  try{
+    const first=await runDebugSession({workspace:dir,command:'node reproduce.js',reproRuns:2,deterministicOnly:true,persist:true});
+    const proposed=withFixturePatch(first,dir),applied=await applyDebugSessionPatch({workspace:dir,sessionId:proposed.sessionId});
+    fs.writeFileSync(path.join(dir,'unrelated.txt'),'unrelated-before\n');
+    const other=createWorkspaceSnapshot(dir,['unrelated.txt']);
+    fs.writeFileSync(path.join(dir,'unrelated.txt'),'unrelated-after\n');
+    let replacement=finalizeWorkspaceSnapshot(dir,other);
+    if(relabel){const payload={...replacement,snapshotId:applied.patch.snapshotId};delete payload.digest;replacement={...payload,digest:stableDigest(payload)};}
+    writeWorkspaceSnapshot(dir,replacement);
+    const destination=path.join(snapshotDirectory(dir),`${applied.patch.snapshotId}.json`);
+    fs.writeFileSync(destination,JSON.stringify(replacement));
+    assert.throws(()=>rollbackDebugSession({workspace:dir,sessionId:applied.sessionId}),error=>error.code==='ESNAPSHOTBINDING');
+    assert.equal(fs.readFileSync(path.join(dir,'state.txt'),'utf8'),'good\n');
+    assert.equal(fs.readFileSync(path.join(dir,'unrelated.txt'),'utf8'),'unrelated-after\n');
+    assert.equal(fs.existsSync(path.join(snapshotDirectory(dir),'staging')),false);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

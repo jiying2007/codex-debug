@@ -6,7 +6,7 @@ const {buildDebugEvidence,readBoundedFile}=require('./evidence');
 const {collectGitContext}=require('./git-context');
 const {createHypothesisLedger,confirmHypothesis}=require('./hypothesis-ledger');
 const {runCodexInvestigation,runCodexCausalVerification,applyCausalVerification}=require('./codex');
-const {runReproductionSeries,compareFailureSignatures}=require('./reproduction');
+const {runReproductionSeries,compareFailureSignatures,sameCommand}=require('./reproduction');
 const {gitApply}=require('./patch');
 const {applyPatchWithSnapshot}=require('./patch-transaction');
 const {rollbackWorkspaceSnapshot}=require('./workspace-snapshot');
@@ -53,12 +53,13 @@ function determineFixStatus({investigation,patchResult,verification}){
 function verificationStatus(beforeSummary,afterSummary,mutationObserved){
   const baselineStrong=Boolean(beforeSummary?.reproducibleFailure);
   const postAllPass=Boolean(afterSummary&&afterSummary.runs>0&&afterSummary.failures===0);
-  if(postAllPass&&baselineStrong&&mutationObserved)return 'passed';
+  if(postAllPass&&baselineStrong&&mutationObserved&&sameCommand(beforeSummary,afterSummary))return 'passed';
   if(postAllPass)return 'passed-unbound';
   return 'failed';
 }
 
 function confirmSupported(ledger,beforeSummary,afterSummary){
+  if(!beforeSummary?.reproducibleFailure||!sameCommand(beforeSummary,afterSummary)||!(afterSummary?.runs>0)||afterSummary.failures!==0)return ledger;
   const supported=ledger.entries.find(h=>h.status==='supported');
   return supported?confirmHypothesis(ledger,supported.id,{verificationEvidence:[`Observed ${beforeSummary.failures}/${beforeSummary.runs} failing baseline runs, an independently observed workspace-state mutation, and ${afterSummary.passes}/${afterSummary.runs} passing post-change runs.`]}):ledger;
 }
@@ -127,6 +128,7 @@ async function runDebugSession(options={}){
   }
 
   const evidence=buildDebugEvidence({text,source,kind:options.kind||'auto',workspace,git:gitContext,commandResult:before,reproductionSummary:beforeSummary,artifactSpecs:options.artifacts||[],maxArtifactBytes:Number(options.maxArtifactBytes||32*1024*1024),symbolization,embeddedSymbols,platformSymbols,bisect});
+  beforeSummary=evidence.reproduction;
   const sessionId=makeSessionId(evidence.digest);
   let modelResult=null,causalResult=null,investigation;
   if(options.deterministicOnly){
@@ -184,7 +186,7 @@ async function resumeDebugSession(options={}){
   const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true});
   let ledger=previous.ledger;
   if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary);
-  const fixStatus=verification.status==='passed'?'verified':mutationObserved?'regressed':previous.fixStatus;
+  const fixStatus=determineFixStatus({investigation:previous.investigation,patchResult:previous.patch,verification});
   const sessionId=makeSessionId(previous.evidence.digest);
   const lineage={parentSessionId:previous.sessionId,parentDebugFingerprint:previous.receipt.debugFingerprint,resumedAt:new Date().toISOString()};
   const receipt=createDebugReceipt({sessionId,evidence:previous.evidence,investigation:previous.investigation,ledger,verification,patchResult:previous.patch||null,lineage,fixStatus,model:previous.receipt?.model||'',codexVersion:previous.receipt?.codexVersion||''});
@@ -226,7 +228,7 @@ function rollbackDebugSession(options={}){
   const snapshotId=previous.patch?.snapshotId;
   if(!snapshotId)throw Object.assign(new Error('Stored session has no patch rollback snapshot.'),{code:'ENOROLLBACKSNAPSHOT'});
 
-  const rollback=rollbackWorkspaceSnapshot(root,snapshotId);
+  const rollback=rollbackWorkspaceSnapshot(root,snapshotId,{snapshotDigest:previous.patch.snapshotDigest,paths:previous.patch.paths});
   const after=collectGitContext(workspace,{includeHistory:false});
   const rollbackOperation=freeze({
     schemaVersion:1,
