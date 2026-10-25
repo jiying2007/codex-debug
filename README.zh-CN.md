@@ -67,10 +67,10 @@ verifier 接受的 patch                    仍然 inert
 1. 产品通过显式 reproduction command 真实观察到失败；
 2. baseline 足够可重复：单次 `1/1` 失败，或多轮中至少两次失败共享同一归一化 failure signature；
 3. baseline 后产品独立观察到 workspace 内容状态发生变化；
-4. 有界 post-change verification 所有轮次全部通过；
+4. 有界 post-change verification 所有轮次全部通过，且 `commandDigest` 与原 reproduction command 精确一致；
 5. stored session 的 evidence / investigation / ledger / verification / patch-state / lineage digest 全部仍然匹配。
 
-因此“给一个 crash.log，再跑一个无关绿色测试”最多只是 `passed-unbound`。Runtime verification 还会记录 failure transition：`resolved`、`same-failure`、`different-failure`、`mixed-failure` 或 unbound。
+因此“给一个 crash.log，再跑一个无关绿色测试”最多只是 `passed-unbound`。即使已经记录原始失败 baseline 且工作区发生变化，不同命令的绿色结果也不能宣称原故障 resolved，不能确认 hypothesis；持久化 `verified` 状态读取时会独立复核命令与 baseline 绑定。没有记录 reproduction command 身份的旧 session，不能仅凭新一次绿色验证升级为 verified；必须先重新采集失败 baseline。Runtime verification 还会记录 failure transition：`resolved`、`same-failure`、`different-failure`、`mixed-failure` 或 unbound。
 
 **修复进入 `verified` 并不自动等于根因 hypothesis 被确认。** `verified` 只证明工作区发生变化后，原先可重复的 failure 在绑定的验证中消失；只有已经被因果 verifier 标成 `supported` 的 hypothesis，才能在后续 runtime verification 成功后升级成 `confirmed`。
 
@@ -165,7 +165,7 @@ codex-debug --rollback-session dbg-fedcba9876543210
 
 `--apply-session` 必须先证明当前 workspace 内容状态仍与 evidence-time fingerprint 一致，并重新检查 stored patch 仍然满足 causal verifier 的 `supported + accept`，然后才通过 patch check 并在 `.codex-debug/snapshots/` 建立私有有界快照。
 
-`--rollback-session` 只恢复记录过的 patch paths；如果其中任一文件在 apply 后又被修改，会直接拒绝 rollback，绝不覆盖用户后续修改。成功 rollback **不会修改原 applied/verified session**，而是创建新的 append-only child session、新随机 session id 和新 Debug Receipt。child 会把 parent session/fingerprint、精确 snapshot id、恢复路径、rollback digest、rollback 前后 workspace state fingerprint、`patch.applied=false`、`patch.rolledBack=true` 以及 verification 中的 rollback observation 一起绑定到现有 lineage / patch-state / verification digest 中。CLI 返回这个新 child 的 session id 和 Receipt。
+`--rollback-session` 在任何恢复写入之前，先核对父 Receipt 绑定的 `snapshotId`、`snapshotDigest` 和精确 patch path set；快照内部 id、before/after 路径集合及原始恢复字节也必须一致。把另一份合法快照放到原文件名下仍会因 `ESNAPSHOTBINDING` 被拒绝。它只恢复记录过的 patch paths；如果其中任一文件在 apply 后又被修改，会直接拒绝 rollback，绝不覆盖用户后续修改。成功 rollback **不会修改原 applied/verified session**，而是创建新的 append-only child session、新随机 session id 和新 Debug Receipt。child 会把 parent session/fingerprint、精确 snapshot id、恢复路径、rollback digest、rollback 前后 workspace state fingerprint、`patch.applied=false`、`patch.rolledBack=true` 以及 verification 中的 rollback observation 一起绑定到现有 lineage / patch-state / verification digest 中。CLI 返回这个新 child 的 session id 和 Receipt。
 
 即使 parent 已是 `verified`，rollback child 也必须回到 `proposed`。再次拿已完成 rollback 的 child 消费原 snapshot 会返回 `EROLLBACKCONSUMED`；持久化 rollback 元数据即使各自被重新计算，但彼此语义不一致，也会因 `EDEBUGROLLBACKBINDING` 被拒绝。如果 drift 导致 rollback 失败，则不会写入一个错误宣称“已经恢复”的 child Receipt。
 

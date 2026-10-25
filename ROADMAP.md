@@ -8,6 +8,8 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] two-pass hypothesis generation + independent causal verification
 - [x] hypothesis ledger where the model cannot self-confirm
 - [x] strict separation between `verified` fix and `confirmed` root-cause hypothesis
+- [x] original reproduction command binding and persisted verified-state validation
+- [x] Receipt-bound snapshot id/digest/path validation before rollback restores bytes
 - [x] deterministic and executable false-fix/regression-escape quality gates
 - [x] source windows, blame/history, causal commit candidates and workspace freshness with symlink/junction escape refusal
 - [x] append-only self-digested Debug Receipts and receipt-bound sessions/rollback lineage
@@ -37,7 +39,7 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] Admission v2 self-digest and independent reconstruction bind repository governance, Qualification, model evidence and admission policy into one downstream authority record
 - [x] shipped Product Contract exposes Promotion Transition v1, Promotion Qualification v1, Admission Policy v1, Admission v2, Governance Lock v1, Governance Receipt v2 and Calibration Report v1
 - [x] manifest gate cross-checks shipped Promotion schema versions directly against implementation module constants
-- [x] package / package-lock / product-contract development identity gated as one version (`0.1.13` for this line)
+- [x] package / package-lock / product-contract development identity gated as one version (`0.1.14` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
@@ -63,4 +65,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.13 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.14 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.
