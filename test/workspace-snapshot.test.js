@@ -33,3 +33,35 @@ test('snapshot restore bytes and before/after paths must match their declared id
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 test('snapshot rejects paths that traverse a symlinked parent directory',t=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-symlink-')),outside=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-outside-'));try{fs.writeFileSync(path.join(outside,'external.txt'),'outside');try{fs.symlinkSync(outside,path.join(root,'linked'),process.platform==='win32'?'junction':'dir');}catch(error){if(process.platform==='win32'&&(error.code==='EPERM'||error.code==='EACCES')){t.skip('Windows runner does not permit symlink/junction creation');return;}throw error;}assert.throws(()=>createWorkspaceSnapshot(root,['linked/external.txt']),/symbolic-link parent/);assert.equal(fs.readFileSync(path.join(outside,'external.txt'),'utf8'),'outside');}finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});}});
+
+test('snapshot storage cannot follow an external snapshots directory symlink or junction',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-storage-'));
+  const outside=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-external-'));
+  try{
+    fs.writeFileSync(path.join(root,'a.txt'),'before');
+    fs.writeFileSync(path.join(outside,'sentinel'),'untouched');
+    const parent=path.join(root,'.codex-debug');fs.mkdirSync(parent);
+    try{fs.symlinkSync(outside,path.join(parent,'snapshots'),process.platform==='win32'?'junction':'dir');}
+    catch(error){if(process.platform==='win32'&&['EPERM','EACCES'].includes(error.code)){t.skip('Windows symlink privileges unavailable');return;}throw error;}
+    const snap=createWorkspaceSnapshot(root,['a.txt']);fs.writeFileSync(path.join(root,'a.txt'),'after');
+    const finalized=finalizeWorkspaceSnapshot(root,snap);
+    assert.throws(()=>writeWorkspaceSnapshot(root,finalized),error=>error.code==='ESNAPSHOTBOUNDARY');
+    assert.equal(fs.readFileSync(path.join(outside,'sentinel'),'utf8'),'untouched');
+    assert.equal(fs.existsSync(path.join(outside,`${finalized.snapshotId}.json`)),false);
+  }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});}
+});
+test('rollback rejects an external staging symlink before cleanup',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-stage-'));
+  const outside=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-external-stage-'));
+  try{
+    fs.writeFileSync(path.join(root,'a.txt'),'before');
+    const snap=createWorkspaceSnapshot(root,['a.txt']);fs.writeFileSync(path.join(root,'a.txt'),'patched');
+    const finalized=finalizeWorkspaceSnapshot(root,snap);writeWorkspaceSnapshot(root,finalized);
+    fs.writeFileSync(path.join(outside,'sentinel'),'must-stay');
+    try{fs.symlinkSync(outside,path.join(root,'.codex-debug','snapshots','staging'),process.platform==='win32'?'junction':'dir');}
+    catch(error){if(process.platform==='win32'&&['EPERM','EACCES'].includes(error.code)){t.skip('Windows symlink privileges unavailable');return;}throw error;}
+    assert.throws(()=>rollbackWorkspaceSnapshot(root,finalized.snapshotId,{snapshotDigest:finalized.digest,paths:finalized.paths}),error=>error.code==='ESNAPSHOTBOUNDARY');
+    assert.equal(fs.readFileSync(path.join(outside,'sentinel'),'utf8'),'must-stay');
+    assert.equal(fs.readFileSync(path.join(root,'a.txt'),'utf8'),'patched');
+  }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});}
+});
