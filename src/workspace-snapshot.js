@@ -66,11 +66,13 @@ function writeWorkspaceSnapshot(root,snapshot){
 }
 function readWorkspaceSnapshot(root,snapshotId){
   const expected=safeSnapshotId(snapshotId),file=path.join(snapshotDirectory(root),`${expected}.json`);
+  const entry=fs.lstatSync(file);
+  if(entry.isSymbolicLink()||!entry.isFile())throw Object.assign(new Error('Snapshot metadata file is not a regular file.'),{code:'ESNAPSHOTBOUNDARY'});
   const fd=fs.openSync(file,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
   let raw;
   try{
     const stat=fs.fstatSync(fd);
-    if(!stat.isFile()||Number(stat.nlink||1)!==1||stat.size>16*1024*1024)throw Object.assign(new Error('Unsafe snapshot storage file.'),{code:'ESNAPSHOTBOUNDARY'});
+    if(!stat.isFile()||Number(stat.nlink||1)!==1||stat.size>16*1024*1024||stat.ino!==entry.ino||stat.dev!==entry.dev)throw Object.assign(new Error('Unsafe snapshot storage file.'),{code:'ESNAPSHOTBOUNDARY'});
     raw=fs.readFileSync(fd,'utf8');
   }finally{fs.closeSync(fd);}
   const snapshot=validateSnapshot(JSON.parse(raw));
