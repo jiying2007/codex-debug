@@ -1,6 +1,25 @@
 'use strict';
 const fs=require('node:fs');const path=require('node:path');const {stableDigest,freeze}=require('./contracts');
-function snapshotDirectory(root){return path.join(path.resolve(root),'.codex-debug','snapshots');}
+function verifiedDirectory(parent,name,create=false){
+  const dir=path.join(parent,name);
+  if(create){try{fs.mkdirSync(dir,{mode:0o700});}catch(error){if(error.code!=='EEXIST')throw error;}}
+  const stat=fs.lstatSync(dir);
+  if(stat.isSymbolicLink()||!stat.isDirectory())throw Object.assign(new Error(`Unsafe snapshot storage directory: ${dir}`),{code:'ESNAPSHOTBOUNDARY'});
+  return dir;
+}
+function snapshotDirectory(root,{create=false}={}){
+  const base=realRoot(root);
+  const privateRoot=verifiedDirectory(base,'.codex-debug',create);
+  return verifiedDirectory(privateRoot,'snapshots',create);
+}
+function stagingDirectory(root,create=false){return verifiedDirectory(snapshotDirectory(root,{create}),'staging',create);}
+function cleanupStaging(root,staging){
+  const base=stagingDirectory(root);
+  if(path.dirname(staging)!==base)throw Object.assign(new Error('Snapshot staging path escaped its private directory.'),{code:'ESNAPSHOTBOUNDARY'});
+  const stat=fs.lstatSync(staging);
+  if(stat.isSymbolicLink()||!stat.isDirectory())throw Object.assign(new Error('Snapshot staging directory was replaced.'),{code:'ESNAPSHOTBOUNDARY'});
+  fs.rmSync(staging,{recursive:true,force:true});
+}
 function safeSnapshotId(value){const id=String(value||'');if(!/^snap-[0-9a-f]{16}$/.test(id))throw Object.assign(new Error('Invalid workspace snapshot id.'),{code:'ESNAPSHOTID'});return id;}
 function realRoot(root){const absolute=path.resolve(root);try{return fs.realpathSync(absolute);}catch(error){throw Object.assign(new Error(`Workspace snapshot root is unavailable: ${error.message}`),{code:'ESNAPSHOTROOT'});}}
 function assertNoSymlinkParents(root,relative){let cursor=root;const parts=String(relative||'').split('/').filter(Boolean);for(const part of parts.slice(0,-1)){cursor=path.join(cursor,part);let stat;try{stat=fs.lstatSync(cursor);}catch(error){if(error.code==='ENOENT')break;throw error;}if(stat.isSymbolicLink())throw Object.assign(new Error(`Snapshot path traverses a symbolic-link parent: ${relative}`),{code:'ESNAPSHOTSYMLINK'});if(!stat.isDirectory())throw Object.assign(new Error(`Snapshot parent is not a directory: ${relative}`),{code:'ESNAPSHOTTYPE'});}}
@@ -37,10 +56,29 @@ function validateSnapshot(snapshot){
   }
   return freeze(snapshot);
 }
-function writeWorkspaceSnapshot(root,snapshot){const value=validateSnapshot(snapshot),dir=snapshotDirectory(root);fs.mkdirSync(dir,{recursive:true,mode:0o700});const target=path.join(dir,`${value.snapshotId}.json`),temp=`${target}.${process.pid}.tmp`;fs.writeFileSync(temp,`${JSON.stringify(value,null,2)}\n`,{encoding:'utf8',mode:0o600});fs.renameSync(temp,target);return target;}
-function readWorkspaceSnapshot(root,snapshotId){const expected=safeSnapshotId(snapshotId),file=path.join(snapshotDirectory(root),`${expected}.json`),snapshot=validateSnapshot(JSON.parse(fs.readFileSync(file,'utf8')));if(snapshot.snapshotId!==expected)throw Object.assign(new Error('Workspace snapshot id does not match the requested snapshot.'),{code:'ESNAPSHOTBINDING'});return snapshot;}
-function prepareRestore(root,snapshot){const staging=path.join(snapshotDirectory(root),'staging',snapshot.snapshotId);fs.rmSync(staging,{recursive:true,force:true});fs.mkdirSync(staging,{recursive:true,mode:0o700});const prepared=[];try{for(let index=0;index<snapshot.before.length;index++){const state=snapshot.before[index],target=safePath(root,state.path);if(state.exists){const currentExists=fs.existsSync(target.absolute);if(currentExists)captureState(root,state.path,{includeContent:false});fs.mkdirSync(path.dirname(target.absolute),{recursive:true});const temp=path.join(staging,`${String(index).padStart(4,'0')}.bin`);fs.writeFileSync(temp,Buffer.from(state.contentBase64,'base64'),{mode:0o600});prepared.push({state,target,temp});}else prepared.push({state,target,temp:null});}return {staging,prepared};}catch(error){fs.rmSync(staging,{recursive:true,force:true});throw error;}}
-function restoreBeforeUnchecked(root,snapshot){const {staging,prepared}=prepareRestore(root,snapshot),failures=[];try{for(const item of prepared){try{const {state,target,temp}=item;if(!state.exists){try{const stat=fs.lstatSync(target.absolute);if(stat.isSymbolicLink()||!stat.isFile()||Number(stat.nlink||1)>1)throw new Error(`Cannot remove unsafe rollback target: ${state.path}`);fs.unlinkSync(target.absolute);}catch(error){if(error.code!=='ENOENT')throw error;}continue;}if(fs.existsSync(target.absolute))captureState(root,state.path,{includeContent:false});fs.copyFileSync(temp,target.absolute);try{fs.chmodSync(target.absolute,state.mode);}catch{}}catch(error){failures.push({path:item.state.path,error:String(error.message||error)});}}}finally{fs.rmSync(staging,{recursive:true,force:true});}if(failures.length){const error=Object.assign(new Error(`Rollback restore was partial for ${failures.map(v=>v.path).join(', ')}`),{code:'EROLLBACKPARTIAL',failures});throw error;}}
+function writeWorkspaceSnapshot(root,snapshot){
+  const value=validateSnapshot(snapshot),dir=snapshotDirectory(root,{create:true});
+  const target=path.join(dir,`${value.snapshotId}.json`);
+  const temp=path.join(dir,`${value.snapshotId}.${process.pid}.${require('node:crypto').randomBytes(8).toString('hex')}.tmp`);
+  try{fs.writeFileSync(temp,`${JSON.stringify(value,null,2)}\n`,{encoding:'utf8',mode:0o600,flag:'wx'});snapshotDirectory(root);fs.renameSync(temp,target);}
+  finally{try{fs.unlinkSync(temp);}catch(error){if(error.code!=='ENOENT')throw error;}}
+  return target;
+}
+function readWorkspaceSnapshot(root,snapshotId){
+  const expected=safeSnapshotId(snapshotId),file=path.join(snapshotDirectory(root),`${expected}.json`);
+  const fd=fs.openSync(file,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
+  let raw;
+  try{
+    const stat=fs.fstatSync(fd);
+    if(!stat.isFile()||Number(stat.nlink||1)!==1||stat.size>16*1024*1024)throw Object.assign(new Error('Unsafe snapshot storage file.'),{code:'ESNAPSHOTBOUNDARY'});
+    raw=fs.readFileSync(fd,'utf8');
+  }finally{fs.closeSync(fd);}
+  const snapshot=validateSnapshot(JSON.parse(raw));
+  if(snapshot.snapshotId!==expected)throw Object.assign(new Error('Workspace snapshot id does not match the requested snapshot.'),{code:'ESNAPSHOTBINDING'});
+  return snapshot;
+}
+function prepareRestore(root,snapshot){const staging=fs.mkdtempSync(path.join(stagingDirectory(root,true),`${snapshot.snapshotId}-`));const prepared=[];try{for(let index=0;index<snapshot.before.length;index++){const state=snapshot.before[index],target=safePath(root,state.path);if(state.exists){const currentExists=fs.existsSync(target.absolute);if(currentExists)captureState(root,state.path,{includeContent:false});fs.mkdirSync(path.dirname(target.absolute),{recursive:true});const temp=path.join(staging,`${String(index).padStart(4,'0')}.bin`);fs.writeFileSync(temp,Buffer.from(state.contentBase64,'base64'),{mode:0o600});prepared.push({state,target,temp});}else prepared.push({state,target,temp:null});}return {staging,prepared};}catch(error){cleanupStaging(root,staging);throw error;}}
+function restoreBeforeUnchecked(root,snapshot){const {staging,prepared}=prepareRestore(root,snapshot),failures=[];try{for(const item of prepared){try{const {state,target,temp}=item;if(!state.exists){try{const stat=fs.lstatSync(target.absolute);if(stat.isSymbolicLink()||!stat.isFile()||Number(stat.nlink||1)>1)throw new Error(`Cannot remove unsafe rollback target: ${state.path}`);fs.unlinkSync(target.absolute);}catch(error){if(error.code!=='ENOENT')throw error;}continue;}if(fs.existsSync(target.absolute))captureState(root,state.path,{includeContent:false});fs.copyFileSync(temp,target.absolute);try{fs.chmodSync(target.absolute,state.mode);}catch{}}catch(error){failures.push({path:item.state.path,error:String(error.message||error)});}}}finally{cleanupStaging(root,staging);}if(failures.length){const error=Object.assign(new Error(`Rollback restore was partial for ${failures.map(v=>v.path).join(', ')}`),{code:'EROLLBACKPARTIAL',failures});throw error;}}
 function rollbackWorkspaceSnapshot(root,snapshotId,{snapshotDigest,paths}={}){
   const snapshot=readWorkspaceSnapshot(root,snapshotId);
   if(!/^[0-9a-f]{64}$/.test(String(snapshotDigest||''))||snapshot.digest!==snapshotDigest||stableDigest(pathSet(paths))!==stableDigest(pathSet(snapshot.paths)))throw Object.assign(new Error('Workspace snapshot does not match the Receipt-bound digest and patch paths.'),{code:'ESNAPSHOTBINDING'});
