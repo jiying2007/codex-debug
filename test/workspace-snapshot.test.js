@@ -68,8 +68,8 @@ test('rollback rejects an external staging symlink before cleanup',t=>{
 
 for(const alias of ['hardlink','symlink']){
  test('rollback replacement cannot overwrite an external '+alias+' swapped at the final write boundary',t=>{
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-atomic-restore-'));
-  const outsideDir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-alias-'));
+  const root=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-atomic-restore-')));
+  const outsideDir=fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-alias-')));
   const file=path.join(root,'a.txt'),outside=path.join(outsideDir,'sentinel.txt');
   const aliasAt=target=>alias==='hardlink'?fs.linkSync(outside,target):fs.symlinkSync(outside,target,'file');
   try{
