@@ -65,3 +65,42 @@ test('rollback rejects an external staging symlink before cleanup',t=>{
     assert.equal(fs.readFileSync(path.join(root,'a.txt'),'utf8'),'patched');
   }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});}
 });
+
+for(const alias of ['hardlink','symlink']){
+ test('rollback replacement cannot overwrite an external '+alias+' swapped at the final write boundary',t=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-atomic-restore-'));
+  const outsideDir=fs.mkdtempSync(path.join(os.tmpdir(),'codex-debug-alias-'));
+  const file=path.join(root,'a.txt'),outside=path.join(outsideDir,'sentinel.txt');
+  const aliasAt=target=>alias==='hardlink'?fs.linkSync(outside,target):fs.symlinkSync(outside,target,'file');
+  try{
+   fs.writeFileSync(file,'before');
+   fs.writeFileSync(outside,'external must remain intact');
+   const probe=path.join(root,'probe-link');
+   try{aliasAt(probe);fs.unlinkSync(probe);}catch(error){
+    if(['EPERM','EACCES','ENOTSUP','EOPNOTSUPP'].includes(error.code)){t.skip('This runner cannot create '+alias+' aliases');return;}
+    throw error;
+   }
+   const before=createWorkspaceSnapshot(root,['a.txt']);
+   fs.writeFileSync(file,'after');
+   const snapshot=finalizeWorkspaceSnapshot(root,before);
+   writeWorkspaceSnapshot(root,snapshot);
+   const copy=fs.copyFileSync,rename=fs.renameSync;
+   let injected=false;
+   const inject=dest=>{
+    if(injected||dest!==file)return;
+    injected=true;fs.unlinkSync(file);aliasAt(file);
+   };
+   fs.copyFileSync=function(from,to,...args){inject(to);return copy.call(this,from,to,...args);};
+   fs.renameSync=function(from,to,...args){inject(to);return rename.call(this,from,to,...args);};
+   try{
+    const rolled=rollbackWorkspaceSnapshot(root,snapshot.snapshotId,{snapshotDigest:snapshot.digest,paths:snapshot.paths});
+    assert.equal(rolled.rolledBack,true);
+   }finally{fs.copyFileSync=copy;fs.renameSync=rename;}
+   assert.equal(injected,true,'the race must exercise the final filesystem write');
+   assert.equal(fs.readFileSync(file,'utf8'),'before');
+   assert.equal(fs.readFileSync(outside,'utf8'),'external must remain intact');
+   assert.equal(fs.lstatSync(file).isSymbolicLink(),false);
+   assert.equal(fs.statSync(file).nlink,1);
+  }finally{fs.rmSync(root,{force:true,recursive:true});fs.rmSync(outsideDir,{force:true,recursive:true});}
+ });
+}
