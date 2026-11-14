@@ -5,7 +5,6 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
-const {normalizedUsage}=require('../src/session-budget');
 
 const MODEL_EVAL_VERSION=1;
 const HEX64=/^[0-9a-f]{64}$/;
@@ -21,6 +20,9 @@ function stable(value){
 }
 function stableDigest(value){return crypto.createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');}
 function number(value){const n=Number(value);return Number.isFinite(n)&&n>=0?n:0;}
+// Read-only provenance imports the digest helpers without runtime sources.
+// Load shared usage validation only when an evaluation actually needs it.
+function normalizedUsage(usage){return require('../src/session-budget').normalizedUsage(usage);}
 function phaseEvidence(phase){
   if(!phase)return null;
   const provider=phase.provider||{};
