@@ -1,16 +1,19 @@
 {
   "productContractVersion": 2,
   "productId": "codex-debug-safe",
-  "productVersion": "0.1.14",
+  "productVersion": "0.1.15",
   "lifecycle": "development",
-  "safeCoreVersion": "4.17.5",
-  "safeCoreCommit": "d8ae46fb84787939f6ecf7632ccf8a52b37188fb",
+  "safeCoreVersion": "4.18.5",
+  "safeCoreCommit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
   "safeCoreMajorVersion": 4,
   "safeContractVersion": 2,
   "policySchemaVersion": 4,
   "minimumNodeVersion": "22.22.2",
   "canonicalNodeVersion": "24.19.0",
-  "supportedNodeMajors": [22,24],
+  "supportedNodeMajors": [
+    22,
+    24
+  ],
   "diagnosePromptContractVersion": 1,
   "diagnosisContractVersion": 1,
   "diagnosisReceiptVersion": 2,
@@ -35,6 +38,10 @@
   "promotionRepositoryGovernanceLockVersion": 1,
   "promotionRepositoryGovernanceVersion": 2,
   "promotionCalibrationReportVersion": 1,
-  "safeCoreRuntimeDigest": "a41fa0e2c02d1977d6f1f8e0b7efff0a3d220d1149498c3d4d5a4ecbb1b03808",
-  "safeCoreGovernanceDigest": "c04ae4768ea0029d9d98bd36413cc726e03db74fe1f2522646e07220f0618ab4"
+  "safeCoreRuntimeDigest": "affb2f6f680d8efcdf8ed6a3c5fbd7b009396883be543684f890a82488be2e6c",
+  "safeCoreGovernanceDigest": "dc82a9f762aaa1d83bf5528105be7ac06029da38788e6fd365d2cc81d4fde9e2",
+  "reviewReceiptVersion": 5,
+  "commitReceiptVersion": 4,
+  "judgmentLifecycleVersion": 1,
+  "findingClaimVersion": 1
 }

@@ -242,3 +242,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [ROADMAP
 ## License
 
 MIT
+
+All outbound model prompts use the shared Core likely-secret sanitizer, including source/history text, structured artifacts, platform evidence and draft investigation. Explicit external evidence files remain supported with descriptor-bound size limits. Sessions and snapshots additionally require single-link private files. Git-provided POSIX paths retain literal backslashes through patch application, snapshots and rollback.
+
+Git status and path inventories require strict UTF-8 and complete NUL records. Unsupported byte filenames or inventory failures stop collection explicitly; they cannot be converted to a replacement-character alias or an apparently clean workspace.
+
+Git freshness fingerprints cover at most 200 changed paths (excluding private Debug state). Larger dirty workspaces fail explicitly instead of omitting later file content; reduce the dirty range before retrying. Git root paths preserve legal edge whitespace and are bound to the real selected workspace, preventing neighboring repositories from being confused.
