@@ -51,3 +51,10 @@ test('workspace fingerprints never silently omit a 201st dirty path',()=>{
   assert.throws(()=>collectGitContext(dir,{includeHistory:false}),error=>error.code==='EGITINVENTORY');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+
+test('Git roots bind native real paths for selected roots and nested workspaces',()=>{
+ const dir=repo(),nested=path.join(dir,'nested workspace');
+ try{fs.mkdirSync(nested);const expected=fs.realpathSync.native(dir);assert.equal(collectGitContext(dir,{includeHistory:false}).root,expected);assert.equal(collectGitContext(nested,{includeHistory:false}).root,expected);}
+ finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

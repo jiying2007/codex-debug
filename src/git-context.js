@@ -22,7 +22,7 @@ function readGitRoot(workspace,control={}){
  catch(error){const cause=error.cause;if(cause?.status===128&&/^fatal: not a git repository(?:\s|:|\()/i.test(String(cause.stderr||'')))return '';throw error;}
  const declared=decodeGitPathLine(raw);
  if(!path.isAbsolute(declared))throw Object.assign(new Error('Git root path is not absolute.'),{code:'EGITINVENTORY'});
- let root,selected;try{root=fs.realpathSync(declared);selected=fs.realpathSync(workspace);}catch(cause){throw Object.assign(new Error('Git root path cannot be bound to the selected workspace.'),{code:'EGITINVENTORY',cause});}
+ let root,selected;try{root=fs.realpathSync.native(declared);selected=fs.realpathSync.native(workspace);}catch(cause){throw Object.assign(new Error('Git root path cannot be bound to the selected workspace.'),{code:'EGITINVENTORY',cause});}
  const relative=path.relative(root,selected);
  if(relative==='..'||relative.startsWith('..'+path.sep)||path.isAbsolute(relative))throw Object.assign(new Error('Git root does not contain the selected workspace.'),{code:'EGITINVENTORY'});
  return root;
