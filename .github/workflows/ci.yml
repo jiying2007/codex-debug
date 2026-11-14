@@ -68,6 +68,42 @@ jobs:
       - run: npm audit --audit-level=high
       - run: node src/codex-safe-core/scripts/verify-package-licenses.js .
 
+  codeql:
+    name: CodeQL Findings
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22.22.2
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:javascript-typescript
+          output: codeql-results
+      - name: Block high and critical findings from actual SARIF
+        if: ${{ always() }}
+        run: node src/codex-safe-core/scripts/codeql-findings-gate.js codeql-results
+      - name: Preserve actual CodeQL SARIF
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: codex-debug-codeql-${{ github.sha }}
+          path: codeql-results/*.sarif
+          if-no-files-found: error
+          retention-days: 14
+
   promotion-provenance:
     name: Promotion Provenance
     runs-on: ubuntu-24.04
@@ -93,9 +129,9 @@ jobs:
 
   consumer-evidence:
     name: Consumer Evidence
-    needs: [test, security, promotion-provenance]
+    needs: [test, security, codeql, promotion-provenance]
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -135,6 +171,22 @@ jobs:
           grep -Fx 'extension/src/codex-safe-core/index.js' /tmp/vsix-files.txt
           if grep -E '^extension/(test|quality|scripts|\.github|\.codex-debug|\.git)(/|$)' /tmp/vsix-files.txt; then echo 'VSIX contains development/private surfaces' >&2; exit 1; fi
           printf '%s  %s\n' "$sha_a" "$vsix_name" > "$evidence_dir/VSIX_SHA256"
+      - name: Run packaged extension in minimum and current VS Code
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir=consumer-evidence
+          version=$(node -p "require('./package.json').version")
+          vsix_name="codex-debug-safe-${version}.vsix"
+          package_dir="$RUNNER_TEMP/codex-debug-packaged"
+          test_tools="$RUNNER_TEMP/codex-debug-host-tools"
+          mkdir -p "$package_dir"
+          unzip -q "$evidence_dir/$vsix_name" -d "$package_dir"
+          npm install --prefix "$test_tools" --ignore-scripts --no-audit --no-fund @vscode/test-electron@3.1.0
+          export CODEX_DEBUG_TEST_ELECTRON_MODULE="$test_tools/node_modules/@vscode/test-electron"
+          for host_version in 1.90.0 stable; do
+            xvfb-run -a node scripts/extension-host-test.js "$package_dir/extension" "$host_version" "$evidence_dir/$vsix_name" "$evidence_dir/EXTENSION_HOST_${host_version}.json"
+          done
       - name: Generate Consumer CI Receipt and checksums
         env:
           CI_SOURCE_SHA: ${{ github.sha }}
@@ -142,7 +194,7 @@ jobs:
           CI_RUN_ID: ${{ github.run_id }}
           CI_RUN_ATTEMPT: ${{ github.run_attempt }}
           CI_EVENT: ${{ github.event_name }}
-          CI_SUITES: matrix-linux-windows-macos-node22-24,security,quality,executable-fix-quality,model-evaluation-contract,promotion-corpus-contract,promotion-transition-e2e,promotion-provenance,real-native-core,native-core-optimized-pie,native-core-split-debug,native-core-shared-library,real-cortex-m,cortex-m-optimized-lto,android-buildid,android-abi-vendor,kernel-system-map,kernel-kaslr,kernel-module-buildid,kernel-module-multi,rollback-receipt-lineage,package-contract,reproducible-vsix
+          CI_SUITES: matrix-linux-windows-macos-node22-24,security,codeql-findings,quality,executable-fix-quality,model-evaluation-contract,promotion-corpus-contract,promotion-transition-e2e,promotion-provenance,real-native-core,native-core-optimized-pie,native-core-split-debug,native-core-shared-library,real-cortex-m,cortex-m-optimized-lto,android-buildid,android-abi-vendor,kernel-system-map,kernel-kaslr,kernel-module-buildid,kernel-module-multi,rollback-receipt-lineage,package-contract,reproducible-vsix,packaged-extension-host-minimum-current-trusted-untrusted
         shell: bash
         run: |
           set -euo pipefail
@@ -152,7 +204,7 @@ jobs:
           test -s "$evidence_dir/$vsix_name"
           node src/codex-safe-core/scripts/generate-consumer-ci-receipt.js --output "$evidence_dir/CONSUMER_CI_RECEIPT.json"
           test -s "$evidence_dir/CONSUMER_CI_RECEIPT.json"
-          (cd "$evidence_dir" && sha256sum "$vsix_name" CONSUMER_CI_RECEIPT.json > SHA256SUMS)
+          (cd "$evidence_dir" && sha256sum "$vsix_name" CONSUMER_CI_RECEIPT.json EXTENSION_HOST_1.90.0.json EXTENSION_HOST_stable.json > SHA256SUMS)
           grep -F "$vsix_name" "$evidence_dir/SHA256SUMS"
           grep -F 'CONSUMER_CI_RECEIPT.json' "$evidence_dir/SHA256SUMS"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -165,7 +217,7 @@ jobs:
   ci-gate:
     name: CI Gate
     if: ${{ always() }}
-    needs: [test, security, promotion-provenance, consumer-evidence]
+    needs: [test, security, codeql, promotion-provenance, consumer-evidence]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:

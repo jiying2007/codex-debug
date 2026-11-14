@@ -38,3 +38,14 @@ test('promotion provenance refuses a ground-truth file absent from the reviewed 
     assert.throws(()=>verifyRepositoryState(root,item,{anchorCommit:fixed,env:process.env}),/ground-truth file .* is absent from fixed commit/);
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+
+test('read-only provenance can load without materializing the execution-only Core submodule',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'debug-provenance-no-core-'));
+ try{
+  for(const file of ['scripts/promotion-provenance.js','scripts/model-evaluation.js','scripts/promotion-corpus.js','scripts/historical-case.js','quality/promotion-corpus.json','src/reproduction.js','src/runner.js','src/contracts.js']){
+   const target=path.join(root,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(path.resolve(__dirname,'..',file),target);
+  }
+  execFileSync(process.execPath,['-e',"require('./scripts/promotion-provenance')"],{cwd:root,stdio:['ignore','pipe','pipe']});
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

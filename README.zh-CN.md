@@ -201,6 +201,22 @@ Change   → PR/MR 交付
 
 所有模型出站文本统一使用 Core 脱敏，包括结构化附件、源码、提交历史、平台信息及调查草稿。显式外部日志仍可读取，但通过文件描述符约束大小；session/snapshot 额外要求私有、单硬链接文件。POSIX 的字面反斜杠路径在 apply、快照和 rollback 中保持原始身份。
 
+### 会话预算、取消与输入边界
+
+`--max-estimated-tokens` / `safeCodexDebug.maxEstimatedTokens` 现在约束整次调查及因果验证；启动调查前预留验证阶段容量。已观测用量替换预算预估，缺失用量保持 `unknown` 并保留预估占用，失败或取消调用也逐步写入 `.codex-debug/executions/`。未知用量的预算占用是估算值，不代表供应商实收费用。
+
+`--session-timeout-seconds` / `safeCodexDebug.sessionTimeoutSeconds` 默认 600 秒，标准输入、Git 检查、模型、复现、验证和符号化工作受剩余会话时间约束。VS Code 调查/验证和 CLI 信号支持取消自有进程；固定符号化在有界命令边界响应取消，apply/rollback 继续在原有事务边界完成。绑定验证失败后直接报告，不静默重放成独立命令。复现身份同时绑定有效环境及工作目录，环境变化后的绿色结果保持 unbound。
+
+多根工作区按当前编辑器选择，其他工作区的 last result 不复用。
+
+Consumer CI 解包实际可重复构建的 VSIX，在最低 VS Code 1.90.0 和当前 stable 中启动 Extension Host，验证激活、命令、包内 worker、多根选择及会话绑定，不调用模型。开发制品验收不授予正式晋级资格。
+
+补丁应用后的验证若被取消或中断，会保存 `applied-unverified` 会话及其 receipt、回滚快照。CLI 显示中断并以非零码退出，扩展保留回滚入口。CI 将实际 VSIX 解包，在 VS Code 1.90.0 和当前稳定版中分别使用隔离配置运行受信任与 Restricted Mode 工作区测试；这些确定性测试不作为真实模型晋级证据。
+
+Consumer Evidence 保留逐宿主 JSON 报告，记录实际 VS Code/Node 版本、信任状态、VSIX SHA-256 和精确 Core 提交；报告纳入制品校验和。
+
 Git 状态及路径清单要求严格 UTF-8 解码和完整 NUL 记录；不支持的文件名字节或读取失败会明确停止收集，不能折叠成替换字符别名或被当成干净工作区。
+
+文件事务完成后，Git 观测失败仍会保存应用或回滚的子会话凭据，并明确将未知工作区指纹留空。通过共享 Core JSONL 解析器保留取消、最终输出无效前已观测的用量；未报告用量的调用继续按未知估算计入。CI 同时阻断真实 CodeQL 高危/严重告警并保留完整 SARIF。
 
 Git 新鲜度指纹最多覆盖 200 个变更路径（不计 Debug 私有状态）。更大的脏工作区会明确报错，不会省略后续文件内容；重试前需缩小变更范围。Git 根路径保留合法边缘空白，并绑定当前所选工作区的真实路径，避免误识别相邻仓库。

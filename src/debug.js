@@ -6,7 +6,7 @@ const {buildDebugEvidence,readBoundedFile}=require('./evidence');
 const {collectGitContext}=require('./git-context');
 const {createHypothesisLedger,confirmHypothesis}=require('./hypothesis-ledger');
 const {runCodexInvestigation,runCodexCausalVerification,applyCausalVerification}=require('./codex');
-const {runReproductionSeries,compareFailureSignatures,sameCommand}=require('./reproduction');
+const {runReproductionSeriesAsync,compareFailureSignatures,sameCommand}=require('./reproduction');
 const {gitApply}=require('./patch');
 const {applyPatchWithSnapshot}=require('./patch-transaction');
 const {rollbackWorkspaceSnapshot}=require('./workspace-snapshot');
@@ -15,8 +15,9 @@ const {symbolizeEmbedded}=require('./embedded-symbols');
 const {symbolizePlatform}=require('./platform-symbols');
 const {runSafeBisect}=require('./bisect');
 const {makeSessionId,createDebugReceipt,freeze,stableDigest,validateStoredSession}=require('./contracts');
-const {writeSession,readSession}=require('./session-store');
+const {writeSession,readSession,writeExecutionLedger}=require('./session-store');
 const {formatDebugReport}=require('./report');
+const {sessionOptions,assertActive}=require('./session-budget');
 
 function deterministicInvestigation(evidence){
   const signal=evidence.parsed?.signals?.[0]||`Deterministic classification: ${evidence.deterministic?.classification||'unknown'}`;
@@ -90,20 +91,26 @@ function assertWorkspaceMatchesEvidence(current,evidence){
   }
 }
 
+function observeWorkspaceAfterMutation(workspace,root){
+  try{return {context:collectGitContext(workspace,{includeHistory:false}),interruption:null};}
+  catch(error){return {context:freeze({root,stateFingerprint:'',observationStatus:'unavailable'}),interruption:{code:String(error.code||'EGITOBSERVATION'),stage:'workspace-observation',message:'Workspace observation failed after the file transaction completed; the operation receipt is retained without a verified verdict.'}};}
+}
+
 async function runDebugSession(options={}){
+  options=sessionOptions(options);assertActive(options);
   const workspace=path.resolve(options.workspace||process.cwd());
-  const initialGitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false});
+  const initialGitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false,control:options});
   let gitContext=initialGitContext;
   let before=null,beforeSummary=null,text='',source={type:'text',label:'inline'},symbolization=null,embeddedSymbols=null,platformSymbols=null,bisect=null;
 
   if(options.command){
-    const series=runReproductionSeries(options.command,{runs:Number(options.reproRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024)});
+    const series=await runReproductionSeriesAsync(options.command,{runs:Number(options.reproRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),sessionBudget:options.sessionBudget,cancellationToken:options.cancellationToken});
     before=series.representative;
     beforeSummary=series.summary;
     text=[`Reproduction series: runs=${series.summary.runs} failures=${series.summary.failures} passes=${series.summary.passes} stableFailure=${series.summary.stableFailure} reproducibleFailure=${series.summary.reproducibleFailure}`,before.stdout||'',before.stderr||''].join('\n');
     source={type:'command',label:'explicit reproduction command'};
     // Reproduction commands may mutate tracked files. Only later changes are candidate repairs.
-    gitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false});
+    gitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false,control:options});
   }else if(options.logFile){
     const absolute=path.resolve(workspace,options.logFile);
     text=readBoundedFile(absolute,Number(options.maxLogBytes||8*1024*1024));
@@ -114,27 +121,31 @@ async function runDebugSession(options={}){
   }
 
   if(options.coreFile){
-    symbolization=symbolizeCore({coreFile:path.resolve(workspace,options.coreFile),executable:path.resolve(workspace,options.executable),tool:options.debugger||'auto',cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||120000),maxBytes:Math.min(Number(options.maxLogBytes||8*1024*1024),1024*1024)});
+    symbolization=symbolizeCore({control:options,coreFile:path.resolve(workspace,options.coreFile),executable:path.resolve(workspace,options.executable),tool:options.debugger||'auto',cwd:workspace,timeoutMs:options.sessionBudget.remainingTimeout(Number(options.commandTimeoutMs||120000)),maxBytes:Math.min(Number(options.maxLogBytes||8*1024*1024),1024*1024)});
     text=[text,`--- FIXED-COMMAND ${symbolization.tool.toUpperCase()} CORE SYMBOLIZATION ---`,symbolization.text,'--- END CORE SYMBOLIZATION ---'].filter(Boolean).join('\n');
     source={type:source.type==='text'?'core':`${source.type}+core`,label:source.type==='text'?symbolization.core.name:source.label};
   }
 
   if(options.elfFile||options.mapFile){
-    embeddedSymbols=symbolizeEmbedded({text,elfFile:options.elfFile?path.resolve(workspace,options.elfFile):'',mapFile:options.mapFile?path.resolve(workspace,options.mapFile):'',tool:options.addr2line||'auto',cwd:workspace,sourcePrefixMaps:options.sourcePrefixMaps||[],timeoutMs:Number(options.commandTimeoutMs||30000)});
+    embeddedSymbols=symbolizeEmbedded({control:options,text,elfFile:options.elfFile?path.resolve(workspace,options.elfFile):'',mapFile:options.mapFile?path.resolve(workspace,options.mapFile):'',tool:options.addr2line||'auto',cwd:workspace,sourcePrefixMaps:options.sourcePrefixMaps||[],timeoutMs:options.sessionBudget.remainingTimeout(Number(options.commandTimeoutMs||30000))});
   }
 
   if((options.androidSymbols||[]).length||options.kernelSystemMap||(options.kernelModuleSymbols||[]).length){
-    platformSymbols=symbolizePlatform({text,androidSymbolSpecs:options.androidSymbols||[],kernelSystemMap:options.kernelSystemMap||'',kernelKaslrSlide:options.kernelKaslrSlide||'',kernelModuleSymbolSpecs:options.kernelModuleSymbols||[],cwd:workspace,sourcePrefixMaps:options.sourcePrefixMaps||[],addr2line:'auto',readelf:'auto',nm:'auto',timeoutMs:Number(options.commandTimeoutMs||30000)});
+    platformSymbols=symbolizePlatform({control:options,text,androidSymbolSpecs:options.androidSymbols||[],kernelSystemMap:options.kernelSystemMap||'',kernelKaslrSlide:options.kernelKaslrSlide||'',kernelModuleSymbolSpecs:options.kernelModuleSymbols||[],cwd:workspace,sourcePrefixMaps:options.sourcePrefixMaps||[],addr2line:'auto',readelf:'auto',nm:'auto',timeoutMs:options.sessionBudget.remainingTimeout(Number(options.commandTimeoutMs||30000))});
   }
 
   if(options.bisectGood){
     if(!gitContext.root)throw Object.assign(new Error('Safe bisect requires a Git workspace.'),{code:'EBISECTREPO'});
-    bisect=runSafeBisect({root:gitContext.root,good:options.bisectGood,bad:options.bisectBad||gitContext.head,command:options.command,runs:Number(options.reproRuns||1),timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),allowHistoricalExecution:Boolean(options.allowHistoricalExecution)});
+    bisect=await runSafeBisect({root:gitContext.root,good:options.bisectGood,bad:options.bisectBad||gitContext.head,command:options.command,runs:Number(options.reproRuns||1),timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),allowHistoricalExecution:Boolean(options.allowHistoricalExecution),sessionBudget:options.sessionBudget,cancellationToken:options.cancellationToken});
   }
 
-  const evidence=buildDebugEvidence({text,source,kind:options.kind||'auto',workspace,git:gitContext,commandResult:before,reproductionSummary:beforeSummary,artifactSpecs:options.artifacts||[],maxArtifactBytes:Number(options.maxArtifactBytes||32*1024*1024),symbolization,embeddedSymbols,platformSymbols,bisect});
+  assertActive(options);
+  if(Buffer.byteLength(text)>Number(options.maxLogBytes||8*1024*1024))throw Object.assign(new Error('Combined failure input exceeds the session input limit.'),{code:'EEVIDENCELIMIT'});
+  const evidence=buildDebugEvidence({text,source,kind:options.kind||'auto',workspace,git:gitContext,commandResult:before,reproductionSummary:beforeSummary,artifactSpecs:options.artifacts||[],maxArtifactBytes:Number(options.maxArtifactBytes||32*1024*1024),symbolization,embeddedSymbols,platformSymbols,bisect,control:options});
   beforeSummary=evidence.reproduction;
   const sessionId=makeSessionId(evidence.digest);
+  if(options.persist!==false&&!options.deterministicOnly)options.sessionBudget.setPersistence(snapshot=>writeExecutionLedger(gitContext.root||workspace,sessionId,snapshot));
+  assertActive(options);
   let modelResult=null,causalResult=null,investigation;
   if(options.deterministicOnly){
     investigation=deterministicInvestigation(evidence);
@@ -144,31 +155,39 @@ async function runDebugSession(options={}){
     investigation=applyCausalVerification(modelResult.investigation,causalResult.verification);
   }
 
+  assertActive(options);
   let ledger=createHypothesisLedger(investigation.hypotheses,{evidenceDigest:evidence.digest}),patchResult=null;
   const root=gitContext.root||workspace;
   if(options.apply&&investigation.patch?.unifiedDiff){
-    assertWorkspaceMatchesEvidence(collectGitContext(workspace,{includeHistory:false}),evidence);
+    assertWorkspaceMatchesEvidence(collectGitContext(workspace,{includeHistory:false,control:options}),evidence);
+    assertActive(options);
     patchResult=applyPatchWithSnapshot(investigation.patch.unifiedDiff,{root});
   }else if(investigation.patch?.unifiedDiff){
     try{patchResult=gitApply(investigation.patch.unifiedDiff,{cwd:root,apply:false});}
     catch(error){patchResult=freeze({checked:false,applied:false,error:error.message,paths:[]});}
   }
 
-  const postMutationContext=collectGitContext(workspace,{includeHistory:false});
+  const observation=patchResult?.applied?observeWorkspaceAfterMutation(workspace,root):{context:collectGitContext(workspace,{includeHistory:false,control:options}),interruption:null};
+  const postMutationContext=observation.context;
   const mutationObserved=Boolean(gitContext.stateFingerprint&&postMutationContext.stateFingerprint&&gitContext.stateFingerprint!==postMutationContext.stateFingerprint);
   const workspaceStates={beforeReproduction:initialGitContext.stateFingerprint,afterReproduction:gitContext.stateFingerprint,beforeVerification:postMutationContext.stateFingerprint,afterVerification:''};
-  let verification=makeVerification(beforeSummary,null,mutationObserved,'',{workspaceStates:{...workspaceStates}});
+  let verification=makeVerification(beforeSummary,null,mutationObserved,'',{workspaceStates:{...workspaceStates},...(observation.interruption?{status:'interrupted',interruption:observation.interruption}:{})});
   const verifyCommand=String(options.verifyCommand||(patchResult?.applied?options.command:'')||'').trim();
-  if(verifyCommand){
-    const afterSeries=runReproductionSeries(verifyCommand,{runs:Number(options.verifyRuns||options.reproRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024)});
-    workspaceStates.afterVerification=collectGitContext(workspace,{includeHistory:false}).stateFingerprint;
-    verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{workspaceStates});
-    if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult,investigation});
+  if(verifyCommand&&!observation.interruption){
+    try{
+      const afterSeries=await runReproductionSeriesAsync(verifyCommand,{runs:Number(options.verifyRuns||options.reproRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),sessionBudget:options.sessionBudget,cancellationToken:options.cancellationToken});
+      workspaceStates.afterVerification=collectGitContext(workspace,{includeHistory:false,control:options}).stateFingerprint;
+      verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{workspaceStates});
+      if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult,investigation});
+    }catch(error){
+      if(!patchResult?.applied)throw error;
+      verification=makeVerification(beforeSummary,null,mutationObserved,stableDigest(verifyCommand),{status:'interrupted',workspaceStates,interruption:{code:String(error.code||'EVERIFICATION'),message:'Verification stopped before a complete result; the applied patch remains unverified and retains its rollback snapshot.'}});
+    }
   }
 
   const fixStatus=determineFixStatus({investigation,patchResult,verification});
   const receipt=createDebugReceipt({sessionId,evidence,investigation,ledger,verification,patchResult,fixStatus,model:modelResult?.model||'deterministic-only',codexVersion:modelResult?.codexVersion||''});
-  const result={sessionId,fixStatus,evidence,gitContext,investigation,ledger,patch:patchResult,verification,execution:modelResult?{hypothesis:{model:modelResult.model,codexVersion:modelResult.codexVersion,usage:modelResult.usage,durationMs:modelResult.durationMs,requestEstimate:modelResult.requestEstimate,runtimeSource:modelResult.runtimeSource,modelEvidence:modelResult.modelEvidence},causalVerification:causalResult?{model:causalResult.model,codexVersion:causalResult.codexVersion,usage:causalResult.usage,durationMs:causalResult.durationMs,requestEstimate:causalResult.requestEstimate}:null}:null,receipt};
+  const result={sessionId,fixStatus,evidence,gitContext,investigation,ledger,patch:patchResult,verification,execution:modelResult?{budget:options.sessionBudget.snapshot(),hypothesis:{model:modelResult.model,codexVersion:modelResult.codexVersion,usage:modelResult.usage,durationMs:modelResult.durationMs,requestEstimate:modelResult.requestEstimate,runtimeSource:modelResult.runtimeSource,modelEvidence:modelResult.modelEvidence},causalVerification:causalResult?{model:causalResult.model,codexVersion:causalResult.codexVersion,usage:causalResult.usage,durationMs:causalResult.durationMs,requestEstimate:causalResult.requestEstimate}:null}:null,receipt};
   result.markdown=formatDebugReport(result);
   if(options.persist!==false)result.sessionPath=writeSession(root,result);
   writeOutputs(workspace,options,result);
@@ -176,8 +195,9 @@ async function runDebugSession(options={}){
 }
 
 async function resumeDebugSession(options={}){
+  options=sessionOptions(options);assertActive(options);
   const workspace=path.resolve(options.workspace||process.cwd());
-  const current=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false});
+  const current=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false,control:options});
   const root=current.root||workspace;
   const previous=validateStoredSession(readSession(root,options.resume));
   if(previous.evidence?.git?.rootDigest&&current.root&&previous.evidence.git.rootDigest!==stableDigest(path.resolve(current.root))){
@@ -189,8 +209,8 @@ async function resumeDebugSession(options={}){
   }
   const mutationObserved=Boolean(previous.evidence?.git?.stateFingerprint&&current.stateFingerprint&&previous.evidence.git.stateFingerprint!==current.stateFingerprint);
   const verifyCommand=String(options.verifyCommand||'').trim();
-  const afterSeries=runReproductionSeries(verifyCommand,{runs:Number(options.verifyRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024)});
-  const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true,workspaceStates:{beforeReproduction:previous.verification?.workspaceStates?.beforeReproduction||'',afterReproduction:previous.evidence?.git?.stateFingerprint||'',beforeVerification:current.stateFingerprint,afterVerification:collectGitContext(workspace,{includeHistory:false}).stateFingerprint}});
+  const afterSeries=await runReproductionSeriesAsync(verifyCommand,{runs:Number(options.verifyRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),sessionBudget:options.sessionBudget,cancellationToken:options.cancellationToken});
+  const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true,workspaceStates:{beforeReproduction:previous.verification?.workspaceStates?.beforeReproduction||'',afterReproduction:previous.evidence?.git?.stateFingerprint||'',beforeVerification:current.stateFingerprint,afterVerification:collectGitContext(workspace,{includeHistory:false,control:options}).stateFingerprint}});
   let ledger=previous.ledger;
   if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult:previous.patch,investigation:previous.investigation});
   const fixStatus=determineFixStatus({investigation:previous.investigation,patchResult:previous.patch,verification});
@@ -206,14 +226,14 @@ async function resumeDebugSession(options={}){
 
 async function applyDebugSessionPatch(options={}){
   const workspace=path.resolve(options.workspace||process.cwd());
-  const current=collectGitContext(workspace,{includeHistory:false});
+  const current=collectGitContext(workspace,{includeHistory:false,control:options});
   const root=current.root||workspace;
   const previous=validateStoredSession(readSession(root,options.sessionId));
   if(!previous.investigation?.patch?.unifiedDiff)throw Object.assign(new Error('Stored session has no verifier-accepted patch.'),{code:'ENOSESSIONPATCH'});
   assertWorkspaceMatchesEvidence(current,previous.evidence);
   const patchResult=applyPatchWithSnapshot(previous.investigation.patch.unifiedDiff,{root});
-  const after=collectGitContext(workspace,{includeHistory:false});
-  const verification=makeVerification(previous.evidence.reproduction,null,current.stateFingerprint!==after.stateFingerprint,'',{patchSnapshotId:patchResult.snapshotId});
+  const observation=observeWorkspaceAfterMutation(workspace,root),after=observation.context;
+  const verification=makeVerification(previous.evidence.reproduction,null,Boolean(after.stateFingerprint&&current.stateFingerprint!==after.stateFingerprint),'',{patchSnapshotId:patchResult.snapshotId,...(observation.interruption?{status:'interrupted',interruption:observation.interruption}:{})});
   const fixStatus='applied-unverified';
   const sessionId=makeSessionId(previous.evidence.digest);
   const lineage={parentSessionId:previous.sessionId,parentDebugFingerprint:previous.receipt.debugFingerprint,appliedAt:new Date().toISOString()};
@@ -226,7 +246,7 @@ async function applyDebugSessionPatch(options={}){
 
 function rollbackDebugSession(options={}){
   const workspace=path.resolve(options.workspace||process.cwd());
-  const current=collectGitContext(workspace,{includeHistory:false});
+  const current=collectGitContext(workspace,{includeHistory:false,control:options});
   const root=current.root||workspace;
   const previous=validateStoredSession(readSession(root,options.sessionId));
   if(previous.patch?.rolledBack){
@@ -236,7 +256,7 @@ function rollbackDebugSession(options={}){
   if(!snapshotId)throw Object.assign(new Error('Stored session has no patch rollback snapshot.'),{code:'ENOROLLBACKSNAPSHOT'});
 
   const rollback=rollbackWorkspaceSnapshot(root,snapshotId,{snapshotDigest:previous.patch.snapshotDigest,paths:previous.patch.paths});
-  const after=collectGitContext(workspace,{includeHistory:false});
+  const observation=observeWorkspaceAfterMutation(workspace,root),after=observation.context;
   const rollbackOperation=freeze({
     schemaVersion:1,
     kind:'workspace-rollback',
@@ -258,7 +278,8 @@ function rollbackDebugSession(options={}){
     rollbackObserved:true,
     rollbackSnapshotId:snapshotId,
     rollbackDigest:rollback.digest,
-    rollbackStateFingerprint:String(after.stateFingerprint||'')
+    rollbackStateFingerprint:String(after.stateFingerprint||''),
+    ...(observation.interruption?{status:'interrupted',interruption:observation.interruption}:{})
   });
   const fixStatus=determineFixStatus({investigation:previous.investigation,patchResult,verification});
   const sessionId=makeSessionId(previous.evidence.digest);

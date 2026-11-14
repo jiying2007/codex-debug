@@ -53,6 +53,11 @@ test('stored sessions enforce a bounded read and reject link swaps after the ini
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
+test('stdin cannot bypass the bounded file input limit',async()=>{
+ const {Readable}=require('node:stream'),{readStdin}=require('../src/cli');
+ assert.equal(await readStdin({stream:Readable.from(['fa','tal']),maxBytes:5}),'fatal');
+ await assert.rejects(()=>readStdin({stream:Readable.from(['fatal',' error']),maxBytes:5}),error=>error.code==='EEVIDENCELIMIT');
+});
 
 
 test('artifact fields redact before truncation and cap SARIF results across runs',()=>{

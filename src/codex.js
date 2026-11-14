@@ -7,6 +7,9 @@ const {resolveModelRegistry}=require('./codex-safe-core/model-registry-resolver'
 const {resolveModelSelection,buildModelEvidence}=require('./codex-safe-core/model-routing');
 const {freeze,stableDigest}=require('./contracts');
 const {redactDiagnosticText}=require('./codex-safe-core/diagnosis-platform');
+const {estimateRequestTokens}=require('./codex-safe-core/efficiency-planner');
+const {createCodexJsonlAccumulator}=require('./codex-safe-core/codex-jsonl-stream');
+const {sessionOptions,assertActive}=require('./session-budget');
 const DEBUG_TIMEOUTS=Object.freeze({connectMs:15000,requestMs:240000,operationMs:600000,idleMs:90000});
 function runtimeSelectionFromOptions(options={}){const mode=String(options.providerMode||'auto').trim()||'auto';const provider=mode==='openai-compatible'?{mode,baseUrl:options.providerBaseUrl,apiKeyEnv:options.providerApiKeyEnv||'OPENAI_API_KEY',credentialSource:options.providerCredentialSource||'auto',allowInsecureHttp:Boolean(options.providerAllowInsecureHttp)}:{mode};return Object.freeze({provider,timeouts:DEBUG_TIMEOUTS});}
 function inspectRuntimeFromOptions(options={}){const resolved=resolveCodexRuntime(runtimeSelectionFromOptions(options));return Object.freeze({source:resolved.source,configPath:resolved.configPath,providerId:resolved.providerId,runtime:resolved.runtime});}
@@ -54,7 +57,29 @@ function applyCausalVerification(investigation,rawVerifier){
   return freeze({...investigation,confidence:Math.min(Number(investigation.confidence||0),Number(verifier.confidence||0)),hypotheses,patch,coverageGaps:[...new Set(coverageGaps)],causalVerification:verifier});
 }
 function selectModel(options,runtimeResolution,modelOverride=''){const registryResolution=resolveModelRegistry();let model=String(modelOverride||options.model||'').trim(),selection=null;if(!modelOverride&&registryResolution.registry){const strategy=String(options.modelSelectionStrategy||'auto'),provider=String(runtimeResolution.providerId||runtimeResolution.runtime?.provider?.mode||'').trim(),request={registry:registryResolution.registry,role:'reviewer',mode:String(options.mode||'deep'),strategy,provider,compatibilityPolicy:options.modelCompatibilityPolicy||(strategy==='fixed'?'warn':'strict'),crossProvider:false};if(strategy==='fixed'){request.model=model;request.fixed={provider,model};}else if(strategy==='preference')request.candidates=options.modelCandidates||[];selection=resolveModelSelection(request);model=selection.resolvedModel;}return {model,selection,registryResolution};}
-async function runPhase({options,phase,schema,input,estimatedOutputTokens,modelOverride=''}){const runner=createProcessRunner((_zh,en)=>en),cli=createCodexCli({runPreparedProcess:runner.runPreparedProcess,tempPrefix:'codex-debug-'}),runtimeResolution=inspectRuntimeFromOptions(options),runtime=runtimeResolution.runtime,{model,selection,registryResolution}=selectModel(options,runtimeResolution,modelOverride),result=await cli.runStructuredCodex({codexPath:options.codexPath||'codex',model,runtime,phase,schema,input,schemaFileName:`${phase}-schema.json`,maxEstimatedTokens:Number(options.maxEstimatedTokens||80000),estimatedOutputTokens,processOptions:{env:process.env}});return {result,model:model||'cli-default',runtimeResolution,selection,registryResolution};}
-async function runCodexInvestigation({evidence,gitContext,options={}}={}){const phase=await runPhase({options,phase:'debug-investigation',schema:debugOutputSchema(),input:buildDebugPrompt({evidence,gitContext}),estimatedOutputTokens:5000}),result=phase.result;return freeze({investigation:normalizeInvestigation(result.parsed),model:phase.model,codexVersion:result.resolved?.version||'',usage:result.usage||{},durationMs:result.durationMs||0,requestEstimate:result.requestEstimate||null,provider:result.provider||null,runtimeSource:phase.runtimeResolution.source,modelEvidence:phase.selection?buildModelEvidence(phase.selection,{usage:result.usage,routingPolicyRevision:'debug-0.1-v1',lineagePinned:false}):null});}
+async function runPhase({options,phase,schema,input,estimatedOutputTokens,modelOverride='',reserveTokens=0}){
+  options=sessionOptions(options);assertActive(options);
+  const budget=options.sessionBudget,estimate=estimateRequestTokens(input,{estimatedOutputTokens}),ticket=budget.begin(phase,estimate,{reserveTokens}),usageStream=createCodexJsonlAccumulator();
+  const observedUsage=()=>{try{usageStream.finish();}catch{}return usageStream.snapshot().usage;};
+  try{
+    const runner=createProcessRunner((_zh,en)=>en),runPreparedProcess=(command,args,processOptions={},stdinText='',token)=>{
+      const bounded={...processOptions,timeoutMs:budget.remainingTimeout(processOptions.timeoutMs||DEBUG_TIMEOUTS.requestMs)};
+      if(typeof processOptions.onStdoutChunk==='function')bounded.onStdoutChunk=chunk=>{
+        // Preserve observed usage before the authoritative Core parser can fail
+        // or cancellation discards its return value. This grants no output authority.
+        try{usageStream.push(chunk);}catch{}
+        processOptions.onStdoutChunk(chunk);
+      };
+      return runner.runPreparedProcess(command,args,bounded,stdinText,options.cancellationToken||token);
+    };
+    const cli=createCodexCli({runPreparedProcess,tempPrefix:'codex-debug-'}),runtimeResolution=inspectRuntimeFromOptions(options),runtime=runtimeResolution.runtime,{model,selection,registryResolution}=selectModel(options,runtimeResolution,modelOverride);
+    const result=await cli.runStructuredCodex({codexPath:options.codexPath||'codex',model,runtime,phase,schema,input,schemaFileName:`${phase}-schema.json`,maxEstimatedTokens:estimate.totalTokens,estimatedOutputTokens,token:options.cancellationToken,timeoutMs:budget.remainingTimeout(DEBUG_TIMEOUTS.requestMs),processOptions:{env:process.env}});
+    budget.finish(ticket,result.usage||observedUsage());return {result,model, runtimeResolution,selection,registryResolution};
+  }catch(error){
+    try{budget.finish(ticket,observedUsage()||error.usage,{status:'failed',errorCode:error.code||'unknown'});}catch{}
+    error.executionBudget=budget.snapshot();throw error;
+  }
+}
+async function runCodexInvestigation({evidence,gitContext,options={}}={}){const phase=await runPhase({options,phase:'debug-investigation',schema:debugOutputSchema(),input:buildDebugPrompt({evidence,gitContext}),estimatedOutputTokens:5000,reserveTokens:estimateRequestTokens(buildCausalVerificationPrompt({evidence,gitContext,investigation:{}}),{estimatedOutputTokens:3500}).totalTokens+5000}),result=phase.result;return freeze({investigation:normalizeInvestigation(result.parsed),model:phase.model,codexVersion:result.resolved?.version||'',usage:result.usage||{},durationMs:result.durationMs||0,requestEstimate:result.requestEstimate||null,provider:result.provider||null,runtimeSource:phase.runtimeResolution.source,modelEvidence:phase.selection?buildModelEvidence(phase.selection,{usage:result.usage,routingPolicyRevision:'debug-0.1-v1',lineagePinned:false}):null});}
 async function runCodexCausalVerification({evidence,gitContext,investigation,options={},model=''}={}){const phase=await runPhase({options,phase:'debug-causal-verification',schema:causalVerificationSchema(),input:buildCausalVerificationPrompt({evidence,gitContext,investigation}),estimatedOutputTokens:3500,modelOverride:String(options.verifierModel||model||'')}),result=phase.result;return freeze({verification:normalizeCausalVerification(result.parsed,investigation),model:phase.model,codexVersion:result.resolved?.version||'',usage:result.usage||{},durationMs:result.durationMs||0,requestEstimate:result.requestEstimate||null});}
 module.exports={DEBUG_TIMEOUTS,runtimeSelectionFromOptions,inspectRuntimeFromOptions,debugOutputSchema,causalVerificationSchema,evidenceBlocks,buildDebugPrompt,buildCausalVerificationPrompt,normalizeInvestigation,normalizeCausalVerification,applyCausalVerification,runCodexInvestigation,runCodexCausalVerification};

@@ -48,8 +48,9 @@ function validateStoredSession(session){
   if(session.fixStatus==='verified'||verification.status==='passed'){
     const baseline=session.evidence?.reproduction,after=verification.afterSummary,commandDigest=session.evidence?.command?.commandDigest;
     const bound=/^[0-9a-f]{64}$/.test(String(commandDigest||''))&&commandDigest===baseline?.commandDigest&&commandDigest===after?.commandDigest&&commandDigest===verification.commandDigest;
+    const contextBound=!(baseline?.executionContextDigest||after?.executionContextDigest)||Boolean(baseline?.executionContextDigest&&baseline.executionContextDigest===after?.executionContextDigest);
     const baselineMatches=baseline&&stableDigest(baseline)===stableDigest(verification.baselineSummary);
-    if(session.fixStatus!=='verified'||verification.status!=='passed'||!bound||!baselineMatches||!baseline.reproducibleFailure||!baseline.failures||!verification.baselineObserved||!verification.mutationObserved||!(after.runs>0)||after.failures!==0||after.passes!==after.runs||verification.failureTransition?.status!=='resolved')throw Object.assign(new Error('Verified Debug state requires a bound reproduction command, observed mutation, and a resolved failing baseline.'),{code:'EDEBUGVERIFICATIONBINDING'});
+    if(session.fixStatus!=='verified'||verification.status!=='passed'||!bound||!contextBound||!baselineMatches||!baseline.reproducibleFailure||!baseline.failures||!verification.baselineObserved||!verification.mutationObserved||!(after.runs>0)||after.failures!==0||after.passes!==after.runs||verification.failureTransition?.status!=='resolved')throw Object.assign(new Error('Verified Debug state requires a bound reproduction command, observed mutation, and a resolved failing baseline.'),{code:'EDEBUGVERIFICATIONBINDING'});
   }
   validateRollbackBinding(session);
   return freeze(session);
