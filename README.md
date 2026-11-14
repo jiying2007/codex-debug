@@ -245,6 +245,22 @@ MIT
 
 All outbound model prompts use the shared Core likely-secret sanitizer, including source/history text, structured artifacts, platform evidence and draft investigation. Explicit external evidence files remain supported with descriptor-bound size limits. Sessions and snapshots additionally require single-link private files. Git-provided POSIX paths retain literal backslashes through patch application, snapshots and rollback.
 
+### Session limits and input boundaries
+
+`--max-estimated-tokens` / `safeCodexDebug.maxEstimatedTokens` is one budget for the complete investigation and causal-verification session. Before starting investigation, Debug reserves estimated capacity for the verifier. Observed usage replaces the reservation; missing usage remains `unknown` and retains its estimate. Calls are recorded incrementally under `.codex-debug/executions/`, including failed or cancelled calls. These budget charges are estimates when usage is unavailable, not a claim of measured provider billing.
+
+`--session-timeout-seconds` / `safeCodexDebug.sessionTimeoutSeconds` defaults to 600 seconds and bounds stdin, Git inspection, model, reproduction, verification and symbolizer work by the remaining session time. VS Code investigation/verification and CLI signals support cancellation of owned processes. Fixed symbolizer calls respond at their bounded command boundaries; apply and rollback finish at their existing transaction boundaries. A failed bound verification is reported and is never silently replayed as a standalone command. Reproduction identity also includes the effective environment and working directory; changing either keeps a subsequent pass unbound.
+
+Multi-root operations select the active editor's workspace; a last result from another workspace is not reused.
+
+Consumer CI unpacks the actual reproducible VSIX and launches its Extension Host in VS Code 1.90.0 and the current stable version. Activation, contributed commands, the packaged worker, active-root selection and last-session binding are exercised without model calls. This development-package check does not grant promotion eligibility.
+
+Interrupted post-apply verification writes an `applied-unverified` session with its receipt and rollback snapshot. The CLI reports the interruption and exits nonzero; the extension keeps rollback available. CI runs the unpacked VSIX in both trusted and Restricted Mode workspaces using separate profiles for VS Code 1.90.0 and the current stable host. These deterministic checks do not count as real-model promotion evidence.
+
+Consumer Evidence retains per-host JSON results with the actual VS Code/Node versions, trust state, VSIX SHA-256 and exact Core commit; all reports join the artifact checksums.
+
 Git status and path inventories require strict UTF-8 and complete NUL records. Unsupported byte filenames or inventory failures stop collection explicitly; they cannot be converted to a replacement-character alias or an apparently clean workspace.
+
+Post-transaction Git observation failures preserve the applied or rollback child receipt with an explicitly unavailable workspace fingerprint. Observed usage survives cancellation and invalid final output through the shared Core JSONL parser; calls with no reported usage retain their unknown estimate. CI also blocks actual high/critical CodeQL findings and retains its complete SARIF.
 
 Git freshness fingerprints cover at most 200 changed paths (excluding private Debug state). Larger dirty workspaces fail explicitly instead of omitting later file content; reduce the dirty range before retrying. Git root paths preserve legal edge whitespace and are bound to the real selected workspace, preventing neighboring repositories from being confused.
