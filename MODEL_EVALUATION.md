@@ -16,7 +16,7 @@ Synthetic live canaries remain useful smoke evidence but are permanently `promot
 
 ## Versioned contracts
 
-The shipped 0.1.16 development Product Contract binds the complete downstream model-quality and promotion-authority evidence schema set:
+The shipped 0.1.17 development Product Contract binds the complete downstream model-quality and promotion-authority evidence schema set:
 
 - `modelEvaluationRecordVersion = 1`
 - `promotionCorpusVersion = 2`
@@ -108,7 +108,7 @@ Calibration mode explicitly records `governanceLockDigest=null` and `governanceR
 
 ### Promotion Model Evaluation
 
-`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.16 it executes one read-only evidence chain in the same run:
+`Promotion Model Evaluation` requires protected model credentials plus explicit historical-execution acknowledgement. In 0.1.17 it executes one read-only evidence chain in the same run:
 
 `validate corpus/policy -> verify reviewed repository governance when promotion_mode=true -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> Promotion Admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
 
@@ -121,6 +121,10 @@ The workflow retains `contents: read` only and performs no patch apply, reposito
 ## Metrics
 
 The evaluator records causal-assessment accuracy, root-cause term hit rate, insufficient-evidence accuracy, false support, false-fix candidates, patch-policy violations, patch applicability, both model phases' token usage and tokens per evaluation case. Safety-critical counts remain zero-tolerance in live workflows.
+
+Both phases must report complete non-negative safe-integer input and output token counts. The collector accepts Codex JSONL snake_case names and derives total tokens from those two observed counts when the provider omits a separate total. An explicit total must match their sum. Missing, null, malformed, conflicting or inconsistent counts remain unknown (`usage=null`) and cannot satisfy evaluation, calibration or admission. Explicitly reported zero counts remain valid. An unreported cached-input count stays unknown in summaries; it is never inferred as zero.
+
+Both evaluation runners save the completed model record, and historical transitions when present, before validating it. Failed validation exits nonzero, removes a stale summary and produces no successful summary. Their workflows retain available artifacts even after failure so an unknown-usage run remains inspectable without becoming calibration evidence.
 
 Token usage is currently a calibration measurement only. An evidence-based `maximumTokensPerCase` must be reviewed after live calibration before Promotion Admission can become ready.
 
