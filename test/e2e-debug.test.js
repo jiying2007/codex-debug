@@ -176,3 +176,22 @@ for(const autocrlf of [false,true])for(const relabel of [false,true])test(`rollb
     assert.equal(fs.existsSync(path.join(snapshotDirectory(dir),'staging')),false);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('reproduction side effects are part of the failing baseline, never credited as a repair',async()=>{
+  const dir=init();
+  try{
+    fs.writeFileSync(path.join(dir,'reproduce.js'),"const fs=require('node:fs');const bad=fs.readFileSync('state.txt','utf8').trim()==='bad';if(bad){fs.writeFileSync('state.txt','good\\n');console.error('fatal error: baseline mutated itself');}process.exit(bad?1:0);\n");
+    execFileSync('git',['add','.'],{cwd:dir});execFileSync('git',['commit','-qm','side-effectful reproduction'],{cwd:dir});
+    const first=await runDebugSession({workspace:dir,command:'node reproduce.js',verifyCommand:'node reproduce.js',deterministicOnly:true,persist:true});
+    assert.equal(first.evidence.reproduction.failures,1);
+    assert.equal(first.verification.afterSummary.passes,1);
+    assert.equal(first.verification.mutationObserved,false);
+    assert.equal(first.verification.status,'passed-unbound');
+    assert.notEqual(first.fixStatus,'verified');
+    assert.notEqual(first.verification.workspaceStates.beforeReproduction,first.verification.workspaceStates.afterReproduction);
+    assert.equal(first.evidence.git.stateFingerprint,first.verification.workspaceStates.afterReproduction);
+    const resumed=await resumeDebugSession({workspace:dir,resume:first.sessionId,verifyCommand:'node reproduce.js',persist:false});
+    assert.equal(resumed.verification.mutationObserved,false);
+    assert.equal(resumed.verification.status,'passed-unbound');
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

@@ -66,7 +66,7 @@ A successful command alone is **not** a verified fix. `verified` requires:
 
 1. an observed explicit reproduction failure;
 2. a sufficiently reproducible baseline (`1/1` failure, or at least two repeated failures sharing one normalized failure signature);
-3. an independently observed workspace content-state mutation after that baseline;
+3. an independently observed workspace content-state mutation after that baseline, captured after reproduction has finished (reproduction side effects are not repairs);
 4. every bounded post-change verification run passes and its `commandDigest` exactly matches the original reproduction command;
 5. the stored session still validates its evidence, investigation, ledger, verification, patch-state and lineage digests.
 
@@ -75,6 +75,8 @@ A log plus an unrelated green test is `passed-unbound`, not `verified`. An unrel
 **A verified fix does not by itself confirm a root-cause hypothesis.** `verified` proves the observed failure transition after a workspace mutation. A hypothesis can become `confirmed` only when it was already causally `supported` and the bound runtime verification then succeeds. Deterministic-only classification can therefore verify that a change resolved a failure without inventing a causal explanation.
 
 Rollback is an operation, not a new fix status. If a patch reached `verified` and is later rolled back, the new rollback child is `proposed`, because the causal proposal is still known but the current workspace no longer contains the verified fix. A completed rollback child can never inherit `verified` or `applied-unverified`.
+
+Missing, duplicate or unevidenced causal-verifier entries remain `open`; they never inherit the draft's `supported` state. Each hypothesis stores its verifier evidence and digest. Runtime cause confirmation also requires an applied verifier-accepted patch and exactly one independently supported hypothesis; manual fixes and multiple competing supported hypotheses retain their causal uncertainty even when the fix is `verified`.
 
 ## Development install
 

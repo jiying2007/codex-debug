@@ -66,7 +66,7 @@ verifier 接受的 patch                    仍然 inert
 
 1. 产品通过显式 reproduction command 真实观察到失败；
 2. baseline 足够可重复：单次 `1/1` 失败，或多轮中至少两次失败共享同一归一化 failure signature；
-3. baseline 后产品独立观察到 workspace 内容状态发生变化；
+3. 在 reproduction 完成后重新采集失败 baseline，之后产品独立观察到 workspace 内容状态发生变化；复现命令自身的副作用不能算作修复；
 4. 有界 post-change verification 所有轮次全部通过，且 `commandDigest` 与原 reproduction command 精确一致；
 5. stored session 的 evidence / investigation / ledger / verification / patch-state / lineage digest 全部仍然匹配。
 
@@ -75,6 +75,8 @@ verifier 接受的 patch                    仍然 inert
 **修复进入 `verified` 并不自动等于根因 hypothesis 被确认。** `verified` 只证明工作区发生变化后，原先可重复的 failure 在绑定的验证中消失；只有已经被因果 verifier 标成 `supported` 的 hypothesis，才能在后续 runtime verification 成功后升级成 `confirmed`。
 
 Rollback 是一次操作，不新增 fix status。如果 patch 已经是 `verified`，随后又执行成功 rollback，新 child 必须回到 `proposed`：patch 的因果提案仍然存在，但当前 workspace 已不再包含已验证修复。完成 rollback 的 child 不能继续保留 `verified` 或 `applied-unverified`。
+
+因果 verifier 漏返、重复返回或缺少具体证据的 hypothesis 保持 `open`，不得继承 draft 的 `supported`。每项 hypothesis 保存自己的 verifier 证据及摘要；运行时确认根因还要求已应用 verifier 接受的补丁，且只有一个独立受支持的假设。手工修复或多个竞争假设即使修复已 `verified`，仍保留因果不确定性。
 
 ## 常用 CLI
 

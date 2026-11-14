@@ -58,9 +58,11 @@ function verificationStatus(beforeSummary,afterSummary,mutationObserved){
   return 'failed';
 }
 
-function confirmSupported(ledger,beforeSummary,afterSummary){
+function confirmSupported(ledger,beforeSummary,afterSummary,{patchResult,investigation}={}){
   if(!beforeSummary?.reproducibleFailure||!sameCommand(beforeSummary,afterSummary)||!(afterSummary?.runs>0)||afterSummary.failures!==0)return ledger;
-  const supported=ledger.entries.find(h=>h.status==='supported');
+  if(!patchResult?.applied||investigation?.causalVerification?.rootCauseAssessment!=='supported'||investigation.causalVerification.patchDisposition!=='accept')return ledger;
+  const candidates=ledger.entries.filter(h=>h.status==='supported'&&h.causalVerification?.status==='supported'&&h.causalVerification.evidence.length&&h.causalVerification.reason);
+  const supported=candidates.length===1?candidates[0]:null;
   return supported?confirmHypothesis(ledger,supported.id,{verificationEvidence:[`Observed ${beforeSummary.failures}/${beforeSummary.runs} failing baseline runs, an independently observed workspace-state mutation, and ${afterSummary.passes}/${afterSummary.runs} passing post-change runs.`]}):ledger;
 }
 
@@ -90,7 +92,8 @@ function assertWorkspaceMatchesEvidence(current,evidence){
 
 async function runDebugSession(options={}){
   const workspace=path.resolve(options.workspace||process.cwd());
-  const gitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false});
+  const initialGitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false});
+  let gitContext=initialGitContext;
   let before=null,beforeSummary=null,text='',source={type:'text',label:'inline'},symbolization=null,embeddedSymbols=null,platformSymbols=null,bisect=null;
 
   if(options.command){
@@ -99,6 +102,8 @@ async function runDebugSession(options={}){
     beforeSummary=series.summary;
     text=[`Reproduction series: runs=${series.summary.runs} failures=${series.summary.failures} passes=${series.summary.passes} stableFailure=${series.summary.stableFailure} reproducibleFailure=${series.summary.reproducibleFailure}`,before.stdout||'',before.stderr||''].join('\n');
     source={type:'command',label:'explicit reproduction command'};
+    // Reproduction commands may mutate tracked files. Only later changes are candidate repairs.
+    gitContext=collectGitContext(workspace,{includeHistory:options.includeGitHistory!==false});
   }else if(options.logFile){
     const absolute=path.resolve(workspace,options.logFile);
     text=readBoundedFile(absolute,Number(options.maxLogBytes||8*1024*1024));
@@ -151,12 +156,14 @@ async function runDebugSession(options={}){
 
   const postMutationContext=collectGitContext(workspace,{includeHistory:false});
   const mutationObserved=Boolean(gitContext.stateFingerprint&&postMutationContext.stateFingerprint&&gitContext.stateFingerprint!==postMutationContext.stateFingerprint);
-  let verification=makeVerification(beforeSummary,null,mutationObserved);
+  const workspaceStates={beforeReproduction:initialGitContext.stateFingerprint,afterReproduction:gitContext.stateFingerprint,beforeVerification:postMutationContext.stateFingerprint,afterVerification:''};
+  let verification=makeVerification(beforeSummary,null,mutationObserved,'',{workspaceStates:{...workspaceStates}});
   const verifyCommand=String(options.verifyCommand||(patchResult?.applied?options.command:'')||'').trim();
   if(verifyCommand){
     const afterSeries=runReproductionSeries(verifyCommand,{runs:Number(options.verifyRuns||options.reproRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024)});
-    verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand));
-    if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary);
+    workspaceStates.afterVerification=collectGitContext(workspace,{includeHistory:false}).stateFingerprint;
+    verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{workspaceStates});
+    if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult,investigation});
   }
 
   const fixStatus=determineFixStatus({investigation,patchResult,verification});
@@ -183,9 +190,9 @@ async function resumeDebugSession(options={}){
   const mutationObserved=Boolean(previous.evidence?.git?.stateFingerprint&&current.stateFingerprint&&previous.evidence.git.stateFingerprint!==current.stateFingerprint);
   const verifyCommand=String(options.verifyCommand||'').trim();
   const afterSeries=runReproductionSeries(verifyCommand,{runs:Number(options.verifyRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024)});
-  const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true});
+  const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true,workspaceStates:{beforeReproduction:previous.verification?.workspaceStates?.beforeReproduction||'',afterReproduction:previous.evidence?.git?.stateFingerprint||'',beforeVerification:current.stateFingerprint,afterVerification:collectGitContext(workspace,{includeHistory:false}).stateFingerprint}});
   let ledger=previous.ledger;
-  if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary);
+  if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult:previous.patch,investigation:previous.investigation});
   const fixStatus=determineFixStatus({investigation:previous.investigation,patchResult:previous.patch,verification});
   const sessionId=makeSessionId(previous.evidence.digest);
   const lineage={parentSessionId:previous.sessionId,parentDebugFingerprint:previous.receipt.debugFingerprint,resumedAt:new Date().toISOString()};
