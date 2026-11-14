@@ -24,3 +24,30 @@ test('real unsupported byte names never alias a replacement-character Git path',
  try{const bad=Buffer.concat([Buffer.from(dir+path.sep+'bad-'),Buffer.from([0xff]),Buffer.from('.txt')]);fs.writeFileSync(bad,'unsupported');fs.writeFileSync(path.join(dir,'bad-\uFFFD.txt'),'valid UTF-8');assert.throws(()=>collectGitContext(dir,{includeHistory:false}),error=>error.code==='EGITINVENTORY');execFileSync('git',['add','--all'],{cwd:dir});assert.throws(()=>gitFiles(dir),error=>error.code==='EGITINVENTORY');}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+
+test('root path records preserve edge whitespace and reject unsupported bytes or multiline paths',()=>{
+ const {decodeGitPathLine}=require('../src/git-context');
+ assert.equal(decodeGitPathLine(Buffer.from('\uFEFFroot \\name \n')),'\uFEFFroot \\name ');
+ for(const raw of [Buffer.from([0xff,10]),Buffer.from('/tmp/no-terminator'),Buffer.from('/tmp/two\nlines\n')])assert.throws(()=>decodeGitPathLine(raw),error=>error.code==='EGITINVENTORY');
+});
+
+test('a selected repository with trailing whitespace cannot alias its neighboring repository',{skip:process.platform==='win32'},()=>{
+ const parent=fs.mkdtempSync(path.join(os.tmpdir(),'debug-root-identity-')),neighbor=path.join(parent,'repo'),selected=path.join(parent,'repo ');
+ try{
+  for(const [root,name] of [[neighbor,'neighbor.txt'],[selected,'selected.txt']]){fs.mkdirSync(root);execFileSync('git',['init','-q'],{cwd:root});fs.writeFileSync(path.join(root,name),'fixture');}
+  const context=collectGitContext(selected,{includeHistory:false});assert.equal(context.root,fs.realpathSync(selected));assert.deepEqual(context.changedPaths,['selected.txt']);assert.equal(fs.readFileSync(path.join(neighbor,'neighbor.txt'),'utf8'),'fixture');
+ }finally{fs.rmSync(parent,{recursive:true,force:true});}
+});
+
+test('workspace fingerprints never silently omit a 201st dirty path',()=>{
+ const dir=repo();
+ try{
+  for(let n=0;n<200;n++)fs.writeFileSync(path.join(dir,`dirty-${String(n).padStart(3,'0')}.txt`),'before');
+  const complete=collectGitContext(dir,{includeHistory:false});assert.equal(complete.changedPaths.length,200);assert.match(complete.stateFingerprint,/^[0-9a-f]{64}$/);
+  const excluded=path.join(dir,'dirty-200.txt');fs.writeFileSync(excluded,'first content');
+  assert.throws(()=>collectGitContext(dir,{includeHistory:false}),error=>error.code==='EGITINVENTORY'&&/200/.test(error.message));
+  fs.writeFileSync(excluded,'changed while already dirty');
+  assert.throws(()=>collectGitContext(dir,{includeHistory:false}),error=>error.code==='EGITINVENTORY');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
