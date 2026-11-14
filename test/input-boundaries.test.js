@@ -67,9 +67,9 @@ test('artifact fields redact before truncation and cap SARIF results across runs
 test('System.map parsing and digest use one bounded descriptor read',()=>{
   const {resolveKernelSystemMap,sha256File}=require('../src/platform-symbols'),crypto=require('node:crypto');
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'debug-map-identity-')),file=path.join(root,'System.map'),bytes=Buffer.from('ffffffff81000000 T start_kernel\nffffffff81001000 T do_fault\n');
-  fs.writeFileSync(file,bytes);const original=fs.openSync;let opened=0;
+  fs.writeFileSync(file,bytes);const realFile=fs.realpathSync(file),original=fs.openSync;let opened=0;
   try{
-    fs.openSync=function(target,...args){if(target===file)opened++;return original.call(this,target,...args);};
+    fs.openSync=function(target,...args){if(target===realFile)opened++;return original.call(this,target,...args);};
     const result=resolveKernelSystemMap({kernel:{pcAddress:'ffffffff81001000',callTrace:[]},systemMapFile:file,kernelKaslrSlide:'0x0'});
     assert.equal(result.pc.symbol,'do_fault');assert.equal(result.systemMap.fileDigest,crypto.createHash('sha256').update(bytes).digest('hex'));assert.equal(result.systemMap.size,bytes.length);assert.equal(opened,1);
     assert.throws(()=>sha256File(file,{maxBytes:4}),/exceeds/);
