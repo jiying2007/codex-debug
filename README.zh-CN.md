@@ -198,3 +198,5 @@ Change   → PR/MR 交付
 ```
 
 当前 `0.1.0` 仍是 development baseline，不代表 Marketplace/Release ready。
+
+所有模型出站文本统一使用 Core 脱敏，包括结构化附件、源码、提交历史、平台信息及调查草稿。显式外部日志仍可读取，但通过文件描述符约束大小；session/snapshot 额外要求私有、单硬链接文件。POSIX 的字面反斜杠路径在 apply、快照和 rollback 中保持原始身份。

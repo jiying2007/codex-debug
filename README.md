@@ -242,3 +242,5 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [ROADMAP
 ## License
 
 MIT
+
+All outbound model prompts use the shared Core likely-secret sanitizer, including source/history text, structured artifacts, platform evidence and draft investigation. Explicit external evidence files remain supported with descriptor-bound size limits. Sessions and snapshots additionally require single-link private files. Git-provided POSIX paths retain literal backslashes through patch application, snapshots and rollback.
