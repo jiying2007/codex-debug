@@ -1,6 +1,22 @@
 'use strict';
 const {freeze}=require('./contracts');
 
+function normalizedUsage(usage={}){
+  if(!usage||typeof usage!=='object'||Array.isArray(usage))return null;
+  // Codex JSONL uses snake_case; stored records use camelCase. Do not coerce
+  // missing, null, string or conflicting counts into measured zero usage.
+  const count=names=>{
+    const values=names.filter(name=>Object.hasOwn(usage,name)).map(name=>usage[name]);
+    if(!values.length)return undefined;
+    return values.every(value=>Number.isSafeInteger(value)&&value>=0&&value===values[0])?values[0]:null;
+  };
+  const input=count(['inputTokens','input_tokens','input']),output=count(['outputTokens','output_tokens','output']);
+  if(input==null||output==null||!Number.isSafeInteger(input+output))return null;
+  const total=count(['totalTokens','total_tokens']),cachedInput=count(['cachedInputTokens','cached_input_tokens','cached_input']);
+  if(total===null||(total!==undefined&&total!==input+output)||cachedInput===null||(cachedInput!==undefined&&cachedInput>input))return null;
+  return Object.freeze({inputTokens:input,outputTokens:output,totalTokens:input+output,...(cachedInput===undefined?{}:{cachedInputTokens:cachedInput})});
+}
+
 function createCancellation(sharedFlag){let requested=false;const listeners=new Set();const token={get isCancellationRequested(){return requested||Boolean(sharedFlag&&Atomics.load(sharedFlag,0));},onCancellationRequested(fn){listeners.add(fn);return {dispose(){listeners.delete(fn);}};}};return {token,cancel(){requested=true;if(sharedFlag)Atomics.store(sharedFlag,0,1);for(const fn of listeners)fn();}};}
 function cancelled(){return Object.assign(new Error('Debug operation cancelled at a safe boundary.'),{code:'ECANCELLED'});}
 function assertActive(options={}){
@@ -24,11 +40,11 @@ function createSessionBudget({maxEstimatedTokens=80000,sessionTimeoutMs=600000,n
   }
   function finish(ticket,usage,{status='completed',errorCode=''}={}){
     const entry=entries[ticket];if(!entry||entry.status!=='running')throw new Error('Phase budget ticket is stale.');
-    const input=Number(usage?.inputTokens??usage?.input_tokens),output=Number(usage?.outputTokens??usage?.output_tokens),known=Number.isSafeInteger(input)&&input>=0&&Number.isSafeInteger(output)&&output>=0&&Number.isSafeInteger(input+output)&&input+output>0;
-    if(known){spent+=input+output-entry.chargedTokens;entry.chargedTokens=input+output;entry.usageStatus='observed';entry.usage={inputTokens:input,outputTokens:output};}
+    const observed=normalizedUsage(usage);
+    if(observed){spent+=observed.totalTokens-entry.chargedTokens;entry.chargedTokens=observed.totalTokens;entry.usageStatus='observed';entry.usage={inputTokens:observed.inputTokens,outputTokens:observed.outputTokens};}
     entry.status=status;if(errorCode)entry.errorCode=String(errorCode);update();return snapshot();
   }
   return {snapshot,begin,finish,remainingTimeout,setPersistence(fn){persist=fn;update();}};
 }
 function sessionOptions(options={}){return {...options,sessionBudget:options.sessionBudget||createSessionBudget({maxEstimatedTokens:Number(options.maxEstimatedTokens??80000),sessionTimeoutMs:Number(options.sessionTimeoutMs??600000)})};}
-module.exports={operationTimeout,createCancellation,createSessionBudget,sessionOptions,assertActive,cancelled};
+module.exports={normalizedUsage,operationTimeout,createCancellation,createSessionBudget,sessionOptions,assertActive,cancelled};

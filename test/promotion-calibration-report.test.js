@@ -8,9 +8,14 @@ const policy=require('../quality/promotion-admission-policy.json');
 const {stableDigest,createRecord}=require('../scripts/model-evaluation');
 const {promotionReadiness,toEvaluationCorpus}=require('../scripts/promotion-corpus');
 const {evaluateAdmission}=require('../scripts/promotion-admission');
-const {buildCalibrationReport,validateCalibrationReport,nearestRank}=require('../scripts/promotion-calibration-report');
+const {buildCalibrationReport,validateCalibrationReport,nearestRank,sumUsage}=require('../scripts/promotion-calibration-report');
 
 function phase(tokens){return {model:'gpt-calibration-test',codexVersion:'0.0.0-test',providerMode:'openai',runtimeSource:'test',modelEvidenceDigest:'',usage:{inputTokens:tokens,outputTokens:0,totalTokens:tokens,cachedInputTokens:0},requestEstimate:null,durationMs:1};}
+
+test('calibration token summary leaves unreported cached usage unknown',()=>{
+  const hypothesis=phase(10),causalVerification=phase(5);delete causalVerification.usage.cachedInputTokens;
+  assert.deepEqual(sumUsage({execution:{hypothesis,causalVerification}}),{inputTokens:15,outputTokens:0,totalTokens:15,cachedInputTokens:null});
+});
 function runContext(debugCommit){return {workflow:'Promotion Model Evaluation',runId:'88',runAttempt:'1',event:'workflow_dispatch',repository:'jiying2007/codex-debug',sourceSha:debugCommit};}
 function fixture(){
   const debugCommit='a'.repeat(40),coreCommit='b'.repeat(40),qualification={schemaVersion:1,kind:'codex-debug-promotion-corpus-qualification',recordedAt:'2026-09-07T00:00:00.000Z',debugCommit,coreCommit,corpusDigest:stableDigest(corpus),readiness:promotionReadiness(corpus),runContext:runContext(debugCommit),cases:corpus.cases.map(item=>({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef,badCommit:item.badCommit,fixedCommit:item.fixedCommit,commandDigest:stableDigest(item.reproduction.command),badSummary:{runs:1,failures:1,timeouts:0,reproducibleFailure:true},fixedSummary:{runs:1,failures:0,timeouts:0,reproducibleFailure:false},badRepresentativeDigest:stableDigest(`bad:${item.id}`),fixedRepresentativeDigest:stableDigest(`fixed:${item.id}`),transitionDigest:stableDigest(`transition:${item.id}`)}))};qualification.digest=stableDigest(qualification);

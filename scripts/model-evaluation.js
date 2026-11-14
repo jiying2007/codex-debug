@@ -20,13 +20,9 @@ function stable(value){
 }
 function stableDigest(value){return crypto.createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');}
 function number(value){const n=Number(value);return Number.isFinite(n)&&n>=0?n:0;}
-function normalizedUsage(usage={}){
-  const input=number(usage.inputTokens??usage.input_tokens??usage.input);
-  const output=number(usage.outputTokens??usage.output_tokens??usage.output);
-  const total=number(usage.totalTokens??usage.total_tokens)||(input+output);
-  const cachedInput=number(usage.cachedInputTokens??usage.cached_input_tokens??usage.cached_input);
-  return Object.freeze({inputTokens:input,outputTokens:output,totalTokens:total,cachedInputTokens:cachedInput});
-}
+// Read-only provenance imports the digest helpers without runtime sources.
+// Load shared usage validation only when an evaluation actually needs it.
+function normalizedUsage(usage){return require('../src/session-budget').normalizedUsage(usage);}
 function phaseEvidence(phase){
   if(!phase)return null;
   const provider=phase.provider||{};
@@ -113,7 +109,8 @@ function validateRecord(corpus,record,{requireLive=false,requirePromotionEligibl
       assert.ok(String(phase.codexVersion||''),`Codex version missing for ${item.caseId}`);
       assert.ok(String(phase.runtimeSource||''),`runtime source missing for ${item.caseId}`);
       if(phase.modelEvidenceDigest)assert.match(phase.modelEvidenceDigest,HEX64,`invalid model evidence digest for ${item.caseId}`);
-      assert.ok(number(phase.usage?.totalTokens)>=0,`usage must be numeric for ${item.caseId}`);
+      const usage=normalizedUsage(phase.usage);
+      assert.ok(usage&&phase.usage.inputTokens===usage.inputTokens&&phase.usage.outputTokens===usage.outputTokens&&phase.usage.totalTokens===usage.totalTokens&&phase.usage.cachedInputTokens===usage.cachedInputTokens,`complete valid usage is required for ${item.caseId}`);
     }
   }
   return record;
@@ -121,7 +118,7 @@ function validateRecord(corpus,record,{requireLive=false,requirePromotionEligibl
 function evaluate(corpus,record,options={}){
   validateRecord(corpus,record,options);
   const specs=new Map(corpus.cases.map(x=>[x.id,x]));
-  let assessmentHits=0,rootCauseTotal=0,rootCauseHits=0,insufficientTotal=0,insufficientHits=0,falseSupport=0,patchPolicyViolations=0,falseFixCandidates=0,inputTokens=0,outputTokens=0,totalTokens=0,cachedInputTokens=0;
+  let assessmentHits=0,rootCauseTotal=0,rootCauseHits=0,insufficientTotal=0,insufficientHits=0,falseSupport=0,patchPolicyViolations=0,falseFixCandidates=0,inputTokens=0,outputTokens=0,totalTokens=0,cachedInputTokens=0,cachedInputComplete=true;
   const cases=[];
   for(const item of record.cases){
     const expected=specs.get(item.caseId).expected,judgment=item.judgment||{},haystack=[judgment.rootCauseText,...(judgment.supportedHypotheses||[])].join('\n').toLowerCase();
@@ -132,11 +129,15 @@ function evaluate(corpus,record,options={}){
     if(expected.assessment!=='supported'&&judgment.causalAssessment==='supported')falseSupport++;
     const forbiddenPatch=expected.patchPolicy==='forbidden'&&(judgment.patchProposed||judgment.patchDisposition==='accept');if(forbiddenPatch)patchPolicyViolations++;
     const falseFix=judgment.patchDisposition==='accept'&&(expected.assessment!=='supported'||expected.patchPolicy==='forbidden'||judgment.patchApplicable===false);if(falseFix)falseFixCandidates++;
-    for(const phase of [item.execution.hypothesis,item.execution.causalVerification]){const u=phase.usage||{};inputTokens+=number(u.inputTokens);outputTokens+=number(u.outputTokens);totalTokens+=number(u.totalTokens);cachedInputTokens+=number(u.cachedInputTokens);}
+    for(const phase of [item.execution.hypothesis,item.execution.causalVerification]){
+      const u=normalizedUsage(phase.usage);inputTokens+=u.inputTokens;outputTokens+=u.outputTokens;totalTokens+=u.totalTokens;
+      if(u.cachedInputTokens===undefined)cachedInputComplete=false;else cachedInputTokens+=u.cachedInputTokens;
+      assert.ok([inputTokens,outputTokens,totalTokens,cachedInputTokens].every(Number.isSafeInteger),'aggregate usage exceeds safe integer range');
+    }
     cases.push({id:item.caseId,assessmentExpected:expected.assessment,assessmentActual:judgment.causalAssessment,rootCauseHit,patchPolicy:expected.patchPolicy,patchDisposition:judgment.patchDisposition,patchApplicable:judgment.patchApplicable,falseFixCandidate:falseFix});
   }
   const count=record.cases.length;
-  return Object.freeze({schemaVersion:MODEL_EVAL_VERSION,source:record.source,promotionEligible:Boolean(record.promotionEligible&&corpus.promotionEligible),claimableLiveMetric:Boolean(record.source==='live'&&record.promotionEligible&&corpus.promotionEligible),cases:count,assessmentAccuracy:count?assessmentHits/count:0,rootCauseTop1Accuracy:rootCauseTotal?rootCauseHits/rootCauseTotal:null,insufficientEvidenceAccuracy:insufficientTotal?insufficientHits/insufficientTotal:null,falseSupport,falseFixCandidates,patchPolicyViolations,usage:{inputTokens,outputTokens,totalTokens,cachedInputTokens,tokensPerCase:count?totalTokens/count:0},caseResults:cases});
+  return Object.freeze({schemaVersion:MODEL_EVAL_VERSION,source:record.source,promotionEligible:Boolean(record.promotionEligible&&corpus.promotionEligible),claimableLiveMetric:Boolean(record.source==='live'&&record.promotionEligible&&corpus.promotionEligible),cases:count,assessmentAccuracy:count?assessmentHits/count:0,rootCauseTop1Accuracy:rootCauseTotal?rootCauseHits/rootCauseTotal:null,insufficientEvidenceAccuracy:insufficientTotal?insufficientHits/insufficientTotal:null,falseSupport,falseFixCandidates,patchPolicyViolations,usage:{inputTokens,outputTokens,totalTokens,cachedInputTokens:cachedInputComplete?cachedInputTokens:null,tokensPerCase:count?totalTokens/count:0},caseResults:cases});
 }
 function parseArgs(argv){const out={};for(let i=0;i<argv.length;i++){const arg=argv[i];if(arg==='--corpus')out.corpus=argv[++i];else if(arg==='--record')out.record=argv[++i];else if(arg==='--require-live')out.requireLive=true;else if(arg==='--require-promotion-eligible')out.requirePromotionEligible=true;else throw new Error(`Unknown argument: ${arg}`);}return out;}
 function main(){const args=parseArgs(process.argv.slice(2));if(!args.corpus||!args.record)throw new Error('--corpus and --record are required');const corpus=JSON.parse(fs.readFileSync(path.resolve(args.corpus),'utf8')),record=JSON.parse(fs.readFileSync(path.resolve(args.record),'utf8')),summary=evaluate(corpus,record,args);process.stdout.write(`${JSON.stringify(summary)}\n`);}

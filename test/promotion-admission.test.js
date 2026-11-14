@@ -39,6 +39,12 @@ test('reviewed policy calibration evidence must be a workflow-dispatch Promotion
 
 test('calibration admission v2 explicitly carries no repository-governance authority',()=>{const q=qualificationFor(corpus),r=liveRecordFor(corpus),a=evaluateAdmission({policy,reviewedCorpus:corpus,qualification:q,modelRecord:r,expectedDebugCommit:r.debugCommit,expectedCoreCommit:r.coreCommit});assert.equal(a.schemaVersion,ADMISSION_VERSION);assert.equal(a.governanceLockDigest,null);assert.equal(a.governanceReceiptDigest,null);assert.equal(a.ready,false);assert.ok(a.gaps.includes('promotion admission policy is not reviewed'));assert.ok(a.gaps.includes('token efficiency is not calibrated'));assert.match(a.digest,/^[0-9a-f]{64}$/);});
 
+test('calibration admission refuses missing model usage instead of measuring zero cost',()=>{
+  const q=qualificationFor(corpus),r=liveRecordFor(corpus);r.cases[0].execution.causalVerification.usage=null;
+  delete r.recordDigest;r.recordDigest=stableDigest(r);
+  assert.throws(()=>evaluateAdmission({policy,reviewedCorpus:corpus,qualification:q,modelRecord:r}),/complete valid usage is required/);
+});
+
 test('promotion admission requires and binds same-run reviewed repository governance',()=>{
   const reviewed=clone(corpus);reviewed.promotionEligible=true;const q=qualificationFor(reviewed),r=liveRecordFor(reviewed,{promotionEligible:true}),p=reviewedPolicy(reviewed),g=governanceFor();
   assert.throws(()=>evaluateAdmission({policy:p,reviewedCorpus:reviewed,qualification:q,modelRecord:r,requirePromotionEligible:true}),/requires reviewed repository governance evidence/);
