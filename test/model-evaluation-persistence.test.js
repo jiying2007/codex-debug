@@ -47,12 +47,12 @@ for(const script of ['live-model-eval.js','promotion-live-eval.js']){
       assert.match(run.processResult.stderr,/complete valid usage is required/);
       assert.equal(fs.existsSync(run.summary),false,'stale success summary must be removed');
       const record=JSON.parse(fs.readFileSync(run.record,'utf8'));
-      assert.equal(record.cases.length,script==='promotion-live-eval.js'?15:3);
+      assert.equal(record.cases.length,script==='promotion-live-eval.js'?25:3);
       assert.ok(record.cases.every(item=>item.execution.hypothesis.usage===null&&item.execution.causalVerification.usage===null));
       const unsigned={...record};delete unsigned.recordDigest;assert.equal(record.recordDigest,stableDigest(unsigned));
       if(script==='promotion-live-eval.js'){
         const transitions=JSON.parse(fs.readFileSync(run.transitions,'utf8'));
-        assert.equal(transitions.cases.length,12);assert.equal(transitions.debugCommit,record.debugCommit);
+        assert.equal(transitions.cases.length,22);assert.equal(transitions.debugCommit,record.debugCommit);
         const unsignedTransitions={...transitions};delete unsignedTransitions.digest;assert.equal(transitions.digest,stableDigest(unsignedTransitions));
       }
     }finally{run.cleanup();}

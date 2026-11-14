@@ -4,10 +4,11 @@
   "promotionEligible": false,
   "provenance": "reviewed-historical-fixes",
   "policy": {
-    "minimumCases": 12,
+    "minimumCases": 20,
     "minimumRepositories": 3,
     "minimumFailureKinds": 4,
-    "minimumInsufficientCases": 3
+    "minimumInsufficientCases": 3,
+    "minimumRootCauseGroups": 20
   },
   "cases": [
     {
@@ -19,11 +20,32 @@
       "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
       "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
       "failureKind": "test",
-      "reproduction": {"command":"node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["record digest","fixture"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "record digest",
+          "fixture"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "f8104b28f67dd75d7b0a2a6a1ae42cec645c126d7e623af4e6e1c49ac2467eca",
-      "groundTruth": {"type":"fix-commit","commit":"f25ddc273c8ed3ddc693e0f8cb71e40e1700638c","files":["quality/model-eval-contract-results.json"],"summary":"The contract fixture stored a non-canonical recordDigest; the evaluator correctly rejected it until the fixture digest was recomputed with the product's canonical JavaScript stable digest."},
-      "groundTruthDigest": "ce45ae021fdf819db10bfbdad1dd01c763050d647311c7668fa38c79ba2d7efa"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+        "files": [
+          "quality/model-eval-contract-results.json"
+        ],
+        "summary": "The contract fixture stored a non-canonical recordDigest; the evaluator correctly rejected it until the fixture digest was recomputed with the product's canonical JavaScript stable digest."
+      },
+      "groundTruthDigest": "ce45ae021fdf819db10bfbdad1dd01c763050d647311c7668fa38c79ba2d7efa",
+      "rootCauseGroup": "codex-debug-model-eval-record-digest-20260906",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "codex-debug-infra-precedence-20260905",
@@ -34,12 +56,46 @@
       "badCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
       "fixedCommit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
       "failureKind": "infra",
-      "reproduction": {"command":"node -e \"const {detectFailureKind}=require('./src/parsers');const k=detectFailureKind('Tests failed: runner service unavailable');if(k!=='infra'){console.error(k);process.exit(1)}\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["infra","service unavailable"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const {detectFailureKind}=require('./src/parsers');const k=detectFailureKind('Tests failed: runner service unavailable');if(k!=='infra'){console.error(k);process.exit(1)}\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "infra",
+          "service unavailable"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "9281f16c8a42d33cfdf95c7a426b64cb32a48ae4fcc295ae11ea27752ec0af6c",
-      "groundTruth": {"type":"fix-commit","commit":"434c7a83759f74d2fd73b797e6962bcbe84ded12","files":["src/parsers.js"],"summary":"Failure classification checked generic test wording before causal infrastructure signals; the fix moved infra precedence ahead of test and added runner/service-unavailable patterns."},
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+        "files": [
+          "src/parsers.js"
+        ],
+        "summary": "Failure classification checked generic test wording before causal infrastructure signals; the fix moved infra precedence ahead of test and added runner/service-unavailable patterns."
+      },
       "groundTruthDigest": "fa550be424b76d729f82e5ec4acc572aed9bbe2322752936e0925a7430001482",
-      "insufficientVariant": {"id":"codex-debug-infra-precedence-insufficient-20260906","expected":{"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},"expectationDigest":"d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a","evidenceProjection":{"version":1,"mode":"summary-only"},"evidenceProjectionDigest":"cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"}
+      "insufficientVariant": {
+        "id": "codex-debug-infra-precedence-insufficient-20260906",
+        "expected": {
+          "assessment": "insufficient",
+          "rootCauseTerms": [],
+          "patchPolicy": "forbidden"
+        },
+        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+        "evidenceProjection": {
+          "version": 1,
+          "mode": "summary-only"
+        },
+        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
+      },
+      "rootCauseGroup": "codex-debug-infra-precedence-20260905",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "safe-core-actions-list-marker-20260906",
@@ -50,12 +106,46 @@
       "badCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
       "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
       "failureKind": "build",
-      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\\\n  - uses: actions/checkout@v4\\\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["uses","unpinned"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\\\n  - uses: actions/checkout@v4\\\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "uses",
+          "unpinned"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "7e751cb1c6070d340d6a41ce5343c957f518627d56e09d1c3d37942684d7c5ce",
-      "groundTruth": {"type":"fix-commit","commit":"825dcce16ba4862639ba3a17ebd413d75044070a","files":["scripts/verify-actions-pins.js"],"summary":"The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."},
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "825dcce16ba4862639ba3a17ebd413d75044070a",
+        "files": [
+          "scripts/verify-actions-pins.js"
+        ],
+        "summary": "The shared Actions pin verifier matched only line-leading uses: syntax, so standard '- uses:' steps were silently skipped; the fix accepts the optional YAML list marker and fails closed on symlink traversal."
+      },
       "groundTruthDigest": "4e14e2245292950d94eaae7db5d2ac7be520829dcaf05ef5732bb27be2589323",
-      "insufficientVariant": {"id":"safe-core-actions-list-marker-insufficient-20260906","expected":{"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},"expectationDigest":"d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a","evidenceProjection":{"version":1,"mode":"summary-only"},"evidenceProjectionDigest":"cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"}
+      "insufficientVariant": {
+        "id": "safe-core-actions-list-marker-insufficient-20260906",
+        "expected": {
+          "assessment": "insufficient",
+          "rootCauseTerms": [],
+          "patchPolicy": "forbidden"
+        },
+        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+        "evidenceProjection": {
+          "version": 1,
+          "mode": "summary-only"
+        },
+        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
+      },
+      "rootCauseGroup": "safe-core-actions-list-marker-20260906",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "codex-diagnose-gitlab-stream-limit-20260903",
@@ -66,12 +156,46 @@
       "badCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
       "fixedCommit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
       "failureKind": "performance",
-      "reproduction": {"command":"node -e \"const {GitLabDiagnoseClient}=require('./src/gitlab');global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(6),Buffer.alloc(6)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{},releaseLock:()=>{}}}},arrayBuffer:async()=>{throw new Error('UNBOUNDED_ARRAYBUFFER')}});new GitLabDiagnoseClient({baseUrl:'https://gitlab.example',token:'x'}).request('GET','/x',{accept:'text',maxBytes:8}).then(()=>process.exit(1),e=>{if(e.code!=='EGITLABSIZE'){console.error(e.code||e.message);process.exit(1)}})\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["streaming","response limit"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const {GitLabDiagnoseClient}=require('./src/gitlab');global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(6),Buffer.alloc(6)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{},releaseLock:()=>{}}}},arrayBuffer:async()=>{throw new Error('UNBOUNDED_ARRAYBUFFER')}});new GitLabDiagnoseClient({baseUrl:'https://gitlab.example',token:'x'}).request('GET','/x',{accept:'text',maxBytes:8}).then(()=>process.exit(1),e=>{if(e.code!=='EGITLABSIZE'){console.error(e.code||e.message);process.exit(1)}})\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "streaming",
+          "response limit"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "0ba316dd57fc685c469106904674d1aef0e0f1f63757352b4077f9ae5ae20c32",
-      "groundTruth": {"type":"fix-commit","commit":"bea058d9ebd274731a41b0973dfe0d1da8d4511e","files":["src/gitlab.js"],"summary":"The GitLab client buffered unknown-length responses with arrayBuffer() before enforcing maxBytes; the fix streams response chunks, cancels on overflow, and raises EGITLABSIZE as soon as the byte limit is crossed."},
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+        "files": [
+          "src/gitlab.js"
+        ],
+        "summary": "The GitLab client buffered unknown-length responses with arrayBuffer() before enforcing maxBytes; the fix streams response chunks, cancels on overflow, and raises EGITLABSIZE as soon as the byte limit is crossed."
+      },
       "groundTruthDigest": "9706cfc766e73a6b74181b496aa13169d69c5365e4695b8c9feba42e7cb7db54",
-      "insufficientVariant": {"id":"codex-diagnose-gitlab-stream-limit-insufficient-20260906","expected":{"assessment":"insufficient","rootCauseTerms":[],"patchPolicy":"forbidden"},"expectationDigest":"d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a","evidenceProjection":{"version":1,"mode":"summary-only"},"evidenceProjectionDigest":"cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"}
+      "insufficientVariant": {
+        "id": "codex-diagnose-gitlab-stream-limit-insufficient-20260906",
+        "expected": {
+          "assessment": "insufficient",
+          "rootCauseTerms": [],
+          "patchPolicy": "forbidden"
+        },
+        "expectationDigest": "d6b55896a76cb1ae54c32e673a9e9ceb0796a82b495d2c292cc2af0ffd80650a",
+        "evidenceProjection": {
+          "version": 1,
+          "mode": "summary-only"
+        },
+        "evidenceProjectionDigest": "cd77be05b8d449e89f78152d20d6be410ca52ce6562635719ef25394c9e0812d"
+      },
+      "rootCauseGroup": "http-response-buffering-limit",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "codex-change-ghes-api-derivation-20260831",
@@ -82,11 +206,32 @@
       "badCommit": "904fef2477cb4164702642aa5393edc7faeefb84",
       "fixedCommit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
       "failureKind": "infra",
-      "reproduction": {"command":"node -e \"const {parseRemote}=require('./src/remote'),{createProvider}=require('./src/provider-factory');const p=createProvider(parseRemote('git@ghe.example:org/repo.git'),{provider:'github',githubApiBaseUrl:'https://api.github.com'});if(p.client.baseUrl!=='https://ghe.example/api/v3'){console.error(p.client.baseUrl);process.exit(1)}\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["api.github.com","api/v3"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const {parseRemote}=require('./src/remote'),{createProvider}=require('./src/provider-factory');const p=createProvider(parseRemote('git@ghe.example:org/repo.git'),{provider:'github',githubApiBaseUrl:'https://api.github.com'});if(p.client.baseUrl!=='https://ghe.example/api/v3'){console.error(p.client.baseUrl);process.exit(1)}\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "api.github.com",
+          "api/v3"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "f4507c4b168ad36bd1539ef01c34922ac624a9eaa1905da2b54bcc04503dd7d1",
-      "groundTruth": {"type":"fix-commit","commit":"f596f44c29e949b12b3541015c14eb424f62ae8d","files":["src/provider-factory.js"],"summary":"The GitHub Enterprise remote incorrectly inherited the GitHub.com API default, causing host-binding refusal instead of deriving the GHES /api/v3 endpoint from the Git remote host."},
-      "groundTruthDigest": "ddb797e29819f7bc8975b80997bb7fb84f17b21f81106581e4caf1418ea3497c"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
+        "files": [
+          "src/provider-factory.js"
+        ],
+        "summary": "The GitHub Enterprise remote incorrectly inherited the GitHub.com API default, causing host-binding refusal instead of deriving the GHES /api/v3 endpoint from the Git remote host."
+      },
+      "groundTruthDigest": "ddb797e29819f7bc8975b80997bb7fb84f17b21f81106581e4caf1418ea3497c",
+      "rootCauseGroup": "codex-change-ghes-api-derivation-20260831",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "codex-change-scm-redirect-refusal-20260831",
@@ -97,11 +242,32 @@
       "badCommit": "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
       "fixedCommit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
       "failureKind": "infra",
-      "reproduction": {"command":"node -e \"(async()=>{const {HttpClient}=require('./src/http-client');global.fetch=async(u,o)=>{if(o.redirect!=='error')throw new Error('MISSING_REDIRECT_ERROR');return{status:200,headers:{get:()=>''},text:async()=>''}};await new HttpClient({baseUrl:'https://ghe.example',token:'x',tokenHeader:'Authorization'}).request('GET','/x')})().catch(e=>{console.error(e.cause?.message||e.message);process.exit(1)})\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["redirect","credential"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"(async()=>{const {HttpClient}=require('./src/http-client');global.fetch=async(u,o)=>{if(o.redirect!=='error')throw new Error('MISSING_REDIRECT_ERROR');return{status:200,headers:{get:()=>''},text:async()=>''}};await new HttpClient({baseUrl:'https://ghe.example',token:'x',tokenHeader:'Authorization'}).request('GET','/x')})().catch(e=>{console.error(e.cause?.message||e.message);process.exit(1)})\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "redirect",
+          "credential"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "38179002e0c358eb48fa0ffc0635130605261e5713607df7fb57198b0634eee8",
-      "groundTruth": {"type":"fix-commit","commit":"4e7b754b06485a3168a0e12a84cabb24e0e3c3ef","files":["src/http-client.js"],"summary":"SCM HTTP requests did not explicitly reject redirects, so credential-bearing requests could follow an unvalidated 3xx hop; the fix sets fetch redirect mode to error."},
-      "groundTruthDigest": "5c31140154d1127a138c4130b31ad9a08f112850a459051310a272176ba297bd"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
+        "files": [
+          "src/http-client.js"
+        ],
+        "summary": "SCM HTTP requests did not explicitly reject redirects, so credential-bearing requests could follow an unvalidated 3xx hop; the fix sets fetch redirect mode to error."
+      },
+      "groundTruthDigest": "5c31140154d1127a138c4130b31ad9a08f112850a459051310a272176ba297bd",
+      "rootCauseGroup": "codex-change-scm-redirect-refusal-20260831",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "codex-change-scm-stream-limit-20260903",
@@ -112,11 +278,32 @@
       "badCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
       "fixedCommit": "128d6668eb3e947e584fc1d660dfcba69c674661",
       "failureKind": "performance",
-      "reproduction": {"command":"node -e \"(async()=>{const {HttpClient}=require('./src/http-client');let cancelled=false;global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(5*1024*1024),Buffer.alloc(4*1024*1024)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await new HttpClient({baseUrl:'https://api.github.com',token:'',tokenHeader:'Authorization',getRetries:0}).request('GET','/x');process.exit(1)}catch(e){if(e.code!=='ESCMOUTPUT'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["response.text","streaming"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"(async()=>{const {HttpClient}=require('./src/http-client');let cancelled=false;global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(5*1024*1024),Buffer.alloc(4*1024*1024)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await new HttpClient({baseUrl:'https://api.github.com',token:'',tokenHeader:'Authorization',getRetries:0}).request('GET','/x');process.exit(1)}catch(e){if(e.code!=='ESCMOUTPUT'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "response.text",
+          "streaming"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "d9cf65a5e6d3f3afb9f2c50e3e951fb2eed96ba9d24cdf9fde6c8d1c1460e4ac",
-      "groundTruth": {"type":"fix-commit","commit":"128d6668eb3e947e584fc1d660dfcba69c674661","files":["src/http-client.js"],"summary":"The shared SCM HTTP client consumed response.text() without any body limit; the fix added an 8 MiB byte-bounded streaming reader, cancels on overflow, and fails closed with ESCMOUTPUT."},
-      "groundTruthDigest": "1b0816684571728b9cda69bab1b81d2a93a67555332472074be2bb82146c362c"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "128d6668eb3e947e584fc1d660dfcba69c674661",
+        "files": [
+          "src/http-client.js"
+        ],
+        "summary": "The shared SCM HTTP client consumed response.text() without any body limit; the fix added an 8 MiB byte-bounded streaming reader, cancels on overflow, and fails closed with ESCMOUTPUT."
+      },
+      "groundTruthDigest": "1b0816684571728b9cda69bab1b81d2a93a67555332472074be2bb82146c362c",
+      "rootCauseGroup": "http-response-buffering-limit",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "codex-diagnose-notify-stream-limit-20260903",
@@ -127,11 +314,32 @@
       "badCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
       "fixedCommit": "27f03f79da14be3e3951734247deef3b8361182b",
       "failureKind": "performance",
-      "reproduction": {"command":"node -e \"(async()=>{const {notifyDiagnosis}=require('./src/notify');let cancelled=false;global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(32768),Buffer.alloc(40000)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await notifyDiagnosis({provider:'feishu',webhookEnv:'HOOK',env:{HOOK:'https://open.feishu.cn/open-apis/bot/v2/hook/test'},diagnosis:{classification:'test',rootCause:'x',confidence:1,retryRecommended:false},evidence:{subject:{jobName:'x'}}});process.exit(1)}catch(e){if(e.code!=='ENOTIFYPROTOCOL'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["response.text","64 KiB"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"(async()=>{const {notifyDiagnosis}=require('./src/notify');let cancelled=false;global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(32768),Buffer.alloc(40000)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await notifyDiagnosis({provider:'feishu',webhookEnv:'HOOK',env:{HOOK:'https://open.feishu.cn/open-apis/bot/v2/hook/test'},diagnosis:{classification:'test',rootCause:'x',confidence:1,retryRecommended:false},evidence:{subject:{jobName:'x'}}});process.exit(1)}catch(e){if(e.code!=='ENOTIFYPROTOCOL'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "response.text",
+          "64 KiB"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "eec50e368ee3b0a54777ad73afb9a052642d47513779868605938463c2c1c4a0",
-      "groundTruth": {"type":"fix-commit","commit":"27f03f79da14be3e3951734247deef3b8361182b","files":["src/notify.js"],"summary":"Notification delivery consumed webhook response.text() in full before slicing it for logs; the fix added a 64 KiB byte-bounded streaming reader, cancels on overflow, and fails closed with ENOTIFYPROTOCOL."},
-      "groundTruthDigest": "426df7ad2e465555ace5bd367d31a12ba33ba519b62a67b4693b2e590178a648"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "27f03f79da14be3e3951734247deef3b8361182b",
+        "files": [
+          "src/notify.js"
+        ],
+        "summary": "Notification delivery consumed webhook response.text() in full before slicing it for logs; the fix added a 64 KiB byte-bounded streaming reader, cancels on overflow, and fails closed with ENOTIFYPROTOCOL."
+      },
+      "groundTruthDigest": "426df7ad2e465555ace5bd367d31a12ba33ba519b62a67b4693b2e590178a648",
+      "rootCauseGroup": "http-response-buffering-limit",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "safe-core-spdx-or-license-20260826",
@@ -142,11 +350,32 @@
       "badCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
       "fixedCommit": "1755262f51d5e15d74e432add38863d2383bb495",
       "failureKind": "dependency",
-      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'lic-')),x=p.join(d,'node_modules','x');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'package.json'),JSON.stringify({name:'x',version:'1',license:'(MIT OR GPL-3.0-or-later)'}));const r=cp.spawnSync(process.execPath,['scripts/verify-package-licenses.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(r.status===0?0:1)\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["SPDX OR","license"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'lic-')),x=p.join(d,'node_modules','x');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'package.json'),JSON.stringify({name:'x',version:'1',license:'(MIT OR GPL-3.0-or-later)'}));const r=cp.spawnSync(process.execPath,['scripts/verify-package-licenses.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(r.status===0?0:1)\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "SPDX OR",
+          "license"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "593efb2297a5d7ac894c9bd7892af7a31ba7e7a3d733992a7c189ea080da97f3",
-      "groundTruth": {"type":"fix-commit","commit":"1755262f51d5e15d74e432add38863d2383bb495","files":["scripts/verify-package-licenses.js"],"summary":"The dependency-license verifier treated any GPL/AGPL token as forbidden even when a permissive SPDX OR alternative was available; the fix evaluates OR alternatives and rejects only when every alternative remains forbidden."},
-      "groundTruthDigest": "7dfeec52209f7066abd4701e4b70cffd473339f015d4b6c7df11f7cbcd13096f"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "1755262f51d5e15d74e432add38863d2383bb495",
+        "files": [
+          "scripts/verify-package-licenses.js"
+        ],
+        "summary": "The dependency-license verifier treated any GPL/AGPL token as forbidden even when a permissive SPDX OR alternative was available; the fix evaluates OR alternatives and rejects only when every alternative remains forbidden."
+      },
+      "groundTruthDigest": "7dfeec52209f7066abd4701e4b70cffd473339f015d4b6c7df11f7cbcd13096f",
+      "rootCauseGroup": "safe-core-spdx-or-license-20260826",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "safe-core-consumer-boundary-core-submodule-20260826",
@@ -157,11 +386,32 @@
       "badCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
       "fixedCommit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
       "failureKind": "build",
-      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'fam-'));for(const r of ['codex-commit','codex-review','codex-pr','codex-review-service']){const x=p.join(d,r,'src','codex-safe-core');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'x.js'),'function buildReviewEvidenceChunks() {}')}const q=cp.spawnSync(process.execPath,['scripts/verify-consumer-boundaries.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(q.status===0?0:1)\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["src/codex-safe-core","boundary scan"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'fam-'));for(const r of ['codex-commit','codex-review','codex-pr','codex-review-service']){const x=p.join(d,r,'src','codex-safe-core');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'x.js'),'function buildReviewEvidenceChunks() {}')}const q=cp.spawnSync(process.execPath,['scripts/verify-consumer-boundaries.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(q.status===0?0:1)\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "src/codex-safe-core",
+          "boundary scan"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "724258a0b2dae77561144ca45e4ac912bdb827b2c747cf1318dfa6e79f83d757",
-      "groundTruth": {"type":"fix-commit","commit":"72363d4f648171242810ac5871d713b2fa9b3bb6","files":["scripts/verify-consumer-boundaries.js"],"summary":"The consumer ownership walker compared directory entry names against the full path src/codex-safe-core, so it scanned the embedded canonical Core and falsely reported Core-owned implementations as consumer violations; the fix excludes that exact relative subtree."},
-      "groundTruthDigest": "afb35d88b2bddee44b59e24bcbcbc7d7d94ea0053b4faafdecff9c88d3c62699"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
+        "files": [
+          "scripts/verify-consumer-boundaries.js"
+        ],
+        "summary": "The consumer ownership walker compared directory entry names against the full path src/codex-safe-core, so it scanned the embedded canonical Core and falsely reported Core-owned implementations as consumer violations; the fix excludes that exact relative subtree."
+      },
+      "groundTruthDigest": "afb35d88b2bddee44b59e24bcbcbc7d7d94ea0053b4faafdecff9c88d3c62699",
+      "rootCauseGroup": "safe-core-consumer-boundary-core-submodule-20260826",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "safe-core-diagnosis-receipt-utc-20260830",
@@ -172,11 +422,32 @@
       "badCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
       "fixedCommit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
       "failureKind": "test",
-      "reproduction": {"command":"node -e \"const {validateDiagnosisReceipt}=require('./diagnosis-platform');const r={schemaVersion:1,kind:'codex-diagnose',subject:{commitSha:'abc'},evidenceDigest:'a'.repeat(64),classification:'unknown',confidence:.5,diagnosisFingerprint:'b'.repeat(64),model:'',codexVersion:'',createdAt:'2026-08-30T12:00:00+08:00'};try{validateDiagnosisReceipt(r);process.exit(1)}catch(e){if(e.code!=='EDIAGNOSISRECEIPT'){console.error(e.code||e.message);process.exit(1)}}\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["createdAt","canonical UTC"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const {validateDiagnosisReceipt}=require('./diagnosis-platform');const r={schemaVersion:1,kind:'codex-diagnose',subject:{commitSha:'abc'},evidenceDigest:'a'.repeat(64),classification:'unknown',confidence:.5,diagnosisFingerprint:'b'.repeat(64),model:'',codexVersion:'',createdAt:'2026-08-30T12:00:00+08:00'};try{validateDiagnosisReceipt(r);process.exit(1)}catch(e){if(e.code!=='EDIAGNOSISRECEIPT'){console.error(e.code||e.message);process.exit(1)}}\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "createdAt",
+          "canonical UTC"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "03c6a24a31e96be0b42329d5b5f953f51a69a77dc74883585e8fcc15e73f1758",
-      "groundTruth": {"type":"fix-commit","commit":"bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8","files":["diagnosis-platform.js"],"summary":"Diagnosis Receipt validation accepted any Date.parse-compatible createdAt value, including offset-local timestamps; the fix requires the canonical millisecond ISO-8601 UTC Z form and round-trip equality."},
-      "groundTruthDigest": "f4f1fae7ad1ac0ca2a477efe1ada1c65f0410e75d25a76ec206e69f1ac39402e"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
+        "files": [
+          "diagnosis-platform.js"
+        ],
+        "summary": "Diagnosis Receipt validation accepted any Date.parse-compatible createdAt value, including offset-local timestamps; the fix requires the canonical millisecond ISO-8601 UTC Z form and round-trip equality."
+      },
+      "groundTruthDigest": "f4f1fae7ad1ac0ca2a477efe1ada1c65f0410e75d25a76ec206e69f1ac39402e",
+      "rootCauseGroup": "safe-core-diagnosis-receipt-utc-20260830",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     },
     {
       "id": "safe-core-change-product-contract-20260831",
@@ -187,11 +458,428 @@
       "badCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
       "fixedCommit": "76418b80533c644e3ab01045290cd3cdd355622c",
       "failureKind": "build",
-      "reproduction": {"command":"node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),core=require('./core-contract.json'),{verify}=require('./scripts/verify-consumer-product-contract');const d=fs.mkdtempSync(p.join(os.tmpdir(),'pc-')),pin='d'.repeat(40),v='9.9.9';cp.execFileSync('git',['init','-q'],{cwd:d});fs.mkdirSync(p.join(d,'src'));fs.writeFileSync(p.join(d,'package.json'),JSON.stringify({version:v}));fs.writeFileSync(p.join(d,'product-contract.json'),JSON.stringify({...core,productId:'codex-change-safe',productVersion:v,safeCoreVersion:core.coreVersion,safeCoreCommit:pin}));cp.execFileSync('git',['update-index','--add','--cacheinfo','160000,'+pin+',src/codex-safe-core'],{cwd:d});verify(d,pin,'codex-change-safe')\"","runs":1,"timeoutMs":120000},
-      "expected": {"assessment":"supported","rootCauseTerms":["change-safe","productId"],"patchPolicy":"optional"},
+      "reproduction": {
+        "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),core=require('./core-contract.json'),{verify}=require('./scripts/verify-consumer-product-contract');const d=fs.mkdtempSync(p.join(os.tmpdir(),'pc-')),pin='d'.repeat(40),v='9.9.9';cp.execFileSync('git',['init','-q'],{cwd:d});fs.mkdirSync(p.join(d,'src'));fs.writeFileSync(p.join(d,'package.json'),JSON.stringify({version:v}));fs.writeFileSync(p.join(d,'product-contract.json'),JSON.stringify({...core,productId:'codex-change-safe',productVersion:v,safeCoreVersion:core.coreVersion,safeCoreCommit:pin}));cp.execFileSync('git',['update-index','--add','--cacheinfo','160000,'+pin+',src/codex-safe-core'],{cwd:d});verify(d,pin,'codex-change-safe')\"",
+        "runs": 1,
+        "timeoutMs": 120000
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "change-safe",
+          "productId"
+        ],
+        "patchPolicy": "optional"
+      },
       "expectationDigest": "9afbf920aae50936cffb22f6a07a1d20654126ebce11a72a31cf8e17224720d7",
-      "groundTruth": {"type":"fix-commit","commit":"76418b80533c644e3ab01045290cd3cdd355622c","files":["scripts/verify-consumer-product-contract.js"],"summary":"The active-consumer Product Contract verifier omitted codex-change-safe from its allowed productId set, so valid Change consumers failed Family validation; the fix adds Change to the canonical accepted product identities."},
-      "groundTruthDigest": "dbb908f6ed26b689a422bfa191fb8f2c7a67d7c9afad548774aa8212f376b732"
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "76418b80533c644e3ab01045290cd3cdd355622c",
+        "files": [
+          "scripts/verify-consumer-product-contract.js"
+        ],
+        "summary": "The active-consumer Product Contract verifier omitted codex-change-safe from its allowed productId set, so valid Change consumers failed Family validation; the fix adds Change to the canonical accepted product identities."
+      },
+      "groundTruthDigest": "dbb908f6ed26b689a422bfa191fb8f2c7a67d7c9afad548774aa8212f376b732",
+      "rootCauseGroup": "safe-core-change-product-contract-20260831",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-empty-economic-qualification-20261114",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "21217c779ceab6542077d3c88e0f6247d5cad305",
+      "fixedCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+      "failureKind": "test",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),{qualityConstrainedPromotion:q}=require('./model-economics');const m={recall:.96,falsePositiveRate:.02,criticalRecall:1,samples:80,criticalSamples:12},limits={maxRecallDrop:0,maxFalsePositiveIncrease:0,maxCriticalRecallDrop:0,minimumSamples:80,minimumCriticalSamples:12};a.equal(q({baseline:m,candidate:m,limits}).approved,true);console.log('POSITIVE_CONTROLS_PASS');a.equal(q().approved,false,'missing observations must not qualify');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "Measured quality, sample counts and explicit reviewed limits approve the identical candidate."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "missing observations",
+          "quality qualification"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "ae6182e5a6ac1e5c35dd73327c52b8c1763e68ae3ddda62105c52b1f86d35b63",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+        "files": [
+          "model-economics.js"
+        ],
+        "summary": "Quality-constrained promotion treated absent measured quality and sample evidence as passing values. The fix requires explicit measured rates, sufficient sample counts and reviewed limits before approval."
+      },
+      "groundTruthDigest": "e0565d1662056d0290b9241b4918bf00b362fae2a05c4c116f3af9717f86af89",
+      "rootCauseGroup": "safe-core-empty-economic-qualification-20261114",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-raw-path-alias-20261114",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+      "fixedCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+      "failureKind": "test",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),{normalizeDiagnosisResult:n}=require('./diagnosis-platform');const x={classification:'source',rootCause:'Compilation failed',confidence:.9,recommendedActions:['Inspect source'],affectedFiles:['src/a.c']};a.deepEqual(n(x).affectedFiles,['src/a.c']);console.log('POSITIVE_CONTROLS_PASS');const paths=[' x\\\\\\\\y.c ','x/y.c'];a.deepEqual(n({...x,affectedFiles:paths}).affectedFiles,paths,'distinct raw path identities must not collapse');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "A normal source path remains unchanged before the distinct raw-path counterexample."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "raw path",
+          "whitespace"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "67e0e3f0a5cacf369f494526f5e377134a71c71bcf278dbe1cbcadc9da881ea2",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+        "files": [
+          "diagnosis-platform.js"
+        ],
+        "summary": "Diagnosis normalization trimmed leading and trailing whitespace from valid Git paths. The regression preserves exact raw names, including literal backslashes, as distinct from slash paths; the observed bad/fixed difference is whitespace preservation."
+      },
+      "groundTruthDigest": "1c786bb4b19223bc4cf5fa1790fab1ed954e7968810f15bf49afe90a8be8a5aa",
+      "rootCauseGroup": "safe-core-raw-path-alias-20261114",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-fifo-open-block-20261114",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+      "fixedCommit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+      "failureKind": "deadlock",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),d=fs.mkdtempSync(p.join(os.tmpdir(),'fifo-case-')),m=require.resolve('./secure-local-file');try{const f=p.join(d,'regular');fs.writeFileSync(f,'ok',{mode:384});a.equal(require(m).secureReadText(f),'ok');console.log('POSITIVE_CONTROLS_PASS');const q=p.join(d,'fifo');cp.execFileSync('mkfifo',[q]);const code='try{require(process.argv[1]).secureReadText(process.argv[2]);process.exit(1)}catch(e){if(e.code!==\\\"ELOCALFILE\\\")throw e}';const r=cp.spawnSync(process.execPath,['-e',code,m,q],{timeout:1000,killSignal:'SIGKILL'});a.equal(r.error,undefined,'FIFO read must not block awaiting a writer');a.equal(r.status,0)}finally{fs.rmSync(d,{recursive:true,force:true})}\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "A private regular file can still be read before the FIFO counterexample."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "FIFO",
+          "O_NONBLOCK"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "d4ad8fd40c9a43eb9b7a634452a1f47b933cdc260eafb3dab78d569c9f7750ed",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+        "files": [
+          "secure-local-file.js"
+        ],
+        "summary": "Opening a FIFO with blocking O_RDONLY hung before fstat could reject its nonregular descriptor. The fix uses O_NONBLOCK at open and rejects the descriptor without reading it while normal files remain readable."
+      },
+      "groundTruthDigest": "3b5a6f3e518e08663263344aa3bc26fa0c305ec3c02d338b39d5d1dc9ec697d1",
+      "rootCauseGroup": "safe-core-fifo-open-block-20261114",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-zero-rss-baseline-20261028",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "13d9c0b7903e7c568f42691d47b9e7d7febde040",
+      "fixedCommit": "876e1d10d3bf0e490a7ee65c226a86e0289e3754",
+      "failureKind": "performance",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),{compareSnapshots:c}=require('./scripts/compare-performance-snapshot');const b={schemaVersion:3,metrics:{elapsedMs:100,rssGrowthBytes:0}},x={...b,budgets:{elapsedMs:5000,rssGrowthBytes:1000000}};a.equal(c(x,b).ok,true);console.log('POSITIVE_CONTROLS_PASS');a.equal(c({...x,metrics:{elapsedMs:100,rssGrowthBytes:1}},b).ok,false,'growth from a zero RSS baseline must not pass');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "A matched zero-to-zero memory observation passes before nonzero growth is tested."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "zero RSS",
+          "denominator"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "ebf935abbe58dc5f1ce68e93f7aa543fe86f93f0322faf52213c78384dc67028",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "876e1d10d3bf0e490a7ee65c226a86e0289e3754",
+        "files": [
+          "scripts/compare-performance-snapshot.js"
+        ],
+        "summary": "The percentage-regression calculation returned zero when the baseline RSS was zero, allowing new nonzero memory growth to pass. The fix explicitly rejects nonzero growth from a zero baseline while preserving equal-zero comparisons."
+      },
+      "groundTruthDigest": "374640cdcd2eb5057bf97a54a22a1e1f2be0efb510b1f19c1d61681b8785b4d4",
+      "rootCauseGroup": "safe-core-zero-rss-baseline-20261028",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-cancelled-observer-20261114",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "7fb4ae37b022f2335084a9543af3bae18d999d22",
+      "fixedCommit": "f327168f490c70a2fb15f1eb4a8b714bd43f43cd",
+      "failureKind": "infra",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),vm=require('vm');const y=fs.readFileSync('.github/workflows/trusted-ci-corroboration.yml','utf8'),m=y.match(/^    if: (.+)$/m);a.ok(m);const run=(event,conclusion)=>vm.runInNewContext(m[1],{github:{event:{workflow_run:{event,conclusion}}}},{timeout:100});a.equal(run('pull_request','success'),true);a.equal(run('pull_request','failure'),true);a.equal(run('push','success'),false);console.log('POSITIVE_CONTROLS_PASS');a.equal(run('pull_request','cancelled'),false,'superseded cancelled CI must not launch the observer');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "Success and real failure PR events remain observed; non-PR events remain excluded."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "cancelled",
+          "observer"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "ad3c86b8aeec4eea6c0b5d024026087b821b32ddefb3be701024aa97bd5abf52",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "f327168f490c70a2fb15f1eb4a8b714bd43f43cd",
+        "files": [
+          ".github/workflows/trusted-ci-corroboration.yml"
+        ],
+        "summary": "The observer workflow admitted cancelled pull-request CI runs from superseded heads, causing stale-head failures and redundant API work. The condition now excludes cancellation while retaining success and real failure observations."
+      },
+      "groundTruthDigest": "bc27eaa8be1a2f4460533b3a4f124d4b232638bf284743913d3b3f8ec5a91bee",
+      "rootCauseGroup": "safe-core-cancelled-observer-20261114",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-solo-approval-drift-20261103",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "2755b82a1d091fdb4154b610e60d6ffc984c7fa8",
+      "fixedCommit": "1566e5551fe28db51327c09d85662938b5aa6f46",
+      "failureKind": "infra",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),{assess}=require('./scripts/verify-repository-ruleset'),c=require('./repository-governance-contract');const d={name:c.rulesetName,target:'branch',enforcement:'active',conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}},bypass_actors:[],rules:[{type:'deletion'},{type:'non_fast_forward'},{type:'pull_request',parameters:{required_approving_review_count:0,dismiss_stale_reviews_on_push:false,require_last_push_approval:false,require_code_owner_review:false}},{type:'required_status_checks',parameters:{strict_required_status_checks_policy:true,required_status_checks:[{context:'CI Gate'}]}}]},r={default_branch:'main',delete_branch_on_merge:true};a.equal(assess(d,r).ok,true);console.log('POSITIVE_CONTROLS_PASS');d.rules[2].parameters.require_last_push_approval=true;a.equal(assess(d,r).ok,false,'unexpected solo last-pusher approval must be detected');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "The declared solo-maintainer zero-approval Ruleset passes before extra last-pusher approval is introduced."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "solo maintainer",
+          "last-push approval"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "f8ee6daddc36bf925bb5d8a62706b24bd8aa8bd59d73bcf0bbbf54a29678e8e5",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "1566e5551fe28db51327c09d85662938b5aa6f46",
+        "files": [
+          "scripts/verify-repository-ruleset.js"
+        ],
+        "summary": "The solo-maintainer audit only checked minimum protections and accepted an unexpected last-pusher approval requirement that blocked the sole maintainer. The fix compares the declared solo approval policy in both directions."
+      },
+      "groundTruthDigest": "34248142b3ec24d8457604d6bfb0189c1c67b903f28da052fb5e1d6f88e7ec3b",
+      "rootCauseGroup": "safe-core-solo-approval-drift-20261103",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-file-growth-race-20261024",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "190651770a444b0693d82228afc66879dd57b0c0",
+      "fixedCommit": "c62546bea2ead985dba4abe38ede5b1ce76ca088",
+      "failureKind": "race",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),os=require('os'),p=require('path'),{secureReadText:r}=require('./secure-local-file'),d=fs.mkdtempSync(p.join(os.tmpdir(),'growth-case-')),f=p.join(d,'file'),stat=fs.fstatSync;try{fs.writeFileSync(f,'small',{mode:384});a.equal(r(f,{maxBytes:32}),'small');console.log('POSITIVE_CONTROLS_PASS');let first=true;fs.fstatSync=function(fd){const v=stat(fd);if(first){first=false;fs.appendFileSync(f,'x'.repeat(4096))}return v};a.throws(()=>r(f,{maxBytes:32}),e=>e.code==='ELOCALFILE','file growth after stat must not exceed the read bound')}finally{fs.fstatSync=stat;fs.rmSync(d,{recursive:true,force:true})}\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "An unchanged regular file within its byte allowance is readable before growth after fstat."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "fstat",
+          "file growth"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "c1e00915dea417cd02d8cb35f598bdb84477d7c8aa350e4aad0cc6a890242684",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "c62546bea2ead985dba4abe38ede5b1ce76ca088",
+        "files": [
+          "secure-local-file.js"
+        ],
+        "summary": "A size check before readFileSync did not bound bytes if a regular file grew after fstat. The fix reads at most maxBytes plus one through the same descriptor and rejects growth before returning oversized content."
+      },
+      "groundTruthDigest": "2aad2c546989ca212ab8e7bb3eb2b88fc062ddb5e6f612a922accf6dc7584be3",
+      "rootCauseGroup": "safe-core-file-growth-race-20261024",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "safe-core-failed-budget-evidence-20261028",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "24877ee99de8d65fc4d0e111c0ceb2735ebb87b9",
+      "fixedCommit": "f9c2b2c223e2577d3dec6df54e5205736c5bc49d",
+      "failureKind": "performance",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),{buildSnapshot:b}=require('./scripts/write-performance-snapshot');const s={elapsedMs:100,rssGrowthBytes:1000,evidenceChunks:8,evidenceInputBytes:4194330,contextInputBytes:4194330,impactNodes:32,impactBytes:39340,estimatedTokens:497856,risk:2,plannedBytes:1046730},good=b(Array.from({length:7},()=>({...s})));a.equal(good.metrics.elapsedMs,100);console.log('POSITIVE_CONTROLS_PASS');const bad=b(Array.from({length:7},(_,i)=>({...s,elapsedMs:6000+i})));a.equal(bad.broadBudgetPassed,false);a.equal(bad.sampling.samples.length,7,'failed budgets must retain all observed samples');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "A successful bounded performance sample produces a valid snapshot before failed-budget evidence is tested."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "raw evidence",
+          "budget failure"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "42b489c9cdd3a4753d2fa147fece7593e0ec02bcc007e0206edd42aae32d975a",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "f9c2b2c223e2577d3dec6df54e5205736c5bc49d",
+        "files": [
+          "scripts/write-performance-snapshot.js"
+        ],
+        "summary": "Snapshot construction threw on a failed performance budget before raw samples could be saved. The fix returns the measured snapshot with broadBudgetPassed false, writes it, and only then fails the gate."
+      },
+      "groundTruthDigest": "a69f2638788411ef56cb0276cdeace566ad22e76d74445cfa4a8d806fc42abd7",
+      "rootCauseGroup": "safe-core-failed-budget-evidence-20261028",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "codex-change-same-name-check-20261113",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "941fdaf840256f1774fa5af831ee0132085d7ed0",
+      "fixedCommit": "0228d13d149c0fb026e1ffdb56bea417133688da",
+      "failureKind": "test",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),{evaluateChecks:e}=require('./src/readiness');const s={name:'CI Gate',state:'success',integrationId:null},r={name:'CI Gate',state:'success',integrationId:15368};a.equal(e([s,r],['CI Gate'])[0].state,'success');console.log('POSITIVE_CONTROLS_PASS');a.equal(e([s,{...r,state:'failure'}],['CI Gate'])[0].state,'failure','a successful status must not hide a failing check-run');a.equal(e([s,{...r,state:'pending'}],['CI Gate'])[0].state,'pending');\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "Matching successful status and check-run entries remain successful before failure and pending cases."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "same-name",
+          "check-run"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "d9e967be52e68f97331b66eed24df6d6c77ee3e56c808c8ac57b7a55d8786e0f",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "0228d13d149c0fb026e1ffdb56bea417133688da",
+        "files": [
+          "src/readiness.js"
+        ],
+        "summary": "Required-check selection kept the first same-name entry and let a green commit status hide a failed or pending Actions check-run. The fix aggregates all matching statuses so failure and pending outcomes cannot be concealed."
+      },
+      "groundTruthDigest": "7f1450872cd7e142cd0eb7b9b616639f072141e7f0ceec4876f276642506a004",
+      "rootCauseGroup": "codex-change-same-name-check-20261113",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
+    },
+    {
+      "id": "codex-change-native-nul-inventory-20261115",
+      "mode": "historical-observed",
+      "relation": "direct-parent-fix",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "anchorRef": "refs/heads/main",
+      "badCommit": "4d5b2064995dcb9bfd234356d6c9c45397045ef8",
+      "fixedCommit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+      "failureKind": "test",
+      "reproduction": {
+        "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),{GitCli}=require('./src/git-cli');(async()=>{const d=fs.mkdtempSync(p.join(os.tmpdir(),'nul-case-')),g=(...x)=>cp.execFileSync('git',x,{cwd:d});try{g('init','-q');g('config','user.email','fixture@example.invalid');g('config','user.name','fixture');g('config','commit.gpgsign','false');fs.writeFileSync(p.join(d,'file'),'one');g('add','.');g('commit','-qm','base');const cli=new GitCli(d);a.deepEqual(await cli.changedFiles('HEAD..HEAD'),[]);console.log('POSITIVE_CONTROLS_PASS');fs.writeFileSync(p.join(d,'file'),'two');g('commit','-qam','change');a.deepEqual(await cli.changedFiles('HEAD~1..HEAD'),[{status:'M',path:'file'}])}finally{fs.rmSync(d,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});\"",
+        "runs": 1,
+        "timeoutMs": 120000,
+        "positiveControls": [
+          "An empty real Git diff returns an empty inventory before a nonempty commit is examined."
+        ]
+      },
+      "expected": {
+        "assessment": "supported",
+        "rootCauseTerms": [
+          "NUL terminator",
+          "changedFiles"
+        ],
+        "patchPolicy": "optional"
+      },
+      "expectationDigest": "511e1b7337c2e3cb5e161591bf3d2cb84d1acf61d1285fcec4a0682192683bbc",
+      "groundTruth": {
+        "type": "fix-commit",
+        "commit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+        "files": [
+          "src/git-cli.js"
+        ],
+        "summary": "Git diff --name-status -z already returned a final NUL, but changedFiles appended another delimiter and its parser rejected every nonempty real diff. The fix consumes the original binary framing and validates UTF-8 and inventory completeness."
+      },
+      "groundTruthDigest": "7c8a955db32515555b91747f0324c5fbc4496366285dabde8dd05a6c5bb9bed4",
+      "rootCauseGroup": "codex-change-native-nul-inventory-20261115",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective"
     }
-  ]
+  ],
+  "partitionPolicy": {
+    "version": 1,
+    "unit": "root-cause-group",
+    "holdoutInterpretation": "reviewed-retrospective",
+    "blind": false
+  }
 }

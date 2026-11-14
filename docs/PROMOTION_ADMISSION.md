@@ -8,7 +8,7 @@ A promotion-mode model run must bind four independently validated layers from th
 
 1. `PROMOTION_REPOSITORY_GOVERNANCE.json` + the exact reviewed `PROMOTION_REPOSITORY_GOVERNANCE_LOCK.json` — repository governance is still active, matches the administrator-reviewed Ruleset identity/projection, and is not using a stale reviewed lock.
 2. `PROMOTION_CORPUS_QUALIFICATION.json` — Promotion Qualification v1 proving every reviewed bad commit reproduces and every exact direct-child fixed commit passes the same bounded command.
-3. `PROMOTION_MODEL_EVAL.json` — credential-backed two-pass live model evidence over all 15 evaluation views.
+3. `PROMOTION_MODEL_EVAL.json` — credential-backed two-pass live model evidence over all 25 evaluation views.
 4. `quality/promotion-admission-policy.json` — digest-bound reviewed quality, safety and token-efficiency policy.
 
 `PROMOTION_ADMISSION.json` v2 binds the Debug commit, Safe Core gitlink, reviewed-corpus digest, evaluation-corpus digest, qualification digest, model-record digest, policy digest, Governance Lock digest, Governance Receipt digest, workflow run context, metrics, gaps and a self digest. Qualification, model and governance evidence from different run ids, attempts, workflows, repositories, events or source SHAs are rejected.
@@ -17,7 +17,7 @@ Calibration remains explicitly non-authoritative: for `promotion_mode=false`, Ad
 
 ## Shipped schema identity
 
-The 0.1.17 packaged `product-contract.json` explicitly publishes the complete downstream Promotion evidence contract instead of requiring Family/release consumers to infer versions from repository code:
+The 0.1.18 packaged `product-contract.json` explicitly publishes the complete downstream Promotion evidence contract instead of requiring Family/release consumers to infer versions from repository code:
 
 - `promotionTransitionVersion=1`;
 - `promotionQualificationVersion=1`;
@@ -33,7 +33,7 @@ These fields describe evidence/control-plane schemas. They do not make the produ
 
 ## Checked-in development policy
 
-The 0.1.17 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
+The 0.1.18 development line intentionally keeps the admission policy **unreviewed** because no credential-backed historical live calibration has yet been recorded. The checked-in policy therefore has:
 
 - `reviewed=false`;
 - `calibrationEvidence=null`;
@@ -75,11 +75,11 @@ The candidate is intentionally written to a separate file. Replacing `quality/pr
 
 `Promotion Model Evaluation` performs the authority chain in one read-only workflow run after explicit acknowledgement that historical code executes without an OS sandbox:
 
-`validate corpus/policy -> verify reviewed repository governance (promotion mode only) -> qualify 12 transitions -> live model evaluation -> zero-tolerance safety check -> promotion admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
+`validate corpus/policy -> verify reviewed repository governance (promotion mode only) -> qualify 22 transitions -> live model evaluation -> zero-tolerance safety check -> promotion admission v2 -> receipt revalidation -> calibration review report -> artifact upload`
 
 The workflow retains `contents: read` only. Historical reproduction receives the existing isolated HOME/Git/npm environment and cannot inherit model or GitHub credentials.
 
-The protected model credential follows an additional least-privilege boundary: `OPENAI_API_KEY` is **not** defined at job scope and is injected only into the `Record historical live-model evaluation` step. Checkout, dependency installation, corpus/policy validation, the complete 12-transition Qualification step, Admission, Receipt revalidation, Calibration Report generation, and artifact upload do not receive the model credential through workflow environment. The live-model step itself fails closed before model execution when the protected credential is absent. Historical reproduction executed inside live evaluation continues to receive the scrubbed historical environment rather than the model process environment.
+The protected model credential follows an additional least-privilege boundary: `OPENAI_API_KEY` is **not** defined at job scope and is injected only into the `Record historical live-model evaluation` step. Checkout, dependency installation, corpus/policy validation, the complete 22-transition Qualification step, Admission, Receipt revalidation, Calibration Report generation, and artifact upload do not receive the model credential through workflow environment. The live-model step itself fails closed before model execution when the protected credential is absent. Historical reproduction executed inside live evaluation continues to receive the scrubbed historical environment rather than the model process environment.
 
 For `promotion_mode=false`, the workflow records qualification, live calibration, Admission and the digest-bound review-only Calibration Report, but the current draft policy causes `ready=false` without failing the calibration run. This is how RCA accuracy, insufficient-evidence accuracy, patch applicability and token usage are collected before choosing thresholds. Admission v2 explicitly records null governance digests in this mode so calibration cannot later be mistaken for active-promotion authority.
 
@@ -95,4 +95,6 @@ For `promotion_mode=true`, the workflow additionally requires a reviewed Governa
 6. Run `Promotion Model Evaluation` with `promotion_mode=true`; reviewed Governance Lock + same-run live Governance Receipt + Qualification + model evidence must all bind into Admission v2 and pass.
 7. Only after that evidence may lifecycle/release governance be considered.
 
-Structural readiness (`12/12`, `4/3`, `5/4`, `3/3`, 15 views) remains distinct from qualification, repository governance, model quality, policy calibration provenance, promotion admission, lifecycle authority and release authority.
+Structural readiness (`22/20` cases, `20/20` root-cause groups, `4/3` repositories, `7/4` failure kinds, `3/3` insufficient variants, 25 views) remains distinct from qualification, repository governance, model quality, policy calibration provenance, promotion admission, lifecycle authority and release authority.
+
+The corpus partitions are retrospective metadata. All current cases have been reviewed, the three related HTTP buffering cases share `dev`, and the four `holdout` cases are not unseen. No blind score or fresh model evidence is implied by deterministic historical replay.

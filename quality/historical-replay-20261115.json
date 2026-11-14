@@ -1,0 +1,2869 @@
+{
+  "schemaVersion": 1,
+  "kind": "codex-debug-retrospective-historical-replay",
+  "recordedAt": "2026-11-14T16:21:20.409Z",
+  "qualificationAuthority": false,
+  "freshModel": "not_run",
+  "interpretation": "Deterministic reviewed historical replays only; neither a blind holdout score nor same-run promotion admission evidence.",
+  "debugBaseCommit": "eefb885dd646ea1b0d83117b917264e8adf23cc2",
+  "worktreeState": "modified",
+  "acquisition": {
+    "mode": "reviewed-public-repository-mirrors",
+    "reason": "Direct HTTPS fetching with the existing scrubbed environment cannot resolve GitHub on this host. Only acquisition uses local mirrors; the original runTransitionInRepo executes both exact revisions and materializes their Core pins with the scrubbed environment.",
+    "anchors": [
+      {
+        "repository": "https://github.com/jiying2007/codex-debug.git",
+        "anchors": {
+          "refs/pull/1/head": "657a4192fc801334552fe08085f0f6f44fda9b2e",
+          "refs/pull/11/head": "44cc98d01f7ae3e5c2120eb1d9466e20a70bd9f4"
+        }
+      },
+      {
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchors": {
+          "refs/heads/main": "30e8426d1da6e7db21f71ec4918e3db90c884511"
+        }
+      },
+      {
+        "repository": "https://github.com/jiying2007/codex-diagnose.git",
+        "anchors": {
+          "refs/pull/23/head": "518f648f92805f5bdf125768a06251388283dc9c"
+        }
+      },
+      {
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchors": {
+          "refs/heads/main": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+          "refs/pull/40/head": "81c905d5d8fa21842548fb74cf2476d4921f15e9",
+          "refs/pull/52/head": "7c35d19ec706405ac901506c6c22c1c383ebcdcf"
+        }
+      }
+    ]
+  },
+  "coreCommit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+  "runnerSourceSha256": {
+    "scripts/historical-case.js": "ac2671be28dac77238d48d6e3c5233d9133065baa4a2f8b43714a4638c1ee2ee",
+    "src/reproduction.js": "1efe016a34dbbbf4a6031c0c3bc80ec5e55ff85817046cdece04e3bad7fc22e9",
+    "src/runner.js": "3a874f8326a1c2566e35bd768db643b6992b1bdf44688b21e5e836c5a1f5c050",
+    "scripts/promotion-corpus.js": "2c2b17959acb81f3a4905582f9eb769fee33f5c59eed9bf337c37fa646b6c4ec",
+    "scripts/promotion-provenance.js": "28e7b98c8480ce9dc9398fd6a63324429453f41d93585b38250399279e97a7d6",
+    "scripts/model-evaluation.js": "fdbedfd7a48948cd0c493dafc159f699759e36ef9b06133f6ef63606633c75ee"
+  },
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "arch": "x64",
+    "osRelease": "6.18.57"
+  },
+  "corpusDigest": "f88154dc6dcdc85d822172018af2bbf85edc0b05f76b69c3357fdddcd25ed13f",
+  "readiness": {
+    "ready": true,
+    "cases": 22,
+    "repositories": 4,
+    "failureKinds": 7,
+    "insufficientCases": 3,
+    "rootCauseGroups": 20,
+    "gaps": []
+  },
+  "cases": [
+    {
+      "caseId": "codex-debug-model-eval-record-digest-20260906",
+      "repository": "https://github.com/jiying2007/codex-debug.git",
+      "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
+      "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+      "rootCauseGroup": "codex-debug-model-eval-record-digest-20260906",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const c=require('./quality/model-eval-contract-corpus.json'),r=require('./quality/model-eval-contract-results.json');require('./scripts/model-evaluation').evaluate(c,r)\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "quality/model-eval-contract-results.json"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/11/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
+          "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+          "--",
+          "quality/model-eval-contract-results.json"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-debug-model-eval-record-digest-20260906",
+        "repository": "https://github.com/jiying2007/codex-debug.git",
+        "anchorRef": "refs/pull/11/head",
+        "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
+        "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+        "commandDigest": "ff2cb78657abbe6a2604bb7822a4cae9aabb60ef7474d4c6057cce4a876861e8",
+        "badSummary": {
+          "commandDigest": "ff2cb78657abbe6a2604bb7822a4cae9aabb60ef7474d4c6057cce4a876861e8",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 44,
+            "max": 44,
+            "mean": 44
+          },
+          "failureSignatures": [
+            {
+              "signature": "4829086c80d0412c285c2591bad5018c7f8e2b38eed73deac8ffcdf3758e66c1",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "f4c08bae2209cecef4bd5542dad792d1ce5cdad31eb077228963edb77c7fa914"
+        },
+        "fixedSummary": {
+          "commandDigest": "ff2cb78657abbe6a2604bb7822a4cae9aabb60ef7474d4c6057cce4a876861e8",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 43,
+            "max": 43,
+            "mean": 43
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "19890d1096eeb19395197cc4c5d42e57c193f6c408206c9385eb0fb40ef5ed76"
+        },
+        "badRepresentativeDigest": "ca79b003d5400c4baff399ddb95528114e29e577c671f8f88d61cb354e68b1d3",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "3517950a2ef84a403be65f644442e915db4d047cb5c154d15d62e201aa75b767"
+      },
+      "coreGitlinks": {
+        "bad": "d8ae46fb84787939f6ecf7632ccf8a52b37188fb",
+        "fixed": "d8ae46fb84787939f6ecf7632ccf8a52b37188fb"
+      },
+      "provenance": {
+        "caseId": "codex-debug-model-eval-record-digest-20260906",
+        "repository": "https://github.com/jiying2007/codex-debug.git",
+        "anchorRef": "refs/pull/11/head",
+        "badCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
+        "fixedCommit": "f25ddc273c8ed3ddc693e0f8cb71e40e1700638c",
+        "parentCommit": "99bd2628b0d55c78f6392d65c6bc11225db6a85d",
+        "anchorCommit": "44cc98d01f7ae3e5c2120eb1d9466e20a70bd9f4",
+        "changedFilesDigest": "45cd14fbd4bd65b2fd7ef4c4ab876e220b73a1de09ac3b5bf5047d474d7afeb1",
+        "groundTruthFiles": [
+          "quality/model-eval-contract-results.json"
+        ],
+        "provenanceDigest": "46462188506b8cb36517189ac12a724eba29ad9c30a17bb89c6ad024f204c93a"
+      },
+      "sourceContext": [
+        {
+          "file": "quality/model-eval-contract-results.json",
+          "bad": {
+            "present": true,
+            "bytes": 5897,
+            "sha256": "2c8c68bc5025383801f262591501140311dac9d130be5a616709c7659a5f7ae1"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 5897,
+            "sha256": "b6757b96509507ab0f0dfebfe58a8a7f27e7fc470155547d50686870fe8100a7"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 438,
+        "sha256": "34462f6f8fe29190b5825bafa2b9a7f02d07f5dac7909e0ac2339a99dbae4a6d"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 470
+    },
+    {
+      "caseId": "codex-debug-infra-precedence-20260905",
+      "repository": "https://github.com/jiying2007/codex-debug.git",
+      "badCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
+      "fixedCommit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+      "rootCauseGroup": "codex-debug-infra-precedence-20260905",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const {detectFailureKind}=require('./src/parsers');const k=detectFailureKind('Tests failed: runner service unavailable');if(k!=='infra'){console.error(k);process.exit(1)}\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "src/parsers.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/1/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
+          "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+          "--",
+          "src/parsers.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-debug-infra-precedence-20260905",
+        "repository": "https://github.com/jiying2007/codex-debug.git",
+        "anchorRef": "refs/pull/1/head",
+        "badCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
+        "fixedCommit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+        "commandDigest": "76c1e040e3cdf0290c44fb13faef888c7d1d876c115182e47b2410fc3acbe46e",
+        "badSummary": {
+          "commandDigest": "76c1e040e3cdf0290c44fb13faef888c7d1d876c115182e47b2410fc3acbe46e",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 49,
+            "max": 49,
+            "mean": 49
+          },
+          "failureSignatures": [
+            {
+              "signature": "0c53e092d65123d913f746ecd67034779a7f8f71d9abd44e6dcf84e61ce500e7",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "c9acfb5cfbb2dfd475fb870f2f766e1d44c6aa33c57c737332ffc6cc196ba947"
+        },
+        "fixedSummary": {
+          "commandDigest": "76c1e040e3cdf0290c44fb13faef888c7d1d876c115182e47b2410fc3acbe46e",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 33,
+            "max": 33,
+            "mean": 33
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "d3822fc6a0b99f3e922e64aad1171b51f6a5594b1a302880aa0ca924187f3eeb"
+        },
+        "badRepresentativeDigest": "02c10358a6d5f97d89aad6b09a58ff47796db939fade0e84d056e15591d9c7c8",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "6df54c5d8ae93b13284be575be59d161b5c5f5880f92efd29a81a4275b6f2a98"
+      },
+      "coreGitlinks": {
+        "bad": "00403dd14877e978698c63d06f6dbdfe2ba9b8cc",
+        "fixed": "00403dd14877e978698c63d06f6dbdfe2ba9b8cc"
+      },
+      "provenance": {
+        "caseId": "codex-debug-infra-precedence-20260905",
+        "repository": "https://github.com/jiying2007/codex-debug.git",
+        "anchorRef": "refs/pull/1/head",
+        "badCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
+        "fixedCommit": "434c7a83759f74d2fd73b797e6962bcbe84ded12",
+        "parentCommit": "e5cfa533eff7db66fd2fd922bff510e557ebc3f2",
+        "anchorCommit": "657a4192fc801334552fe08085f0f6f44fda9b2e",
+        "changedFilesDigest": "709716e6d4df78eb11f2dfc802c4bed86b6c70c7cc62624d99e318b27cfb956a",
+        "groundTruthFiles": [
+          "src/parsers.js"
+        ],
+        "provenanceDigest": "0ab2a7a0baae6ed50c24de842d1a117f965848a06ef9a54345a5548dc7c70e3c"
+      },
+      "sourceContext": [
+        {
+          "file": "src/parsers.js",
+          "bad": {
+            "present": true,
+            "bytes": 4225,
+            "sha256": "412935637da50f4a40c4196ae6f73ba04f5d6376f269483b9e2087d9079d1a9c"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 4318,
+            "sha256": "d8b4bbc842e2351743ffa04933ae6544c15e2787cbbfe89d995a8855ba2b336c"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 2555,
+        "sha256": "9d3fe8df85dcd34a0456e93e99d646af106ecc29c5e90508d4fb843849bda41b"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 461
+    },
+    {
+      "caseId": "safe-core-actions-list-marker-20260906",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
+      "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
+      "rootCauseGroup": "safe-core-actions-list-marker-20260906",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');const d=fs.mkdtempSync(path.join(os.tmpdir(),'pin-'));fs.writeFileSync(path.join(d,'x.yml'),'steps:\\\\n  - uses: actions/checkout@v4\\\\n');const r=cp.spawnSync(process.execPath,['scripts/verify-actions-pins.js',d]);fs.rmSync(d,{recursive:true,force:true});if(r.status===0)process.exit(1)\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "scripts/verify-actions-pins.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "43271fdf2a9fac608d27734e8c634f23ba393863",
+          "825dcce16ba4862639ba3a17ebd413d75044070a",
+          "--",
+          "scripts/verify-actions-pins.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-actions-list-marker-20260906",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
+        "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
+        "commandDigest": "1c3dcc3aebcc41d8c7e94845c920cab71797b7fb23871ddf80f74b17a6f22b0f",
+        "badSummary": {
+          "commandDigest": "1c3dcc3aebcc41d8c7e94845c920cab71797b7fb23871ddf80f74b17a6f22b0f",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 62,
+            "max": 62,
+            "mean": 62
+          },
+          "failureSignatures": [
+            {
+              "signature": "c15385e6da2cec576dfe5ee372cae20806da2b190c263a4919dff7ceb0d54213",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "82a4a9f23ebe472a212401380c2c35986ae8d17d0eec75d5d0dbd6fdabb33c72"
+        },
+        "fixedSummary": {
+          "commandDigest": "1c3dcc3aebcc41d8c7e94845c920cab71797b7fb23871ddf80f74b17a6f22b0f",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 64,
+            "max": 64,
+            "mean": 64
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "7cb5b1668782ee028ee24522b02a699259735c0aa43f363d282ce86ad9e1788a"
+        },
+        "badRepresentativeDigest": "2035769114896ab23d4cc2229fca1c254660b5aa1edd7ad215bda307860ef71d",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "7f10c40b1ad2473bda06d78e4d79894d75b10248a71ea8b41ed44ed92623115e"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-actions-list-marker-20260906",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
+        "fixedCommit": "825dcce16ba4862639ba3a17ebd413d75044070a",
+        "parentCommit": "43271fdf2a9fac608d27734e8c634f23ba393863",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "9f52eff060f981ad9324d0a616cccfa5f442ee48c1a75d921ec33072c8087b8a",
+        "groundTruthFiles": [
+          "scripts/verify-actions-pins.js"
+        ],
+        "provenanceDigest": "6cf88e88edc77b2b9ba48529fe0c9384a085f475f0ab06aaf2dfa72da0316671"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/verify-actions-pins.js",
+          "bad": {
+            "present": true,
+            "bytes": 863,
+            "sha256": "7f8731941625b52808ed3950e818080beded674bedc5a0b449a9ecca3866d704"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 978,
+            "sha256": "47f10d205b193e133a42cb89fc70a4719de602310588c282c9f6b2ab60390cb8"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 1782,
+        "sha256": "f55893da6493af3c2b865479b5c21c01a1dae20ce4d7d2965e97a4f95ffe9e17"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 285
+    },
+    {
+      "caseId": "codex-diagnose-gitlab-stream-limit-20260903",
+      "repository": "https://github.com/jiying2007/codex-diagnose.git",
+      "badCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
+      "fixedCommit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+      "rootCauseGroup": "http-response-buffering-limit",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const {GitLabDiagnoseClient}=require('./src/gitlab');global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(6),Buffer.alloc(6)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{},releaseLock:()=>{}}}},arrayBuffer:async()=>{throw new Error('UNBOUNDED_ARRAYBUFFER')}});new GitLabDiagnoseClient({baseUrl:'https://gitlab.example',token:'x'}).request('GET','/x',{accept:'text',maxBytes:8}).then(()=>process.exit(1),e=>{if(e.code!=='EGITLABSIZE'){console.error(e.code||e.message);process.exit(1)}})\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "src/gitlab.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/23/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "56d2b6c71c2897cc0497b9777db03e76ec90b514",
+          "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+          "--",
+          "src/gitlab.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-diagnose-gitlab-stream-limit-20260903",
+        "repository": "https://github.com/jiying2007/codex-diagnose.git",
+        "anchorRef": "refs/pull/23/head",
+        "badCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
+        "fixedCommit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+        "commandDigest": "a9a3716fdfaa3138b473fed8c9d0197a2723f398681f5a7b8ac8b74a46135474",
+        "badSummary": {
+          "commandDigest": "a9a3716fdfaa3138b473fed8c9d0197a2723f398681f5a7b8ac8b74a46135474",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 31,
+            "max": 31,
+            "mean": 31
+          },
+          "failureSignatures": [
+            {
+              "signature": "2e9e0f074383a5653fce8c3ffcb17c8486bf1f2ffb6ad3a0d821bf40005c8855",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "58d720d083154c5eaeac04cd695fd2d1403eb51d57058c323bf06a967382fad2"
+        },
+        "fixedSummary": {
+          "commandDigest": "a9a3716fdfaa3138b473fed8c9d0197a2723f398681f5a7b8ac8b74a46135474",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 30,
+            "max": 30,
+            "mean": 30
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "5f3900806246d0c522509d92bc4c1cbb6a06cb5cef3c7a071f0a114f12c608bb"
+        },
+        "badRepresentativeDigest": "f36f1b77d42c9ececaa11fe47aa9abbebc1780e7c50cc6c31e7b3f214cc0ec43",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "6c3e95fa2858f721e38fd2548b2d155ee6f6ce6139c9ec0af80244f4f9ef7f06"
+      },
+      "coreGitlinks": {
+        "bad": "479e4b33356457a90617aea7bbba5ee25b65b2c8",
+        "fixed": "479e4b33356457a90617aea7bbba5ee25b65b2c8"
+      },
+      "provenance": {
+        "caseId": "codex-diagnose-gitlab-stream-limit-20260903",
+        "repository": "https://github.com/jiying2007/codex-diagnose.git",
+        "anchorRef": "refs/pull/23/head",
+        "badCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
+        "fixedCommit": "bea058d9ebd274731a41b0973dfe0d1da8d4511e",
+        "parentCommit": "56d2b6c71c2897cc0497b9777db03e76ec90b514",
+        "anchorCommit": "518f648f92805f5bdf125768a06251388283dc9c",
+        "changedFilesDigest": "be6c27c2f47e0f05df5a085cec2af3133bcf3636b9935fcabf8fd051fb3c1ada",
+        "groundTruthFiles": [
+          "src/gitlab.js"
+        ],
+        "provenanceDigest": "1d36f2cb26f5abf8e8e74517736d0b5425b88509bfb3a05c612bb1f4cf9b26ec"
+      },
+      "sourceContext": [
+        {
+          "file": "src/gitlab.js",
+          "bad": {
+            "present": true,
+            "bytes": 5625,
+            "sha256": "c0177c649e51c8e57c92d21e43a0ccb28dea560b29977f24fbdb0412ded583e5"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 6212,
+            "sha256": "58ac0fd8a1b63589dd0a8b5d03a315bef74b475a37c8d7a2968fa5b896bccedd"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 6782,
+        "sha256": "73538d0229a15be6b36cad4dac226aaf0a7b1169318218274267c5fb83dfbbc9"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 386
+    },
+    {
+      "caseId": "codex-change-ghes-api-derivation-20260831",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "badCommit": "904fef2477cb4164702642aa5393edc7faeefb84",
+      "fixedCommit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
+      "rootCauseGroup": "codex-change-ghes-api-derivation-20260831",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const {parseRemote}=require('./src/remote'),{createProvider}=require('./src/provider-factory');const p=createProvider(parseRemote('git@ghe.example:org/repo.git'),{provider:'github',githubApiBaseUrl:'https://api.github.com'});if(p.client.baseUrl!=='https://ghe.example/api/v3'){console.error(p.client.baseUrl);process.exit(1)}\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "src/provider-factory.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/40/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "904fef2477cb4164702642aa5393edc7faeefb84",
+          "f596f44c29e949b12b3541015c14eb424f62ae8d",
+          "--",
+          "src/provider-factory.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-change-ghes-api-derivation-20260831",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/pull/40/head",
+        "badCommit": "904fef2477cb4164702642aa5393edc7faeefb84",
+        "fixedCommit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
+        "commandDigest": "93076a0f8cad2b7c7b7223678d88d830c9593a8ff122047a282560d2f515f416",
+        "badSummary": {
+          "commandDigest": "93076a0f8cad2b7c7b7223678d88d830c9593a8ff122047a282560d2f515f416",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 41,
+            "max": 41,
+            "mean": 41
+          },
+          "failureSignatures": [
+            {
+              "signature": "e78b92c23a4206914e4165a3cf02894b2b9b35756d4ced76d4863687c180d3d1",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "9e5f32b9f950ecad3c0d97263248aa1c6ed821a05c9ae15ec149844aca1416f0"
+        },
+        "fixedSummary": {
+          "commandDigest": "93076a0f8cad2b7c7b7223678d88d830c9593a8ff122047a282560d2f515f416",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 38,
+            "max": 38,
+            "mean": 38
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "9b87f8b2e23861e85b7eca8109c1da206130ecab5a71e48c0e58173c45b138fd"
+        },
+        "badRepresentativeDigest": "55f7f25917ec50a34d2a9a02131f6b5bcebcc1325ed6bddba3ea214f71190213",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "da3816e9c08e7cf7edff71c9f9be2806f94a5ae915d7adf8cb2f3000860894d0"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "codex-change-ghes-api-derivation-20260831",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/pull/40/head",
+        "badCommit": "904fef2477cb4164702642aa5393edc7faeefb84",
+        "fixedCommit": "f596f44c29e949b12b3541015c14eb424f62ae8d",
+        "parentCommit": "904fef2477cb4164702642aa5393edc7faeefb84",
+        "anchorCommit": "81c905d5d8fa21842548fb74cf2476d4921f15e9",
+        "changedFilesDigest": "ddf5788ed8318001b4eb79b8bbcb0a78a479b1a9076a79c4dfccb9acee13066d",
+        "groundTruthFiles": [
+          "src/provider-factory.js"
+        ],
+        "provenanceDigest": "2a4e6bacf67e1d67b95bbd3908db360a71e92bd8320b20ed97d0ba35c003f0d9"
+      },
+      "sourceContext": [
+        {
+          "file": "src/provider-factory.js",
+          "bad": {
+            "present": true,
+            "bytes": 1621,
+            "sha256": "3722992a321b28ae6c35d7fff5d72accd65d04be33cacf55e24f7c42bef807ef"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 1962,
+            "sha256": "50f18bbabb28f934d77881e19f36c0656d3d7e4a72649e1a8fa6acc077d4c539"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 2383,
+        "sha256": "90d7ccd69cea5f8803fbc1c211c319c52d545197ba5654bf306dc7f8a17201af"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 191
+    },
+    {
+      "caseId": "codex-change-scm-redirect-refusal-20260831",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "badCommit": "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
+      "fixedCommit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
+      "rootCauseGroup": "codex-change-scm-redirect-refusal-20260831",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"(async()=>{const {HttpClient}=require('./src/http-client');global.fetch=async(u,o)=>{if(o.redirect!=='error')throw new Error('MISSING_REDIRECT_ERROR');return{status:200,headers:{get:()=>''},text:async()=>''}};await new HttpClient({baseUrl:'https://ghe.example',token:'x',tokenHeader:'Authorization'}).request('GET','/x')})().catch(e=>{console.error(e.cause?.message||e.message);process.exit(1)})\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "src/http-client.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/40/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
+          "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
+          "--",
+          "src/http-client.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-change-scm-redirect-refusal-20260831",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/pull/40/head",
+        "badCommit": "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
+        "fixedCommit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
+        "commandDigest": "95309c3dfc3a985e6b03e11cb9b9a21c7fd7f2f105e6f2dc246918c2cd98ad14",
+        "badSummary": {
+          "commandDigest": "95309c3dfc3a985e6b03e11cb9b9a21c7fd7f2f105e6f2dc246918c2cd98ad14",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 118,
+            "max": 118,
+            "mean": 118
+          },
+          "failureSignatures": [
+            {
+              "signature": "f404e668d100d14e32f22fb3cd23f096ba0a4484a0f4a10c9a6c91d122d322e0",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "c76ebd92834b87aabd4b3282a860bdddd9f8cb8bd5aa37f65f30c308a075c8b5"
+        },
+        "fixedSummary": {
+          "commandDigest": "95309c3dfc3a985e6b03e11cb9b9a21c7fd7f2f105e6f2dc246918c2cd98ad14",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 39,
+            "max": 39,
+            "mean": 39
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "bf64104f20fbae64f5091173ed8c9855a34ecb2bc587d923fde55326b91b03b9"
+        },
+        "badRepresentativeDigest": "048548c9782c4acc8466ddd3a260837405fae741f962bd098beb378168dcf815",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "d0e96897dd882f1968ffb4bb92824bb30cf3a8339f16422585855eaaa0a018be"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "codex-change-scm-redirect-refusal-20260831",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/pull/40/head",
+        "badCommit": "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
+        "fixedCommit": "4e7b754b06485a3168a0e12a84cabb24e0e3c3ef",
+        "parentCommit": "f87165849d5627fa013eb5d7e9c27ae01351fc4d",
+        "anchorCommit": "81c905d5d8fa21842548fb74cf2476d4921f15e9",
+        "changedFilesDigest": "c2a4453046a6c87bf9106351cad6fd565b4fd736ffd4a1a88fb5e33fb7ed9733",
+        "groundTruthFiles": [
+          "src/http-client.js"
+        ],
+        "provenanceDigest": "11df0a9631784063200dc8b0315461c88cea75c9e3842d064c250a97fa134eee"
+      },
+      "sourceContext": [
+        {
+          "file": "src/http-client.js",
+          "bad": {
+            "present": true,
+            "bytes": 4064,
+            "sha256": "9a92672944771975c51b3f785ab0f97760b798b9d449f234a8e839ba4c0c2545"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 4083,
+            "sha256": "cb8841c973669f563c088909423b6a2e3faec2e070b3a249b15d55b9935b0624"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 1077,
+        "sha256": "f7f6a2dc0f00b7b68f202d9befe7d25e48eb321bd373add78a6712015b67ea49"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 262
+    },
+    {
+      "caseId": "codex-change-scm-stream-limit-20260903",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "badCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
+      "fixedCommit": "128d6668eb3e947e584fc1d660dfcba69c674661",
+      "rootCauseGroup": "http-response-buffering-limit",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"(async()=>{const {HttpClient}=require('./src/http-client');let cancelled=false;global.fetch=async()=>({status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(5*1024*1024),Buffer.alloc(4*1024*1024)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await new HttpClient({baseUrl:'https://api.github.com',token:'',tokenHeader:'Authorization',getRetries:0}).request('GET','/x');process.exit(1)}catch(e){if(e.code!=='ESCMOUTPUT'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "src/http-client.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/52/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "3a2e6935daaf3494e298491adb76f45c71eb5038",
+          "128d6668eb3e947e584fc1d660dfcba69c674661",
+          "--",
+          "src/http-client.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-change-scm-stream-limit-20260903",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/pull/52/head",
+        "badCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
+        "fixedCommit": "128d6668eb3e947e584fc1d660dfcba69c674661",
+        "commandDigest": "8ef1ab777f706e3c21a55b9d0ebfd4b3333b063635eb6f2eee2b0ab8f5f53e19",
+        "badSummary": {
+          "commandDigest": "8ef1ab777f706e3c21a55b9d0ebfd4b3333b063635eb6f2eee2b0ab8f5f53e19",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 34,
+            "max": 34,
+            "mean": 34
+          },
+          "failureSignatures": [
+            {
+              "signature": "b96defa76c07c6254a2ba308dac3a2c0503e1ea64ead219e00748157864aa11c",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "dcfd1a275c398adf371698981e57dd97c582db20fc9ae5893e152b294b5550e3"
+        },
+        "fixedSummary": {
+          "commandDigest": "8ef1ab777f706e3c21a55b9d0ebfd4b3333b063635eb6f2eee2b0ab8f5f53e19",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 47,
+            "max": 47,
+            "mean": 47
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "0327280eeddb7582bb433daa897468dfe621bdf9eb9e251a39af8f9f49ddca58"
+        },
+        "badRepresentativeDigest": "6348976d81077179f85903294a0a78ec7750c8791895fd1ee20f0b983dac2f5f",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "1fde67457cc01935f12c299f8168ccd1c7e431268522d80ae2d2ea7c5fa62de6"
+      },
+      "coreGitlinks": {
+        "bad": "479e4b33356457a90617aea7bbba5ee25b65b2c8",
+        "fixed": "479e4b33356457a90617aea7bbba5ee25b65b2c8"
+      },
+      "provenance": {
+        "caseId": "codex-change-scm-stream-limit-20260903",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/pull/52/head",
+        "badCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
+        "fixedCommit": "128d6668eb3e947e584fc1d660dfcba69c674661",
+        "parentCommit": "3a2e6935daaf3494e298491adb76f45c71eb5038",
+        "anchorCommit": "7c35d19ec706405ac901506c6c22c1c383ebcdcf",
+        "changedFilesDigest": "c2a4453046a6c87bf9106351cad6fd565b4fd736ffd4a1a88fb5e33fb7ed9733",
+        "groundTruthFiles": [
+          "src/http-client.js"
+        ],
+        "provenanceDigest": "f7555a8f869aedd3c866d22acc5725dfcf2081e0c7c25479c57506a4b1beceec"
+      },
+      "sourceContext": [
+        {
+          "file": "src/http-client.js",
+          "bad": {
+            "present": true,
+            "bytes": 4245,
+            "sha256": "a9ec8239f24a908b5c6edeba4f4f15686e0c15865355744ba2fc916f88a56abe"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 5432,
+            "sha256": "7f9738165d2137cfd37ac946b70384f8ab9ec95f9740add0b2532bab1fda382b"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 7260,
+        "sha256": "bab8f8d9caa57f21fbbf71101b950bf55937d8fa3220aa3f614152c74fb95b0a"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 440
+    },
+    {
+      "caseId": "codex-diagnose-notify-stream-limit-20260903",
+      "repository": "https://github.com/jiying2007/codex-diagnose.git",
+      "badCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
+      "fixedCommit": "27f03f79da14be3e3951734247deef3b8361182b",
+      "rootCauseGroup": "http-response-buffering-limit",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"(async()=>{const {notifyDiagnosis}=require('./src/notify');let cancelled=false;global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},body:{getReader:()=>{const q=[Buffer.alloc(32768),Buffer.alloc(40000)];return{read:async()=>q.length?{done:false,value:q.shift()}:{done:true},cancel:async()=>{cancelled=true},releaseLock:()=>{}}}},text:async()=>{throw new Error('UNBOUNDED_TEXT')}});try{await notifyDiagnosis({provider:'feishu',webhookEnv:'HOOK',env:{HOOK:'https://open.feishu.cn/open-apis/bot/v2/hook/test'},diagnosis:{classification:'test',rootCause:'x',confidence:1,retryRecommended:false},evidence:{subject:{jobName:'x'}}});process.exit(1)}catch(e){if(e.code!=='ENOTIFYPROTOCOL'||!cancelled){console.error(e.code||e.message,cancelled);process.exit(1)}}})()\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "src/notify.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/pull/23/head"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "56987e5537637704ed643a0b253a679bbaba3e52",
+          "27f03f79da14be3e3951734247deef3b8361182b",
+          "--",
+          "src/notify.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-diagnose-notify-stream-limit-20260903",
+        "repository": "https://github.com/jiying2007/codex-diagnose.git",
+        "anchorRef": "refs/pull/23/head",
+        "badCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
+        "fixedCommit": "27f03f79da14be3e3951734247deef3b8361182b",
+        "commandDigest": "2294f229ff2b51457f66d32c9fc917b011fc74fb640996a7547d2c681d6130f7",
+        "badSummary": {
+          "commandDigest": "2294f229ff2b51457f66d32c9fc917b011fc74fb640996a7547d2c681d6130f7",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 30,
+            "max": 30,
+            "mean": 30
+          },
+          "failureSignatures": [
+            {
+              "signature": "89d380fe680cfc0e0dd447a849fc168d72404e0f5f6e8245be5d323755151826",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "d7bceb8988e43cacd1a19aa4fbf50855a79ea411e1bc004df4dbdf4a1a887b95"
+        },
+        "fixedSummary": {
+          "commandDigest": "2294f229ff2b51457f66d32c9fc917b011fc74fb640996a7547d2c681d6130f7",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 28,
+            "max": 28,
+            "mean": 28
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "fd4fcec686e7333a6952733d83b19dd0fc9764546eeddeb5146b38f747a2114a"
+        },
+        "badRepresentativeDigest": "6348976d81077179f85903294a0a78ec7750c8791895fd1ee20f0b983dac2f5f",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "e753e5e31111efde246806be9321b49df56dc87b936184b55e14c9a651d6a813"
+      },
+      "coreGitlinks": {
+        "bad": "479e4b33356457a90617aea7bbba5ee25b65b2c8",
+        "fixed": "479e4b33356457a90617aea7bbba5ee25b65b2c8"
+      },
+      "provenance": {
+        "caseId": "codex-diagnose-notify-stream-limit-20260903",
+        "repository": "https://github.com/jiying2007/codex-diagnose.git",
+        "anchorRef": "refs/pull/23/head",
+        "badCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
+        "fixedCommit": "27f03f79da14be3e3951734247deef3b8361182b",
+        "parentCommit": "56987e5537637704ed643a0b253a679bbaba3e52",
+        "anchorCommit": "518f648f92805f5bdf125768a06251388283dc9c",
+        "changedFilesDigest": "653e0ef5c9c84ec72e24db2a66c5f28855a95cce28805710ca0ecef98ab2e056",
+        "groundTruthFiles": [
+          "src/notify.js"
+        ],
+        "provenanceDigest": "d2b721023a166566a5fcf5778975693d211c11dc23315e0fbccb829fae873ac3"
+      },
+      "sourceContext": [
+        {
+          "file": "src/notify.js",
+          "bad": {
+            "present": true,
+            "bytes": 2199,
+            "sha256": "ca936a2c3cc882c46f4c71b88c6f67b68f0c896622376d885a3a086d4828f403"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 3204,
+            "sha256": "7c2e84b4652d4f767aaf92e246639cbf3388fc95612f40b6133492f907f5d90d"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 4271,
+        "sha256": "6f531d00d268f743f0ef4c4f83c8fd6b9e762830d06c56123340483b181e26ff"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 363
+    },
+    {
+      "caseId": "safe-core-spdx-or-license-20260826",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
+      "fixedCommit": "1755262f51d5e15d74e432add38863d2383bb495",
+      "rootCauseGroup": "safe-core-spdx-or-license-20260826",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'lic-')),x=p.join(d,'node_modules','x');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'package.json'),JSON.stringify({name:'x',version:'1',license:'(MIT OR GPL-3.0-or-later)'}));const r=cp.spawnSync(process.execPath,['scripts/verify-package-licenses.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(r.status===0?0:1)\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "scripts/verify-package-licenses.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "a0c3419684f835108cad31eb909b3d7f7df7b260",
+          "1755262f51d5e15d74e432add38863d2383bb495",
+          "--",
+          "scripts/verify-package-licenses.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-spdx-or-license-20260826",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
+        "fixedCommit": "1755262f51d5e15d74e432add38863d2383bb495",
+        "commandDigest": "bf125c88ad4b41c56fba042359619ad927eafcbc6ad70f84755ff4d548cc9a83",
+        "badSummary": {
+          "commandDigest": "bf125c88ad4b41c56fba042359619ad927eafcbc6ad70f84755ff4d548cc9a83",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 61,
+            "max": 61,
+            "mean": 61
+          },
+          "failureSignatures": [
+            {
+              "signature": "c15385e6da2cec576dfe5ee372cae20806da2b190c263a4919dff7ceb0d54213",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "43d99c56a64cde24792061ef2f3606305546cd6e71668ec23e143e11d0fdaa06"
+        },
+        "fixedSummary": {
+          "commandDigest": "bf125c88ad4b41c56fba042359619ad927eafcbc6ad70f84755ff4d548cc9a83",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 69,
+            "max": 69,
+            "mean": 69
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "90269b7caede822879f3e5f3184dceea8872f85104d6f6930271be29f3fcd48a"
+        },
+        "badRepresentativeDigest": "2035769114896ab23d4cc2229fca1c254660b5aa1edd7ad215bda307860ef71d",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "7ade4788d3cd3b16d2d38a6748890a5f2da53b09d03ba7b5c24e7b4d32171d18"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-spdx-or-license-20260826",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
+        "fixedCommit": "1755262f51d5e15d74e432add38863d2383bb495",
+        "parentCommit": "a0c3419684f835108cad31eb909b3d7f7df7b260",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "823852ccfdffc1646b0a253e081b02236d6118dba92dc946c5400e41db32321f",
+        "groundTruthFiles": [
+          "scripts/verify-package-licenses.js"
+        ],
+        "provenanceDigest": "a05fa0dad1a5968c958eaeafd9186997a97bd544044be3ad8675431f31c14cf1"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/verify-package-licenses.js",
+          "bad": {
+            "present": true,
+            "bytes": 892,
+            "sha256": "be6f9f35f0a02dc453d476d5623ed0e4dd93ec8906734ed3066138dc303eb266"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 1647,
+            "sha256": "bc942a9af193e736e14247dbf97b354b500d406fd5ea1aaa27ab2bc28ffca19a"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 2782,
+        "sha256": "a44b608f55df168a278a8d473537b35cc589066d4e99347c84bfc42ac2e52cab"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 291
+    },
+    {
+      "caseId": "safe-core-consumer-boundary-core-submodule-20260826",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
+      "fixedCommit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
+      "rootCauseGroup": "safe-core-consumer-boundary-core-submodule-20260826",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process');const d=fs.mkdtempSync(p.join(os.tmpdir(),'fam-'));for(const r of ['codex-commit','codex-review','codex-pr','codex-review-service']){const x=p.join(d,r,'src','codex-safe-core');fs.mkdirSync(x,{recursive:true});fs.writeFileSync(p.join(x,'x.js'),'function buildReviewEvidenceChunks() {}')}const q=cp.spawnSync(process.execPath,['scripts/verify-consumer-boundaries.js',d]);fs.rmSync(d,{recursive:true,force:true});process.exit(q.status===0?0:1)\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "scripts/verify-consumer-boundaries.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "391dde3e7558a9edceef6840de331b8b7c95a375",
+          "72363d4f648171242810ac5871d713b2fa9b3bb6",
+          "--",
+          "scripts/verify-consumer-boundaries.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-consumer-boundary-core-submodule-20260826",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
+        "fixedCommit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
+        "commandDigest": "0f9a1af20e9b24a7f2c45497e5ecb348fe985c3c827e848184d4dc0246b4cb8b",
+        "badSummary": {
+          "commandDigest": "0f9a1af20e9b24a7f2c45497e5ecb348fe985c3c827e848184d4dc0246b4cb8b",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 65,
+            "max": 65,
+            "mean": 65
+          },
+          "failureSignatures": [
+            {
+              "signature": "c15385e6da2cec576dfe5ee372cae20806da2b190c263a4919dff7ceb0d54213",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "9faef451b2ac5040470fd9462cb3de544eb7daf29de6ec5a9af7fc9fabbb962f"
+        },
+        "fixedSummary": {
+          "commandDigest": "0f9a1af20e9b24a7f2c45497e5ecb348fe985c3c827e848184d4dc0246b4cb8b",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 68,
+            "max": 68,
+            "mean": 68
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "06747c2c602dbf088879e5a93cd0a86d692355902704be4778403e3c2bc506f9"
+        },
+        "badRepresentativeDigest": "2035769114896ab23d4cc2229fca1c254660b5aa1edd7ad215bda307860ef71d",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "8bff71ed75c58bd3b00483c6f7f9fdafe7bbe1dc86263ff9d43e39581c06e33d"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-consumer-boundary-core-submodule-20260826",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
+        "fixedCommit": "72363d4f648171242810ac5871d713b2fa9b3bb6",
+        "parentCommit": "391dde3e7558a9edceef6840de331b8b7c95a375",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "f1e01773a89f7e50f55ed2a6d46f94b61b4dbc5c4fa6bdb0bb1fa721ec314046",
+        "groundTruthFiles": [
+          "scripts/verify-consumer-boundaries.js"
+        ],
+        "provenanceDigest": "c8c32213b54ca1a7b824bc35cc7f153720cb5ae8d59d3d96fce818a1e9a4d0dd"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/verify-consumer-boundaries.js",
+          "bad": {
+            "present": true,
+            "bytes": 1117,
+            "sha256": "1a055ff02e9f67dc5b5c54b705a37bbcb621e7c570916b3b68a4c771279a9394"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 1306,
+            "sha256": "215cc5719cb4977a888e84dbeea6f40cac0c77eb7922dbda591265b214edf692"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 1794,
+        "sha256": "0813aa76e308ae9badfd14d7de59c17490c7df99818ef3d7e8a126db08c84d7b"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 287
+    },
+    {
+      "caseId": "safe-core-diagnosis-receipt-utc-20260830",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
+      "fixedCommit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
+      "rootCauseGroup": "safe-core-diagnosis-receipt-utc-20260830",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const {validateDiagnosisReceipt}=require('./diagnosis-platform');const r={schemaVersion:1,kind:'codex-diagnose',subject:{commitSha:'abc'},evidenceDigest:'a'.repeat(64),classification:'unknown',confidence:.5,diagnosisFingerprint:'b'.repeat(64),model:'',codexVersion:'',createdAt:'2026-08-30T12:00:00+08:00'};try{validateDiagnosisReceipt(r);process.exit(1)}catch(e){if(e.code!=='EDIAGNOSISRECEIPT'){console.error(e.code||e.message);process.exit(1)}}\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "diagnosis-platform.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "2011591e76cf73c0890b702a5bcd3499de91bbbc",
+          "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
+          "--",
+          "diagnosis-platform.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-diagnosis-receipt-utc-20260830",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
+        "fixedCommit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
+        "commandDigest": "a629e4c4ab278fdaf0ab069b9a98daeabb53e520985974165d77247cdd302704",
+        "badSummary": {
+          "commandDigest": "a629e4c4ab278fdaf0ab069b9a98daeabb53e520985974165d77247cdd302704",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 44,
+            "max": 44,
+            "mean": 44
+          },
+          "failureSignatures": [
+            {
+              "signature": "0a90addf84c5acfc14caa940d23fc0aeded56147829c4fc901222fd9f1bcc8b8",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "79e2c3056b6599b49663bedf739d8518e912c09dcc25a5ff558a01c1a04d35fd"
+        },
+        "fixedSummary": {
+          "commandDigest": "a629e4c4ab278fdaf0ab069b9a98daeabb53e520985974165d77247cdd302704",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 40,
+            "max": 40,
+            "mean": 40
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "eeb749a4cc1cade6b3593d86dca1e295438d6ff8efc884c9284a323cb52b4b07"
+        },
+        "badRepresentativeDigest": "2035769114896ab23d4cc2229fca1c254660b5aa1edd7ad215bda307860ef71d",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "82f5fb905423c501eeb96348a6e237c3c6822f56ecda1f823da96fe4b993fff6"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-diagnosis-receipt-utc-20260830",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
+        "fixedCommit": "bc367cf3fbc57d7060bce343fcf4a6d5312f7ab8",
+        "parentCommit": "2011591e76cf73c0890b702a5bcd3499de91bbbc",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "0a7f0d209ab5b72e93184fec4ce59b25c5a69bbbc6e016dbd5c37863d05809de",
+        "groundTruthFiles": [
+          "diagnosis-platform.js"
+        ],
+        "provenanceDigest": "91fc090144538ec913aadf5c280e86821313f85b9ed6b104efcda0854fbd8555"
+      },
+      "sourceContext": [
+        {
+          "file": "diagnosis-platform.js",
+          "bad": {
+            "present": true,
+            "bytes": 9976,
+            "sha256": "f59a1cae3612cb7a8fdcabc87e0cc312f1a63b098158e32f165d13100f72c491"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 10373,
+            "sha256": "4e30b7cf52a675b6632ef3300cba45acb7dae619403d9376fab5344069e88556"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 8277,
+        "sha256": "92b45c2184ba74d788f68d3b3de0b6a0e3683c2e1e71021cce8f1c6274e60d15"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 241
+    },
+    {
+      "caseId": "safe-core-change-product-contract-20260831",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
+      "fixedCommit": "76418b80533c644e3ab01045290cd3cdd355622c",
+      "rootCauseGroup": "safe-core-change-product-contract-20260831",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),core=require('./core-contract.json'),{verify}=require('./scripts/verify-consumer-product-contract');const d=fs.mkdtempSync(p.join(os.tmpdir(),'pc-')),pin='d'.repeat(40),v='9.9.9';cp.execFileSync('git',['init','-q'],{cwd:d});fs.mkdirSync(p.join(d,'src'));fs.writeFileSync(p.join(d,'package.json'),JSON.stringify({version:v}));fs.writeFileSync(p.join(d,'product-contract.json'),JSON.stringify({...core,productId:'codex-change-safe',productVersion:v,safeCoreVersion:core.coreVersion,safeCoreCommit:pin}));cp.execFileSync('git',['update-index','--add','--cacheinfo','160000,'+pin+',src/codex-safe-core'],{cwd:d});verify(d,pin,'codex-change-safe')\"",
+      "positiveControls": [],
+      "groundTruthFiles": [
+        "scripts/verify-consumer-product-contract.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "57440a00030941020d5c3e9e01ced3c06062f42e",
+          "76418b80533c644e3ab01045290cd3cdd355622c",
+          "--",
+          "scripts/verify-consumer-product-contract.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-change-product-contract-20260831",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
+        "fixedCommit": "76418b80533c644e3ab01045290cd3cdd355622c",
+        "commandDigest": "c49f854f49b01ba379827ba8580f59badc3776193c163bd05f65870b292c2875",
+        "badSummary": {
+          "commandDigest": "c49f854f49b01ba379827ba8580f59badc3776193c163bd05f65870b292c2875",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 45,
+            "max": 45,
+            "mean": 45
+          },
+          "failureSignatures": [
+            {
+              "signature": "70c43b97d9fc2448012aeeb056b60278f6ee11b95df18bb5c6dfa8c0936c3040",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "2aa793a89fc4224dd91d22dd4e7f5436e8d0040f2ee532aa4e58a235c72015be"
+        },
+        "fixedSummary": {
+          "commandDigest": "c49f854f49b01ba379827ba8580f59badc3776193c163bd05f65870b292c2875",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 43,
+            "max": 43,
+            "mean": 43
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "19890d1096eeb19395197cc4c5d42e57c193f6c408206c9385eb0fb40ef5ed76"
+        },
+        "badRepresentativeDigest": "3f3fb94eddb2d267ed883c56ff88df1e658495fb3ce14a6548bdb0222a6970e4",
+        "fixedRepresentativeDigest": "30d02d660aec0bbea1d2274fdf7e72c1b7c0e6e9e2e756848f953676a7a9b1f6",
+        "transitionDigest": "b3a4da163189355951160e3bb5749f47df4e951c7b5af28b1cf87adf19982dc6"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-change-product-contract-20260831",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
+        "fixedCommit": "76418b80533c644e3ab01045290cd3cdd355622c",
+        "parentCommit": "57440a00030941020d5c3e9e01ced3c06062f42e",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "3f6571020922289097f2654202afa408cabc3d75e4720ffef53e3e9f949c0520",
+        "groundTruthFiles": [
+          "scripts/verify-consumer-product-contract.js"
+        ],
+        "provenanceDigest": "fff3b2aa79936f1aa4c80afd09edc33281742b7084e3515c2a8d046db821eff1"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/verify-consumer-product-contract.js",
+          "bad": {
+            "present": true,
+            "bytes": 2189,
+            "sha256": "2dfd6acaa169eda0b9763774e94dceec0544e2670cfbf80e6d709cf8c7ea76f8"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 2201,
+            "sha256": "729dafa808b6eca1f53bd32376b7e364eb2057ca6e48c5233ebf448f76cdc6f1"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 1079,
+        "sha256": "0cbf8e09901e5940d023e1c6061a6aaaa2883db9e9d56867c5c6c06182f4b077"
+      },
+      "positiveControlResult": "not_declared",
+      "status": "passed",
+      "durationMs": 251
+    },
+    {
+      "caseId": "safe-core-empty-economic-qualification-20261114",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "21217c779ceab6542077d3c88e0f6247d5cad305",
+      "fixedCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+      "rootCauseGroup": "safe-core-empty-economic-qualification-20261114",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),{qualityConstrainedPromotion:q}=require('./model-economics');const m={recall:.96,falsePositiveRate:.02,criticalRecall:1,samples:80,criticalSamples:12},limits={maxRecallDrop:0,maxFalsePositiveIncrease:0,maxCriticalRecallDrop:0,minimumSamples:80,minimumCriticalSamples:12};a.equal(q({baseline:m,candidate:m,limits}).approved,true);console.log('POSITIVE_CONTROLS_PASS');a.equal(q().approved,false,'missing observations must not qualify');\"",
+      "positiveControls": [
+        "Measured quality, sample counts and explicit reviewed limits approve the identical candidate."
+      ],
+      "groundTruthFiles": [
+        "model-economics.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "21217c779ceab6542077d3c88e0f6247d5cad305",
+          "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+          "--",
+          "model-economics.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-empty-economic-qualification-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "21217c779ceab6542077d3c88e0f6247d5cad305",
+        "fixedCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+        "commandDigest": "af1a122cb6cf23e3ca1a436b26f9c47d06e0ba593b2c1e1cf9a436726226da04",
+        "badSummary": {
+          "commandDigest": "af1a122cb6cf23e3ca1a436b26f9c47d06e0ba593b2c1e1cf9a436726226da04",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 46,
+            "max": 46,
+            "mean": 46
+          },
+          "failureSignatures": [
+            {
+              "signature": "e40a69b7526ecfc0c4c2886dcb36b32b131f83a50e644b9a17bd7d7d721547cc",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "a103c8de381f7534cddf21f2d493c71bd2905a5df264bb97a5b49e371b26e27b"
+        },
+        "fixedSummary": {
+          "commandDigest": "af1a122cb6cf23e3ca1a436b26f9c47d06e0ba593b2c1e1cf9a436726226da04",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 41,
+            "max": 41,
+            "mean": 41
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "930aa4aa1d07d07fa9a2d581a2d3e000a2bc84fe3ce495daf851fd6dde4f6bff"
+        },
+        "badRepresentativeDigest": "78799c16f1ef2a3b29d29c6868aced148da61d769d5898f03959591d3d9f9e2d",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "cc0e17d67842516d949b35aca94d2f4fa39c9282fad2511023a3c45d4d15467a"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-empty-economic-qualification-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "21217c779ceab6542077d3c88e0f6247d5cad305",
+        "fixedCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+        "parentCommit": "21217c779ceab6542077d3c88e0f6247d5cad305",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "87580fdbe1af6e9d1ef80ab1c731926415774fdd87a68b021027705066190451",
+        "groundTruthFiles": [
+          "model-economics.js"
+        ],
+        "provenanceDigest": "9e4b2ca047ce43153384db97c86880a1304da085df5133f3396e1cd02cb339f1"
+      },
+      "sourceContext": [
+        {
+          "file": "model-economics.js",
+          "bad": {
+            "present": true,
+            "bytes": 6821,
+            "sha256": "7b4aadf3af04d2759458700895a89b1464dbea04533c850ea636b9cf175fdb2a"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 8175,
+            "sha256": "7e650eeece35be5dd0dffe0e8098e439188a077ad29755ab9af36d2cb05f8c33"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 3102,
+        "sha256": "14b35511a440e644563b60f82bd193ae8405dd8d7a40cbb863bf8ed65fa17cb0"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 333
+    },
+    {
+      "caseId": "safe-core-raw-path-alias-20261114",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+      "fixedCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+      "rootCauseGroup": "safe-core-raw-path-alias-20261114",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),{normalizeDiagnosisResult:n}=require('./diagnosis-platform');const x={classification:'source',rootCause:'Compilation failed',confidence:.9,recommendedActions:['Inspect source'],affectedFiles:['src/a.c']};a.deepEqual(n(x).affectedFiles,['src/a.c']);console.log('POSITIVE_CONTROLS_PASS');const paths=[' x\\\\\\\\y.c ','x/y.c'];a.deepEqual(n({...x,affectedFiles:paths}).affectedFiles,paths,'distinct raw path identities must not collapse');\"",
+      "positiveControls": [
+        "A normal source path remains unchanged before the distinct raw-path counterexample."
+      ],
+      "groundTruthFiles": [
+        "diagnosis-platform.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+          "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+          "--",
+          "diagnosis-platform.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-raw-path-alias-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+        "fixedCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+        "commandDigest": "b2abd8f9a51a1274425f746ccc0dc675f48b910cab0c5ea0f3ffa35a30415b10",
+        "badSummary": {
+          "commandDigest": "b2abd8f9a51a1274425f746ccc0dc675f48b910cab0c5ea0f3ffa35a30415b10",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 42,
+            "max": 42,
+            "mean": 42
+          },
+          "failureSignatures": [
+            {
+              "signature": "c49323cc9055db4cb3063238885237aec53f88b06c393b7874171c5c4887f898",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "6e691d3e7ebd936ef4d1d73fbcb8c5eede482504e60cca3855245762062a5921"
+        },
+        "fixedSummary": {
+          "commandDigest": "b2abd8f9a51a1274425f746ccc0dc675f48b910cab0c5ea0f3ffa35a30415b10",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 44,
+            "max": 44,
+            "mean": 44
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "abbb74ee39f13a37d35ad8302f988011a2cf7d75ba73daa216a03c04c0450eb8"
+        },
+        "badRepresentativeDigest": "1d825d6fbaba39837e0e42b1225965545e4d9b9831044be52d8c31f60b8c28bb",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "39d95197b9312c9d737df095073ce89b454dae63db6d4ec09f83e201d1470a80"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-raw-path-alias-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+        "fixedCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+        "parentCommit": "f2f222b02c1031dbc54d012bec13fb8507506f5d",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "6c39f4bd43e3fa5dc6e634812a5f5d465149d84999b364483ffb0e8ae9a73a97",
+        "groundTruthFiles": [
+          "diagnosis-platform.js"
+        ],
+        "provenanceDigest": "e0d4e01878c92e0a07682e924351c9d0c8862e0553408fc5b723c3128dd757cb"
+      },
+      "sourceContext": [
+        {
+          "file": "diagnosis-platform.js",
+          "bad": {
+            "present": true,
+            "bytes": 13998,
+            "sha256": "3f11137493a9ee05dad65a98df0b7370ca952e859194f34448e0b0ebd0019c6a"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 14447,
+            "sha256": "300c7391bd8add58b6f57a3039b83c68b2f9fabb1a69ea9de1276b8e8cd0f4ae"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 9858,
+        "sha256": "bdac001b4a861bc920b50b7ebde099cbbcfe37d19c51a97b2529dc843aedb52f"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 253
+    },
+    {
+      "caseId": "safe-core-fifo-open-block-20261114",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+      "fixedCommit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+      "rootCauseGroup": "safe-core-fifo-open-block-20261114",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),d=fs.mkdtempSync(p.join(os.tmpdir(),'fifo-case-')),m=require.resolve('./secure-local-file');try{const f=p.join(d,'regular');fs.writeFileSync(f,'ok',{mode:384});a.equal(require(m).secureReadText(f),'ok');console.log('POSITIVE_CONTROLS_PASS');const q=p.join(d,'fifo');cp.execFileSync('mkfifo',[q]);const code='try{require(process.argv[1]).secureReadText(process.argv[2]);process.exit(1)}catch(e){if(e.code!==\\\"ELOCALFILE\\\")throw e}';const r=cp.spawnSync(process.execPath,['-e',code,m,q],{timeout:1000,killSignal:'SIGKILL'});a.equal(r.error,undefined,'FIFO read must not block awaiting a writer');a.equal(r.status,0)}finally{fs.rmSync(d,{recursive:true,force:true})}\"",
+      "positiveControls": [
+        "A private regular file can still be read before the FIFO counterexample."
+      ],
+      "groundTruthFiles": [
+        "secure-local-file.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+          "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+          "--",
+          "secure-local-file.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-fifo-open-block-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+        "fixedCommit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+        "commandDigest": "ff200b830785a7b4e9fb9c2521f26cdc87565325e94a6bdcf2edb15fd5183eab",
+        "badSummary": {
+          "commandDigest": "ff200b830785a7b4e9fb9c2521f26cdc87565325e94a6bdcf2edb15fd5183eab",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 1052,
+            "max": 1052,
+            "mean": 1052
+          },
+          "failureSignatures": [
+            {
+              "signature": "84432e16200a1685310451bde6468f9a2cc2b79a46d9fcd539b8be165574ac8b",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "5477fccbb439e3b795e004234bd1ffd8cb56bf70071bc4e76912f1dd0ea28e61"
+        },
+        "fixedSummary": {
+          "commandDigest": "ff200b830785a7b4e9fb9c2521f26cdc87565325e94a6bdcf2edb15fd5183eab",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 107,
+            "max": 107,
+            "mean": 107
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "6457ce63eda38ff118ec3ccd9a119c0e693a256aba5b123419a1a2396e1a9287"
+        },
+        "badRepresentativeDigest": "429918c5aef1647f0719af3a168c93f66ed6af7790cdbdcbf8465f9d29d2e607",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "e71ee7bdc754b1d5e1c0c35aeb26abf8b67c89fae1306204e62b6949818dc7e3"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-fifo-open-block-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+        "fixedCommit": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+        "parentCommit": "31b94d4c1bddbe9988225eccf632a669d8b124f0",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "f9cb5c8a5fb68ba4ca6286dd3b1987e9b595b99f7f0c0f9f5eb3ae426d17461b",
+        "groundTruthFiles": [
+          "secure-local-file.js"
+        ],
+        "provenanceDigest": "ef3be8ea57643e860b1d2d6cf04eb428fffa85e9dfbf8ec0e01b2b958f27778c"
+      },
+      "sourceContext": [
+        {
+          "file": "secure-local-file.js",
+          "bad": {
+            "present": true,
+            "bytes": 8019,
+            "sha256": "25418da43e27f032fb66e24a1a6b8abc626d626b2fb4ff2ab9a8eeac42080c8f"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 8173,
+            "sha256": "682aa62d25aa346b35170015529976da8ea7b9a00ab0f3bf3859de04a9013a46"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 1076,
+        "sha256": "6ab3709e49cf38ceb17dd6e4c33e5a4c5be4d6638302fba3703b320be485f827"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 1319
+    },
+    {
+      "caseId": "safe-core-zero-rss-baseline-20261028",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "13d9c0b7903e7c568f42691d47b9e7d7febde040",
+      "fixedCommit": "876e1d10d3bf0e490a7ee65c226a86e0289e3754",
+      "rootCauseGroup": "safe-core-zero-rss-baseline-20261028",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),{compareSnapshots:c}=require('./scripts/compare-performance-snapshot');const b={schemaVersion:3,metrics:{elapsedMs:100,rssGrowthBytes:0}},x={...b,budgets:{elapsedMs:5000,rssGrowthBytes:1000000}};a.equal(c(x,b).ok,true);console.log('POSITIVE_CONTROLS_PASS');a.equal(c({...x,metrics:{elapsedMs:100,rssGrowthBytes:1}},b).ok,false,'growth from a zero RSS baseline must not pass');\"",
+      "positiveControls": [
+        "A matched zero-to-zero memory observation passes before nonzero growth is tested."
+      ],
+      "groundTruthFiles": [
+        "scripts/compare-performance-snapshot.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "13d9c0b7903e7c568f42691d47b9e7d7febde040",
+          "876e1d10d3bf0e490a7ee65c226a86e0289e3754",
+          "--",
+          "scripts/compare-performance-snapshot.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-zero-rss-baseline-20261028",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "13d9c0b7903e7c568f42691d47b9e7d7febde040",
+        "fixedCommit": "876e1d10d3bf0e490a7ee65c226a86e0289e3754",
+        "commandDigest": "99c4b919a281e6b4dcaa1a0356643ae3f4b1b70589306a8ffde50c39aedf30f2",
+        "badSummary": {
+          "commandDigest": "99c4b919a281e6b4dcaa1a0356643ae3f4b1b70589306a8ffde50c39aedf30f2",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 43,
+            "max": 43,
+            "mean": 43
+          },
+          "failureSignatures": [
+            {
+              "signature": "b529b0c4d72e2b417d11df48094bdd1d93f5b9a1f93f481282cd728125deb375",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "dfedc864d38c323f360904ccf8aed1e05b7ab6763d56b47f94b68840f14efd91"
+        },
+        "fixedSummary": {
+          "commandDigest": "99c4b919a281e6b4dcaa1a0356643ae3f4b1b70589306a8ffde50c39aedf30f2",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 37,
+            "max": 37,
+            "mean": 37
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "22408f15a8769fae377c737d058fd707e37311051ba95d4f44485d58ff95afae"
+        },
+        "badRepresentativeDigest": "c3428f30a288b9948d62194cec12cdee1da19d64fa55ee7bcc84b2f04737ca96",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "ead4c5ff8f775ab2f54825f6e475522b5cd15167f96c2a17cb56eb24f00cae8f"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-zero-rss-baseline-20261028",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "13d9c0b7903e7c568f42691d47b9e7d7febde040",
+        "fixedCommit": "876e1d10d3bf0e490a7ee65c226a86e0289e3754",
+        "parentCommit": "13d9c0b7903e7c568f42691d47b9e7d7febde040",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "479c99dd0a2ca059a7f9d896d8e540a6cc988cd560262e6d67ca0cf1cb4f8ff3",
+        "groundTruthFiles": [
+          "scripts/compare-performance-snapshot.js"
+        ],
+        "provenanceDigest": "376a6ee71c0b8f98881f009fef1f936d3a96e480f64184b20f5449b1eec483cb"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/compare-performance-snapshot.js",
+          "bad": {
+            "present": true,
+            "bytes": 3596,
+            "sha256": "c5e7cdb22be06ebc4718483781bb66d3f80de69c19d02fb51920101e2ac24d10"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 4993,
+            "sha256": "54880c2603af3667c8ed10b0dfd99d8386408946092abb088280050aec803f0f"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 3554,
+        "sha256": "272327071606a42873a5ca7acd10642c00a3ca661c94ba16963a8d0093eac209"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 234
+    },
+    {
+      "caseId": "safe-core-cancelled-observer-20261114",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "7fb4ae37b022f2335084a9543af3bae18d999d22",
+      "fixedCommit": "f327168f490c70a2fb15f1eb4a8b714bd43f43cd",
+      "rootCauseGroup": "safe-core-cancelled-observer-20261114",
+      "partition": "holdout",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),vm=require('vm');const y=fs.readFileSync('.github/workflows/trusted-ci-corroboration.yml','utf8'),m=y.match(/^    if: (.+)$/m);a.ok(m);const run=(event,conclusion)=>vm.runInNewContext(m[1],{github:{event:{workflow_run:{event,conclusion}}}},{timeout:100});a.equal(run('pull_request','success'),true);a.equal(run('pull_request','failure'),true);a.equal(run('push','success'),false);console.log('POSITIVE_CONTROLS_PASS');a.equal(run('pull_request','cancelled'),false,'superseded cancelled CI must not launch the observer');\"",
+      "positiveControls": [
+        "Success and real failure PR events remain observed; non-PR events remain excluded."
+      ],
+      "groundTruthFiles": [
+        ".github/workflows/trusted-ci-corroboration.yml"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "7fb4ae37b022f2335084a9543af3bae18d999d22",
+          "f327168f490c70a2fb15f1eb4a8b714bd43f43cd",
+          "--",
+          ".github/workflows/trusted-ci-corroboration.yml"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-cancelled-observer-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "7fb4ae37b022f2335084a9543af3bae18d999d22",
+        "fixedCommit": "f327168f490c70a2fb15f1eb4a8b714bd43f43cd",
+        "commandDigest": "b9c77c259d2479a90f82e6e25c68b2604f25c76f5fd0946e92d4b0ee66aa6d5b",
+        "badSummary": {
+          "commandDigest": "b9c77c259d2479a90f82e6e25c68b2604f25c76f5fd0946e92d4b0ee66aa6d5b",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 55,
+            "max": 55,
+            "mean": 55
+          },
+          "failureSignatures": [
+            {
+              "signature": "11ac343ec5c08e6aead3b3ddbd658d0cf368eda3ed96845b50278264bb5ed527",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "d65cdaa7cf8e76d2c5e6ee5311fa2af5a315a39f1f5d9438d4a876540dcadd56"
+        },
+        "fixedSummary": {
+          "commandDigest": "b9c77c259d2479a90f82e6e25c68b2604f25c76f5fd0946e92d4b0ee66aa6d5b",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 47,
+            "max": 47,
+            "mean": 47
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "6b902afb41b518ff887cce96d4dca840efa4b5a20f72e38234cc2e80a3d53df9"
+        },
+        "badRepresentativeDigest": "b552e72414565ffae6c693ed17ee47a5e582cde54f20ea9beb0b1d425e8a0b81",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "21cb8c70f05fe8567aed414882057daef193997944c21ad5e0a2460fef2720c7"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-cancelled-observer-20261114",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "7fb4ae37b022f2335084a9543af3bae18d999d22",
+        "fixedCommit": "f327168f490c70a2fb15f1eb4a8b714bd43f43cd",
+        "parentCommit": "7fb4ae37b022f2335084a9543af3bae18d999d22",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "e39cb7203b8f359cacc681da25c19724a33e8239e545664753c3d980fd568961",
+        "groundTruthFiles": [
+          ".github/workflows/trusted-ci-corroboration.yml"
+        ],
+        "provenanceDigest": "f04eca6e12b768adfe5b295e38fc942965ebd1853e3612de3a2c9c3a49ce9fca"
+      },
+      "sourceContext": [
+        {
+          "file": ".github/workflows/trusted-ci-corroboration.yml",
+          "bad": {
+            "present": true,
+            "bytes": 5838,
+            "sha256": "b66db19df2b0fbfe3b764e8f73f5e970a61a8745f3db9ff7688bf94e4d7fbd36"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 5893,
+            "sha256": "490b46c12c8f02cfd5193f3be9555fee95e73d7127a93f43189c0eb8d2768c4b"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 585,
+        "sha256": "91685d931e6be9cf9976fe41de5bc39e1d8fa4469ee5f9312d99fe77e665a790"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 298
+    },
+    {
+      "caseId": "safe-core-solo-approval-drift-20261103",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "2755b82a1d091fdb4154b610e60d6ffc984c7fa8",
+      "fixedCommit": "1566e5551fe28db51327c09d85662938b5aa6f46",
+      "rootCauseGroup": "safe-core-solo-approval-drift-20261103",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),{assess}=require('./scripts/verify-repository-ruleset'),c=require('./repository-governance-contract');const d={name:c.rulesetName,target:'branch',enforcement:'active',conditions:{ref_name:{include:['~DEFAULT_BRANCH'],exclude:[]}},bypass_actors:[],rules:[{type:'deletion'},{type:'non_fast_forward'},{type:'pull_request',parameters:{required_approving_review_count:0,dismiss_stale_reviews_on_push:false,require_last_push_approval:false,require_code_owner_review:false}},{type:'required_status_checks',parameters:{strict_required_status_checks_policy:true,required_status_checks:[{context:'CI Gate'}]}}]},r={default_branch:'main',delete_branch_on_merge:true};a.equal(assess(d,r).ok,true);console.log('POSITIVE_CONTROLS_PASS');d.rules[2].parameters.require_last_push_approval=true;a.equal(assess(d,r).ok,false,'unexpected solo last-pusher approval must be detected');\"",
+      "positiveControls": [
+        "The declared solo-maintainer zero-approval Ruleset passes before extra last-pusher approval is introduced."
+      ],
+      "groundTruthFiles": [
+        "scripts/verify-repository-ruleset.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "2755b82a1d091fdb4154b610e60d6ffc984c7fa8",
+          "1566e5551fe28db51327c09d85662938b5aa6f46",
+          "--",
+          "scripts/verify-repository-ruleset.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-solo-approval-drift-20261103",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "2755b82a1d091fdb4154b610e60d6ffc984c7fa8",
+        "fixedCommit": "1566e5551fe28db51327c09d85662938b5aa6f46",
+        "commandDigest": "d3ccff3de209ca8623a717825ec001af1c773866693d05abe9c00f20e344b8eb",
+        "badSummary": {
+          "commandDigest": "d3ccff3de209ca8623a717825ec001af1c773866693d05abe9c00f20e344b8eb",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 34,
+            "max": 34,
+            "mean": 34
+          },
+          "failureSignatures": [
+            {
+              "signature": "b4d744db8b0f1ebf69507353561d6990fa9c433e8ea55b0e21cf31cfa61c7284",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "526981bee5261bda61639eca7ccd22eaab5b62879743e9e0b5476deb01a4bb34"
+        },
+        "fixedSummary": {
+          "commandDigest": "d3ccff3de209ca8623a717825ec001af1c773866693d05abe9c00f20e344b8eb",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 31,
+            "max": 31,
+            "mean": 31
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "4090e0dc51e77dee5558ce9d6927c12dc505c47a5bf9782361022103a8845450"
+        },
+        "badRepresentativeDigest": "a351885742034ae1d49ca95662dce96e8941597d78c21a32362f7d0453d70a7a",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "410bc5c8bd30a8222c602c413e2b6902e6c5225216f607a6d5a5fd3f410b0309"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-solo-approval-drift-20261103",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "2755b82a1d091fdb4154b610e60d6ffc984c7fa8",
+        "fixedCommit": "1566e5551fe28db51327c09d85662938b5aa6f46",
+        "parentCommit": "2755b82a1d091fdb4154b610e60d6ffc984c7fa8",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "f8cbedfd1c5c7c8ac2eb897d04f71aa920f049ede96fc230b19ba1766e67af2e",
+        "groundTruthFiles": [
+          "scripts/verify-repository-ruleset.js"
+        ],
+        "provenanceDigest": "402615d379e87e50ecbd3a7148c151e693f1e1b71a0ad7121f6a5717640fa630"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/verify-repository-ruleset.js",
+          "bad": {
+            "present": true,
+            "bytes": 8814,
+            "sha256": "41c082ea303a33ac203f4879cc3cdbb80374a54b7916e0106a93b8a941fa5160"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 9909,
+            "sha256": "4f3be8a5e1cc92e4e644d0d95378f852c166875437ce705157bddb077ef10c8d"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 3008,
+        "sha256": "47544d767a943061f17773399e5ccdbafa29f52639abfd8e977cff8281a25b85"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 202
+    },
+    {
+      "caseId": "safe-core-file-growth-race-20261024",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "190651770a444b0693d82228afc66879dd57b0c0",
+      "fixedCommit": "c62546bea2ead985dba4abe38ede5b1ce76ca088",
+      "rootCauseGroup": "safe-core-file-growth-race-20261024",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),os=require('os'),p=require('path'),{secureReadText:r}=require('./secure-local-file'),d=fs.mkdtempSync(p.join(os.tmpdir(),'growth-case-')),f=p.join(d,'file'),stat=fs.fstatSync;try{fs.writeFileSync(f,'small',{mode:384});a.equal(r(f,{maxBytes:32}),'small');console.log('POSITIVE_CONTROLS_PASS');let first=true;fs.fstatSync=function(fd){const v=stat(fd);if(first){first=false;fs.appendFileSync(f,'x'.repeat(4096))}return v};a.throws(()=>r(f,{maxBytes:32}),e=>e.code==='ELOCALFILE','file growth after stat must not exceed the read bound')}finally{fs.fstatSync=stat;fs.rmSync(d,{recursive:true,force:true})}\"",
+      "positiveControls": [
+        "An unchanged regular file within its byte allowance is readable before growth after fstat."
+      ],
+      "groundTruthFiles": [
+        "secure-local-file.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "190651770a444b0693d82228afc66879dd57b0c0",
+          "c62546bea2ead985dba4abe38ede5b1ce76ca088",
+          "--",
+          "secure-local-file.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-file-growth-race-20261024",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "190651770a444b0693d82228afc66879dd57b0c0",
+        "fixedCommit": "c62546bea2ead985dba4abe38ede5b1ce76ca088",
+        "commandDigest": "0f4bd490510ad3b9a36844a5f1229d645c8093207c41300c5ef0beec1461499b",
+        "badSummary": {
+          "commandDigest": "0f4bd490510ad3b9a36844a5f1229d645c8093207c41300c5ef0beec1461499b",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 38,
+            "max": 38,
+            "mean": 38
+          },
+          "failureSignatures": [
+            {
+              "signature": "58258bacd0dc01e9ab700185417c5127329808d9c92475f3d418377ccfed5cb8",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "e9d38dac7e45ecd44c239daf529c862095e8effc7209a7dfab375212d72e24ca"
+        },
+        "fixedSummary": {
+          "commandDigest": "0f4bd490510ad3b9a36844a5f1229d645c8093207c41300c5ef0beec1461499b",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 54,
+            "max": 54,
+            "mean": 54
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "4773e4546e03582bde595022204c01474136cabe9b15989c53d5da69cd6ab0c8"
+        },
+        "badRepresentativeDigest": "69af6c43113a25ac62f7fa9e87c0fe7af9d6ca61ea6f98f1063d9133b7906334",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "de6a8a8fdfd55e76b89a89f9382ff1bccbe2ff386b8d9ebc6515587dde8efc04"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-file-growth-race-20261024",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "190651770a444b0693d82228afc66879dd57b0c0",
+        "fixedCommit": "c62546bea2ead985dba4abe38ede5b1ce76ca088",
+        "parentCommit": "190651770a444b0693d82228afc66879dd57b0c0",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "4b21dca462f5e76cc9cfe44ecbb4b7ff600c1b246f50fe127df6da14c12842af",
+        "groundTruthFiles": [
+          "secure-local-file.js"
+        ],
+        "provenanceDigest": "331704f2b1ec01c9fab59cc5d1c1f4d758711a597b910ac2c53c4aeab9adc07e"
+      },
+      "sourceContext": [
+        {
+          "file": "secure-local-file.js",
+          "bad": {
+            "present": true,
+            "bytes": 5994,
+            "sha256": "a05d43a1d9980fb2e9c431ed8046fd4576f0f46cdbeace76981b987847b282d4"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 7614,
+            "sha256": "5b094c04b287c812afa7af06b8b7cf647633b60c6709fb9dfb4ad2c8e358f9b1"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 6319,
+        "sha256": "765fb3e4c223a34fb61eef6faf8183c76de2935ab3f251d8ebba87357c9ac35e"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 244
+    },
+    {
+      "caseId": "safe-core-failed-budget-evidence-20261028",
+      "repository": "https://github.com/jiying2007/codex-safe-core.git",
+      "badCommit": "24877ee99de8d65fc4d0e111c0ceb2735ebb87b9",
+      "fixedCommit": "f9c2b2c223e2577d3dec6df54e5205736c5bc49d",
+      "rootCauseGroup": "safe-core-failed-budget-evidence-20261028",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),{buildSnapshot:b}=require('./scripts/write-performance-snapshot');const s={elapsedMs:100,rssGrowthBytes:1000,evidenceChunks:8,evidenceInputBytes:4194330,contextInputBytes:4194330,impactNodes:32,impactBytes:39340,estimatedTokens:497856,risk:2,plannedBytes:1046730},good=b(Array.from({length:7},()=>({...s})));a.equal(good.metrics.elapsedMs,100);console.log('POSITIVE_CONTROLS_PASS');const bad=b(Array.from({length:7},(_,i)=>({...s,elapsedMs:6000+i})));a.equal(bad.broadBudgetPassed,false);a.equal(bad.sampling.samples.length,7,'failed budgets must retain all observed samples');\"",
+      "positiveControls": [
+        "A successful bounded performance sample produces a valid snapshot before failed-budget evidence is tested."
+      ],
+      "groundTruthFiles": [
+        "scripts/write-performance-snapshot.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "24877ee99de8d65fc4d0e111c0ceb2735ebb87b9",
+          "f9c2b2c223e2577d3dec6df54e5205736c5bc49d",
+          "--",
+          "scripts/write-performance-snapshot.js"
+        ]
+      },
+      "transition": {
+        "caseId": "safe-core-failed-budget-evidence-20261028",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "24877ee99de8d65fc4d0e111c0ceb2735ebb87b9",
+        "fixedCommit": "f9c2b2c223e2577d3dec6df54e5205736c5bc49d",
+        "commandDigest": "280f4d9adc9c5869c42c67e946ba5b7bbd54555c0087042221ee91838d18a7e8",
+        "badSummary": {
+          "commandDigest": "280f4d9adc9c5869c42c67e946ba5b7bbd54555c0087042221ee91838d18a7e8",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 133,
+            "max": 133,
+            "mean": 133
+          },
+          "failureSignatures": [
+            {
+              "signature": "5cdd9e5faa127fbc08d8641377fe0d40a4f80bd2801fc3a51afe27806a67b2c0",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "0774fba5ac4949220a270d13192823f9ab48009a9cff051c5775c91742c43b0e"
+        },
+        "fixedSummary": {
+          "commandDigest": "280f4d9adc9c5869c42c67e946ba5b7bbd54555c0087042221ee91838d18a7e8",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 77,
+            "max": 77,
+            "mean": 77
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "959286bb50316b18cf331cde098d79865447006683d70fe8ecf9c04079905276"
+        },
+        "badRepresentativeDigest": "ca9859df8410ac8a97e79ef08ce03ffda8cf1545259648bf3b134eb0d054ea9c",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "6cc3d175c230defa93c2209915fce2a0c5ec2e8f302fcd3823f0eb8218a9faba"
+      },
+      "coreGitlinks": {
+        "bad": null,
+        "fixed": null
+      },
+      "provenance": {
+        "caseId": "safe-core-failed-budget-evidence-20261028",
+        "repository": "https://github.com/jiying2007/codex-safe-core.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "24877ee99de8d65fc4d0e111c0ceb2735ebb87b9",
+        "fixedCommit": "f9c2b2c223e2577d3dec6df54e5205736c5bc49d",
+        "parentCommit": "24877ee99de8d65fc4d0e111c0ceb2735ebb87b9",
+        "anchorCommit": "30e8426d1da6e7db21f71ec4918e3db90c884511",
+        "changedFilesDigest": "b95b02d04b5904f03820c84aed6e1168271edab4f59b69c02ac38ccc7bb0f5d5",
+        "groundTruthFiles": [
+          "scripts/write-performance-snapshot.js"
+        ],
+        "provenanceDigest": "dd6f8f0796851dee7f3a0afad5f40e95cb2821799bb6d2a0dabb6c0d1412effb"
+      },
+      "sourceContext": [
+        {
+          "file": "scripts/write-performance-snapshot.js",
+          "bad": {
+            "present": true,
+            "bytes": 7344,
+            "sha256": "aaf69175933af2661318f10ecee6244079ec316e95a044844b46bd97ad802b7d"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 7667,
+            "sha256": "8497924e2c7640710b17da259648908dfd753f1aff1407c3ef2082020063fb00"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 4307,
+        "sha256": "b40d2b9aafda150ad9407739c7e1abb3dcdb76d3f95855df617073aed5377d8d"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 350
+    },
+    {
+      "caseId": "codex-change-same-name-check-20261113",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "badCommit": "941fdaf840256f1774fa5af831ee0132085d7ed0",
+      "fixedCommit": "0228d13d149c0fb026e1ffdb56bea417133688da",
+      "rootCauseGroup": "codex-change-same-name-check-20261113",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),{evaluateChecks:e}=require('./src/readiness');const s={name:'CI Gate',state:'success',integrationId:null},r={name:'CI Gate',state:'success',integrationId:15368};a.equal(e([s,r],['CI Gate'])[0].state,'success');console.log('POSITIVE_CONTROLS_PASS');a.equal(e([s,{...r,state:'failure'}],['CI Gate'])[0].state,'failure','a successful status must not hide a failing check-run');a.equal(e([s,{...r,state:'pending'}],['CI Gate'])[0].state,'pending');\"",
+      "positiveControls": [
+        "Matching successful status and check-run entries remain successful before failure and pending cases."
+      ],
+      "groundTruthFiles": [
+        "src/readiness.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "941fdaf840256f1774fa5af831ee0132085d7ed0",
+          "0228d13d149c0fb026e1ffdb56bea417133688da",
+          "--",
+          "src/readiness.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-change-same-name-check-20261113",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "941fdaf840256f1774fa5af831ee0132085d7ed0",
+        "fixedCommit": "0228d13d149c0fb026e1ffdb56bea417133688da",
+        "commandDigest": "2adfa8319801c492bf17bff84c2a63701136200ecb314cc50c9745399985770a",
+        "badSummary": {
+          "commandDigest": "2adfa8319801c492bf17bff84c2a63701136200ecb314cc50c9745399985770a",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 30,
+            "max": 30,
+            "mean": 30
+          },
+          "failureSignatures": [
+            {
+              "signature": "29ed662c3ef7bbf06f35661b2e5584d51c1df2bf60e901d5a8d5f3e60dcd1bbd",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "8c4476f7d043d823d07319410f51f911e93caa2af6efd264e98038853929967e"
+        },
+        "fixedSummary": {
+          "commandDigest": "2adfa8319801c492bf17bff84c2a63701136200ecb314cc50c9745399985770a",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 32,
+            "max": 32,
+            "mean": 32
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "b023f4d59d6d73fbd304b090778152c23c9e7644263595ee4522834e8ee0c128"
+        },
+        "badRepresentativeDigest": "7412b9b6c4166fc848aedfa511f0149fb656890dd05c74908487cb125f694079",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "3022503fec81de806457027cd29f4077a4cd217f132bdb5a3329f8fc60e80e2c"
+      },
+      "coreGitlinks": {
+        "bad": "59f8a1b84158b05d0c0a5f257ffb8b2452e0b18b",
+        "fixed": "59f8a1b84158b05d0c0a5f257ffb8b2452e0b18b"
+      },
+      "provenance": {
+        "caseId": "codex-change-same-name-check-20261113",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "941fdaf840256f1774fa5af831ee0132085d7ed0",
+        "fixedCommit": "0228d13d149c0fb026e1ffdb56bea417133688da",
+        "parentCommit": "941fdaf840256f1774fa5af831ee0132085d7ed0",
+        "anchorCommit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+        "changedFilesDigest": "fb6b1892ee00199bc129e754d96ef904055440306ccd5afe1d808d1ad76fbc5b",
+        "groundTruthFiles": [
+          "src/readiness.js"
+        ],
+        "provenanceDigest": "c72a631c9945953e71391723998c3ab39c045e758bcf2f225e61525041c1813d"
+      },
+      "sourceContext": [
+        {
+          "file": "src/readiness.js",
+          "bad": {
+            "present": true,
+            "bytes": 5247,
+            "sha256": "b49978ae8c58fca50db25dfcca4780b60b79a2cd97e2644e7235ccfcea1ef2c4"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 5776,
+            "sha256": "9e1bec4fd7016bec926a9cb528a76d466a79719bd934016d264f06249e3bf61d"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 3800,
+        "sha256": "fc18bdde028cbe3679eee6ee0f1906473a1ca9106401966c2018ff2e6bf2ba11"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 396
+    },
+    {
+      "caseId": "codex-change-native-nul-inventory-20261115",
+      "repository": "https://github.com/jiying2007/codex-pr.git",
+      "badCommit": "4d5b2064995dcb9bfd234356d6c9c45397045ef8",
+      "fixedCommit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+      "rootCauseGroup": "codex-change-native-nul-inventory-20261115",
+      "partition": "dev",
+      "exposure": "reviewed-retrospective",
+      "freshModel": "not_run",
+      "command": "node -e \"const a=require('node:assert/strict'),fs=require('fs'),os=require('os'),p=require('path'),cp=require('child_process'),{GitCli}=require('./src/git-cli');(async()=>{const d=fs.mkdtempSync(p.join(os.tmpdir(),'nul-case-')),g=(...x)=>cp.execFileSync('git',x,{cwd:d});try{g('init','-q');g('config','user.email','fixture@example.invalid');g('config','user.name','fixture');g('config','commit.gpgsign','false');fs.writeFileSync(p.join(d,'file'),'one');g('add','.');g('commit','-qm','base');const cli=new GitCli(d);a.deepEqual(await cli.changedFiles('HEAD..HEAD'),[]);console.log('POSITIVE_CONTROLS_PASS');fs.writeFileSync(p.join(d,'file'),'two');g('commit','-qam','change');a.deepEqual(await cli.changedFiles('HEAD~1..HEAD'),[{status:'M',path:'file'}])}finally{fs.rmSync(d,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});\"",
+      "positiveControls": [
+        "An empty real Git diff returns an empty inventory before a nonempty commit is examined."
+      ],
+      "groundTruthFiles": [
+        "src/git-cli.js"
+      ],
+      "contextReconstruction": {
+        "fetch": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "origin",
+          "refs/heads/main"
+        ],
+        "diff": [
+          "git",
+          "diff",
+          "--no-ext-diff",
+          "--no-textconv",
+          "4d5b2064995dcb9bfd234356d6c9c45397045ef8",
+          "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+          "--",
+          "src/git-cli.js"
+        ]
+      },
+      "transition": {
+        "caseId": "codex-change-native-nul-inventory-20261115",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "4d5b2064995dcb9bfd234356d6c9c45397045ef8",
+        "fixedCommit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+        "commandDigest": "9ba715d582600c738e5f67c8e330bb96c15537836189eb9a3289c411514e20c3",
+        "badSummary": {
+          "commandDigest": "9ba715d582600c738e5f67c8e330bb96c15537836189eb9a3289c411514e20c3",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 0,
+          "failures": 1,
+          "failRate": 1,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 66,
+            "max": 66,
+            "mean": 66
+          },
+          "failureSignatures": [
+            {
+              "signature": "030f27fe6f5f5631c796af137e0bb3028c6dd797088ae34f44da54e4336c82b4",
+              "count": 1
+            }
+          ],
+          "stableFailure": true,
+          "reproducibleFailure": true,
+          "digest": "8421a0901893e29795f974a9fad897372df14ef9c32ca60020b810137ed0899b"
+        },
+        "fixedSummary": {
+          "commandDigest": "9ba715d582600c738e5f67c8e330bb96c15537836189eb9a3289c411514e20c3",
+          "executionContextDigest": "",
+          "runs": 1,
+          "passes": 1,
+          "failures": 0,
+          "failRate": 0,
+          "timeouts": 0,
+          "durationMs": {
+            "min": 65,
+            "max": 65,
+            "mean": 65
+          },
+          "failureSignatures": [],
+          "stableFailure": false,
+          "reproducibleFailure": false,
+          "digest": "db92245645fd6023f6ae59eb602dde7ce5d39946479c62c6515929d9716c13f0"
+        },
+        "badRepresentativeDigest": "7f56d3fa7515e876b22ebcfcbcc747c1135e51fa5e1deb2e37312a2642eefcb9",
+        "fixedRepresentativeDigest": "2416ebab941f0ee8fe55286b24f54afa8eae42853b8c89ca018a7b509b1d72e5",
+        "transitionDigest": "0024b83a2bd62256851a4100b682c791693ba3542eb4e6a6920dfd98a4ee8dae"
+      },
+      "coreGitlinks": {
+        "bad": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb",
+        "fixed": "ac5203e1b65ffdca26064c0887537f64d2a8a6cb"
+      },
+      "provenance": {
+        "caseId": "codex-change-native-nul-inventory-20261115",
+        "repository": "https://github.com/jiying2007/codex-pr.git",
+        "anchorRef": "refs/heads/main",
+        "badCommit": "4d5b2064995dcb9bfd234356d6c9c45397045ef8",
+        "fixedCommit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+        "parentCommit": "4d5b2064995dcb9bfd234356d6c9c45397045ef8",
+        "anchorCommit": "37deebf2f17f60f19a014dd1f5ac341ec8f4f09f",
+        "changedFilesDigest": "496e2999af12deab03841c20d2cbdbc8dbb7fcef60468646e18fbfe06aeed2c8",
+        "groundTruthFiles": [
+          "src/git-cli.js"
+        ],
+        "provenanceDigest": "e1fb406600b56b755a3ec1cc1f4f6e9c939e0bf5d78076da3a624dde21c84151"
+      },
+      "sourceContext": [
+        {
+          "file": "src/git-cli.js",
+          "bad": {
+            "present": true,
+            "bytes": 3775,
+            "sha256": "84c7228e6aba1d20e89aba6b48e59f93b21f24452a06d81e8cda33044f5e8490"
+          },
+          "fixed": {
+            "present": true,
+            "bytes": 5128,
+            "sha256": "8edf75a7ede6c34bce5e493d0699211276736e7970b6e3f71405140c96beb731"
+          }
+        }
+      ],
+      "reviewedDiff": {
+        "bytes": 5554,
+        "sha256": "f67dd672c44805507c6a63d153375719a9f4c301692326894d39051bc5f3674e"
+      },
+      "positiveControlResult": "passed_on_bad_and_fixed",
+      "status": "passed",
+      "durationMs": 419
+    }
+  ],
+  "completedAt": "2026-11-14T16:21:28.412Z",
+  "summary": {
+    "attempted": 22,
+    "passed": 22,
+    "failed": 0
+  },
+  "digest": "7d75289505f5f075c78aa18f54107951716de3824f3b2d32c89187ef5cb807be"
+}
