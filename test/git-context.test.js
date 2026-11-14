@@ -5,3 +5,22 @@ test('NUL porcelain parsing preserves spaces unicode and rename destination',()=
 test('workspace state fingerprint changes with tracked content mutation',()=>{const dir=repo();try{const a=collectGitContext(dir,{includeHistory:false});fs.writeFileSync(path.join(dir,'a.txt'),'two');const b=collectGitContext(dir,{includeHistory:false});assert.notEqual(a.stateFingerprint,b.stateFingerprint);assert.deepEqual(b.changedPaths,['a.txt']);}finally{fs.rmSync(dir,{recursive:true,force:true});}});
 test('workspace freshness tracks unicode and spaced paths without quoted-path ambiguity',()=>{const dir=repo();try{const a=collectGitContext(dir,{includeHistory:false}),spaced='with space.txt',unicode='中文.txt';fs.writeFileSync(path.join(dir,spaced),'one');fs.writeFileSync(path.join(dir,unicode),'一');const b=collectGitContext(dir,{includeHistory:false});assert.ok(b.changedPaths.includes(spaced));assert.ok(b.changedPaths.includes(unicode));assert.notEqual(a.stateFingerprint,b.stateFingerprint);fs.writeFileSync(path.join(dir,unicode),'二');const c=collectGitContext(dir,{includeHistory:false});assert.notEqual(b.stateFingerprint,c.stateFingerprint);}finally{fs.rmSync(dir,{recursive:true,force:true});}});
 test('private .codex-debug state does not invalidate workspace freshness',()=>{const dir=repo();try{const a=collectGitContext(dir,{includeHistory:false});fs.mkdirSync(path.join(dir,'.codex-debug','sessions'),{recursive:true});fs.writeFileSync(path.join(dir,'.codex-debug','sessions','x.json'),'{}');const b=collectGitContext(dir,{includeHistory:false});assert.equal(a.stateFingerprint,b.stateFingerprint);assert.equal(b.dirty,false);assert.deepEqual(b.changedPaths,[]);fs.writeFileSync(path.join(dir,'a.txt'),'two');const c=collectGitContext(dir,{includeHistory:false});assert.notEqual(a.stateFingerprint,c.stateFingerprint);assert.deepEqual(c.changedPaths,['a.txt']);}finally{fs.rmSync(dir,{recursive:true,force:true});}});
+
+
+test('Git inventories reject invalid UTF-8 and truncated records while preserving literal BOM names',()=>{
+ const {decodeGitNulRecords}=require('../src/git-context');
+ assert.deepEqual(decodeGitNulRecords(Buffer.from('\uFEFFname.txt\0')),['\uFEFFname.txt']);
+ for(const bytes of [Buffer.from([0xff,0]),Buffer.from('unterminated'),Buffer.from('one\0\0')])assert.throws(()=>decodeGitNulRecords(bytes),error=>error.code==='EGITINVENTORY');
+ assert.throws(()=>parsePorcelainZ(Buffer.concat([Buffer.from('?? bad-'),Buffer.from([0xff,0])])),error=>error.code==='EGITINVENTORY');
+ assert.throws(()=>parsePorcelainZ(Buffer.from('R  destination\0')),error=>error.code==='EGITINVENTORY');
+});
+test('a Git status or path-list failure cannot turn a known repository into a clean empty inventory',()=>{
+ const {gitFiles}=require('../src/test-selection'),dir=repo();
+ try{fs.writeFileSync(path.join(dir,'.git','index'),'broken-index');assert.throws(()=>collectGitContext(dir,{includeHistory:false}),error=>error.code==='EGITINVENTORY');assert.throws(()=>gitFiles(dir),error=>error.code==='EGITINVENTORY');}
+ finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('real unsupported byte names never alias a replacement-character Git path',{skip:process.platform!=='linux'},()=>{
+ const {gitFiles}=require('../src/test-selection'),dir=repo();
+ try{const bad=Buffer.concat([Buffer.from(dir+path.sep+'bad-'),Buffer.from([0xff]),Buffer.from('.txt')]);fs.writeFileSync(bad,'unsupported');fs.writeFileSync(path.join(dir,'bad-\uFFFD.txt'),'valid UTF-8');assert.throws(()=>collectGitContext(dir,{includeHistory:false}),error=>error.code==='EGITINVENTORY');execFileSync('git',['add','--all'],{cwd:dir});assert.throws(()=>gitFiles(dir),error=>error.code==='EGITINVENTORY');}
+ finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
