@@ -124,6 +124,8 @@ The evaluator records causal-assessment accuracy, root-cause term hit rate, insu
 
 Both phases must report complete non-negative safe-integer input and output token counts. The collector accepts Codex JSONL snake_case names and derives total tokens from those two observed counts when the provider omits a separate total. An explicit total must match their sum. Missing, null, malformed, conflicting or inconsistent counts remain unknown (`usage=null`) and cannot satisfy evaluation, calibration or admission. Explicitly reported zero counts remain valid. An unreported cached-input count stays unknown in summaries; it is never inferred as zero.
 
+Debug uses the raw observed JSONL usage for both session accounting and evaluation records. It does not treat the pinned Core compatibility envelope's default zero values as observations. Unknown usage retains the admitted request estimate in the session ledger until an actual complete count exists.
+
 Both evaluation runners save the completed model record, and historical transitions when present, before validating it. Failed validation exits nonzero, removes a stale summary and produces no successful summary. Their workflows retain available artifacts even after failure so an unknown-usage run remains inspectable without becoming calibration evidence.
 
 Token usage is currently a calibration measurement only. An evidence-based `maximumTokensPerCase` must be reviewed after live calibration before Promotion Admission can become ready.

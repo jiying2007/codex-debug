@@ -22,7 +22,7 @@ test('real investigation admission reserves its verifier before the fake provide
 });
 
 test('observed first-phase usage blocks the real verifier entry point on the same session budget',async()=>{
- const limit=50000,calls=[];const codex=fixtureCodex(async request=>{calls.push(request.phase);return {parsed:draft,usage:{inputTokens:limit,outputTokens:0}};}),budget=createSessionBudget({maxEstimatedTokens:limit}),options={sessionBudget:budget};
+ const limit=50000,calls=[];const codex=fixtureTransport(async request=>{calls.push('debug-investigation');const line=JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify(draft)}})+'\n'+JSON.stringify({type:'turn.completed',usage:{input_tokens:limit,output_tokens:0}})+'\n';request.onStdoutChunk(Buffer.from(line));return {stdout:line,stderr:''};}),budget=createSessionBudget({maxEstimatedTokens:limit}),options={sessionBudget:budget};
  const first=await codex.runCodexInvestigation({evidence,options});
  await assert.rejects(()=>codex.runCodexCausalVerification({evidence,investigation:first.investigation,options}),error=>error.code==='ETOKENBUDGET');
  assert.deepEqual(calls,['debug-investigation']);assert.equal(budget.snapshot().chargedTokens,limit);assert.equal(budget.snapshot().calls[0].usageStatus,'observed');
@@ -67,4 +67,16 @@ test('actual Core CLI cancellation without usage remains unknown and charged',as
  const codex=fixtureTransport(async()=>{throw Object.assign(new Error('Controlled cancellation'),{code:'ECANCELLED'});}),budget=createSessionBudget({maxEstimatedTokens:50000});
  await assert.rejects(()=>codex.runCodexInvestigation({evidence,options:{sessionBudget:budget}}));
  const state=budget.snapshot();assert.equal(state.calls[0].status,'failed');assert.equal(state.unknownUsageCalls,1);assert.equal(state.calls[0].usage,null);assert.ok(state.chargedTokens>0);
+});
+
+for(const usage of [undefined,{}, {input_tokens:10},{input_tokens:'10',output_tokens:2},{input_tokens:10,output_tokens:2,total_tokens:0}])test(`successful Core CLI cannot turn unobserved or invalid usage into measured zeros: ${JSON.stringify(usage)}`,async()=>{
+ const codex=fixtureTransport(async options=>{const line=JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify(draft)}})+'\n'+JSON.stringify({type:'turn.completed',usage})+'\n';options.onStdoutChunk(Buffer.from(line));return {stdout:line,stderr:''};}),budget=createSessionBudget({maxEstimatedTokens:50000});
+ const result=await codex.runCodexInvestigation({evidence,options:{sessionBudget:budget}});
+ assert.equal(result.usage,null);assert.equal(budget.snapshot().unknownUsageCalls,1);assert.ok(budget.snapshot().chargedTokens>0);
+});
+
+test('successful Core CLI preserves explicitly reported zero usage as observed',async()=>{
+ const codex=fixtureTransport(async options=>{const line=JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify(draft)}})+'\n'+JSON.stringify({type:'turn.completed',usage:{input_tokens:0,output_tokens:0}})+'\n';options.onStdoutChunk(Buffer.from(line));return {stdout:line,stderr:''};}),budget=createSessionBudget({maxEstimatedTokens:50000});
+ const result=await codex.runCodexInvestigation({evidence,options:{sessionBudget:budget}});
+ assert.equal(result.usage.totalTokens,0);assert.equal(result.usage.cachedInputTokens,undefined);assert.equal(budget.snapshot().unknownUsageCalls,0);assert.equal(budget.snapshot().chargedTokens,0);
 });

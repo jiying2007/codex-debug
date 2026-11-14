@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
+const {normalizedUsage}=require('../src/session-budget');
 
 const MODEL_EVAL_VERSION=1;
 const HEX64=/^[0-9a-f]{64}$/;
@@ -20,21 +21,6 @@ function stable(value){
 }
 function stableDigest(value){return crypto.createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');}
 function number(value){const n=Number(value);return Number.isFinite(n)&&n>=0?n:0;}
-function normalizedUsage(usage={}){
-  if(!usage||typeof usage!=='object'||Array.isArray(usage))return null;
-  // Codex JSONL uses snake_case; stored records use camelCase. Do not coerce
-  // missing, null, string or conflicting counts into measured zero usage.
-  const count=names=>{
-    const values=names.filter(name=>Object.hasOwn(usage,name)).map(name=>usage[name]);
-    if(!values.length)return undefined;
-    return values.every(value=>Number.isSafeInteger(value)&&value>=0&&value===values[0])?values[0]:null;
-  };
-  const input=count(['inputTokens','input_tokens','input']),output=count(['outputTokens','output_tokens','output']);
-  if(input==null||output==null||!Number.isSafeInteger(input+output))return null;
-  const total=count(['totalTokens','total_tokens']),cachedInput=count(['cachedInputTokens','cached_input_tokens','cached_input']);
-  if(total===null||(total!==undefined&&total!==input+output)||cachedInput===null||(cachedInput!==undefined&&cachedInput>input))return null;
-  return Object.freeze({inputTokens:input,outputTokens:output,totalTokens:input+output,...(cachedInput===undefined?{}:{cachedInputTokens:cachedInput})});
-}
 function phaseEvidence(phase){
   if(!phase)return null;
   const provider=phase.provider||{};
