@@ -33,9 +33,9 @@ test('calibration report is review-only and exposes quality token patch and line
   assert.equal(report.reviewInputOnly,true);assert.equal(report.authorizesPromotion,false);assert.equal(report.thresholdRecommendation,null);
   assert.equal(report.metrics.assessmentAccuracy,1);assert.equal(report.metrics.rootCauseTop1Accuracy,1);assert.equal(report.metrics.insufficientEvidenceAccuracy,1);
   assert.deepEqual(report.review.assessmentMisses,[]);assert.deepEqual(report.review.rootCauseMisses,[]);assert.deepEqual(report.review.insufficientMisses,[]);assert.deepEqual(report.review.falseFixCases,[]);
-  assert.deepEqual(report.review.tokenDistribution,{cases:15,totalTokens:240,meanTokensPerCase:16,p50TokensPerCase:16,p95TokensPerCase:30,maxTokensPerCase:30});
-  assert.equal(report.review.patch.accepted,0);assert.equal(report.review.patch.none,15);
-  assert.equal(report.review.lineage.length,2);assert.ok(report.review.lineage.every(x=>x.cases===15));
+  assert.deepEqual(report.review.tokenDistribution,{cases:25,totalTokens:650,meanTokensPerCase:26,p50TokensPerCase:26,p95TokensPerCase:48,maxTokensPerCase:50});
+  assert.equal(report.review.patch.accepted,0);assert.equal(report.review.patch.none,25);
+  assert.equal(report.review.lineage.length,2);assert.ok(report.review.lineage.every(x=>x.cases===25));
   assert.equal(report.admission.ready,false);assert.ok(report.admission.gaps.includes('promotion admission policy is not reviewed'));
   assert.match(report.digest,/^[0-9a-f]{64}$/);
 });

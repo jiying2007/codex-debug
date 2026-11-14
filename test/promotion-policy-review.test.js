@@ -29,7 +29,7 @@ function report(overrides={}){
     runContext:{workflow:'Promotion Model Evaluation',runId:'88',runAttempt:'1',event:'workflow_dispatch',repository:'jiying2007/codex-debug',sourceSha:debugCommit},
     admission:{ready:false,gaps:['promotion admission policy is not reviewed']},
     metrics:{assessmentAccuracy:0.9,rootCauseTop1Accuracy:0.8,insufficientEvidenceAccuracy:1,falseSupport:0,falseFixCandidates:0,patchPolicyViolations:0},
-    review:{assessmentMisses:[],rootCauseMisses:[],insufficientMisses:[],falseFixCases:[],patch:{proposed:0,accepted:0,rejected:0,none:15,acceptedApplicable:0,acceptedNonApplicable:0,acceptedApplicabilityUnknown:0},tokenDistribution:{cases:15,totalTokens:1500,meanTokensPerCase:100,p50TokensPerCase:90,p95TokensPerCase:140,maxTokensPerCase:160},lineage:[]},
+    review:{assessmentMisses:[],rootCauseMisses:[],insufficientMisses:[],falseFixCases:[],patch:{proposed:0,accepted:0,rejected:0,none:25,acceptedApplicable:0,acceptedNonApplicable:0,acceptedApplicabilityUnknown:0},tokenDistribution:{cases:25,totalTokens:2500,meanTokensPerCase:100,p50TokensPerCase:90,p95TokensPerCase:140,maxTokensPerCase:160},lineage:[]},
     cases:[]
   };
   Object.assign(value,overrides);

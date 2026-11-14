@@ -75,14 +75,20 @@ function cleanCheckout(root,commit,env,coreOptions={}){
   return head;
 }
 function digestRepresentative(result){return stableDigest({exitCode:result?.exitCode??null,signal:result?.signal||'',timedOut:Boolean(result?.timedOut),stdoutDigest:stableDigest(String(result?.stdout||'')),stderrDigest:stableDigest(String(result?.stderr||''))});}
+function assertPositiveControls(item,series,phase){
+  if(item.reproduction.positiveControls===undefined)return;
+  assert.ok(String(series.representative?.stdout||'').split(/\r?\n/).includes('POSITIVE_CONTROLS_PASS'),`positive controls did not complete on ${phase} commit for ${item.id}`);
+}
 function runTransitionInRepo(root,item,{env=process.env,coreOptions={}}={}){
   const badHead=cleanCheckout(root,item.badCommit,env,coreOptions);
   assert.equal(badHead,item.badCommit,`bad checkout mismatch for ${item.id}`);
   const bad=runReproductionSeries(item.reproduction.command,{runs:item.reproduction.runs,cwd:root,timeoutMs:item.reproduction.timeoutMs,maxBuffer:4*1024*1024,env});
+  assertPositiveControls(item,bad,'bad');
   assert.equal(bad.summary.reproducibleFailure,true,`bad commit does not reproduce a stable failure for ${item.id}`);
   const fixedHead=cleanCheckout(root,item.fixedCommit,env,coreOptions);
   assert.equal(fixedHead,item.fixedCommit,`fixed checkout mismatch for ${item.id}`);
   const fixed=runReproductionSeries(item.reproduction.command,{runs:item.reproduction.runs,cwd:root,timeoutMs:item.reproduction.timeoutMs,maxBuffer:4*1024*1024,env});
+  assertPositiveControls(item,fixed,'fixed');
   assert.equal(fixed.summary.failures,0,`fixed commit still fails the exact reproduction for ${item.id}`);
   return Object.freeze({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef||'',badCommit:item.badCommit,fixedCommit:item.fixedCommit,commandDigest:stableDigest(item.reproduction.command),badSummary:bad.summary,fixedSummary:fixed.summary,badRepresentativeDigest:digestRepresentative(bad.representative),fixedRepresentativeDigest:digestRepresentative(fixed.representative),transitionDigest:stableDigest({caseId:item.id,repository:item.repository,anchorRef:item.anchorRef||'',badCommit:item.badCommit,fixedCommit:item.fixedCommit,command:item.reproduction.command,bad:bad.summary,fixed:fixed.summary})});
 }
@@ -107,4 +113,4 @@ function materializeHistoricalCase(item){
 }
 function main(){throw new Error('historical-case.js is a library; use promotion-live-eval.js or the unit tests.');}
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={TRUSTED_CORE_PATH,TRUSTED_CORE_URL,isolatedHistoricalEnv,parseSubmoduleConfig,trustedCoreGitlink,resetTrustedCore,materializeTrustedCore,cleanCheckout,runTransitionInRepo,materializeHistoricalCase};
+module.exports={TRUSTED_CORE_PATH,TRUSTED_CORE_URL,isolatedHistoricalEnv,parseSubmoduleConfig,trustedCoreGitlink,resetTrustedCore,materializeTrustedCore,cleanCheckout,assertPositiveControls,runTransitionInRepo,materializeHistoricalCase};

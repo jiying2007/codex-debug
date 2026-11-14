@@ -23,9 +23,10 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] Safe Core Consumer CI Receipt plus read-only development Consumer Evidence artifact
 - [x] Model Evaluation Record v1 with digest-bound corpus expectations, two-pass model/runtime/usage evidence and deterministic RCA/insufficient/false-fix metrics
 - [x] manual read-only live synthetic model canary with protected-credential fail-closed behavior and `promotionEligible=false`
-- [x] Promotion Corpus v2 structural floor: 12 unique reviewed cases, 3 repositories, 4 failure kinds and 3 authentic insufficient-evidence variants
-- [x] real historical corpus with `12/12` unique direct-parent transitions across Codex Debug, Safe Core, Codex Diagnose and Codex Change
-- [x] current diversity `4/3` repositories, `5/4` failure kinds, `3/3` insufficient variants and `15` model-evaluation views
+- [x] Promotion Corpus v2 structural floor: 20 unique reviewed cases, 20 independent root-cause groups, 3 repositories, 4 failure kinds and 3 authentic insufficient-evidence variants
+- [x] real historical corpus with `22/20` unique direct-parent transitions across Codex Debug, Safe Core, Codex Diagnose and Codex Change
+- [x] retrospective dev/holdout metadata keeps root-cause lineages together; all cases remain reviewed, with no blind-score claim
+- [x] current diversity `4/3` repositories, `7/4` failure kinds, `3/3` insufficient variants and `25` model-evaluation views
 - [x] duplicate historical transition/bad/fix identities rejected so repeated fixes cannot inflate readiness
 - [x] continuous read-only Promotion Provenance proving reviewed ref/direct-parent/ground-truth-file bindings without historical execution
 - [x] promotion historical execution isolated from model/GitHub credentials and arbitrary host configuration
@@ -33,18 +34,18 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - [x] Promotion Admission Policy v1: digest-bound quality/safety/token policy separate from structural corpus readiness
 - [x] zero-tolerance admission safety gates for false support, false-fix candidates and patch-policy violations
 - [x] same-run Qualification/Model binding by Debug SHA, Core gitlink, workflow/run/attempt/event/repository/source SHA
-- [x] Promotion Model Evaluation sequencing: validate -> governance in promotion mode -> qualify all 12 -> live model -> safety -> Admission v2 -> receipt revalidation -> calibration report -> artifact
+- [x] Promotion Model Evaluation sequencing: validate -> governance in promotion mode -> qualify all 22 -> live model -> safety -> Admission v2 -> receipt revalidation -> calibration report -> artifact
 - [x] calibration mode produces qualification/live/admission evidence with explicit null governance digests and without granting promotion authority
 - [x] promotion mode requires reviewed Governance Lock v1 + live Governance Receipt v2, explicit eligibility, reviewed/calibrated admission policy and ready Admission v2 receipt
 - [x] Admission v2 self-digest and independent reconstruction bind repository governance, Qualification, model evidence and admission policy into one downstream authority record
 - [x] shipped Product Contract exposes Promotion Transition v1, Promotion Qualification v1, Admission Policy v1, Admission v2, Governance Lock v1, Governance Receipt v2 and Calibration Report v1
 - [x] manifest gate cross-checks shipped Promotion schema versions directly against implementation module constants
-- [x] package / package-lock / product-contract development identity gated as one version (`0.1.17` for this line)
+- [x] package / package-lock / product-contract development identity gated as one version (`0.1.18` for this line)
 - [x] development-consumer Family lifecycle so unfinished Debug cannot block production Family freshness
 
 ## Required before active promotion
 
-- [ ] trigger and retain a credential-backed calibration run with explicit historical-execution acknowledgement; this run will also create same-run 12-transition Qualification
+- [ ] trigger and retain a credential-backed calibration run with explicit historical-execution acknowledgement; this run will also create same-run 22-transition Qualification
 - [ ] review live RCA assessment/root-cause metrics and choose evidence-based minimum thresholds
 - [ ] review live false-fix and patch-applicability results across all reviewed evaluation views
 - [ ] calibrate token usage and choose an evidence-based finite `maximumTokensPerCase`
@@ -65,4 +66,4 @@ The first line is architecture-first. Marketplace publication is not the milesto
 - audio-pipeline diagnostic bundles for AEC/NS/VAD/KWS before/after evidence
 - richer VS Code Evidence/Hypothesis tree views
 
-Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.17 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.
+Synthetic contract fixtures and synthetic live-canary artifacts are not promotion evidence. Structural readiness does not auto-authorize promotion. The checked-in 0.1.18 admission policy intentionally remains `reviewed=false` and token-uncalibrated until a real credential-backed historical calibration artifact exists; no RCA or token threshold is invented in advance.

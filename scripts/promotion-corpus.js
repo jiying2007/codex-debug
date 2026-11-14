@@ -18,6 +18,21 @@ const PATCH_POLICIES=new Set(['required','optional','forbidden']);
 
 function safeRel(value){const p=String(value||'').replace(/\\/g,'/');return Boolean(p)&&!p.startsWith('/')&&!p.split('/').includes('..')&&!p.startsWith('.git/')&&!p.startsWith('.codex-debug/');}
 function validatePolicy(policy={}){for(const key of ['minimumCases','minimumRepositories','minimumFailureKinds','minimumInsufficientCases'])assert.ok(Number.isInteger(policy[key])&&policy[key]>=1&&policy[key]<=1000,`invalid promotion policy ${key}`);return policy;}
+function validatePartitions(corpus){
+  if(corpus.partitionPolicy===undefined&&corpus.policy.minimumRootCauseGroups===undefined)return;
+  assert.deepEqual(corpus.partitionPolicy,{version:1,unit:'root-cause-group',holdoutInterpretation:'reviewed-retrospective',blind:false},'partition policy must declare retrospective, non-blind root-cause groups');
+  const minimum=corpus.policy.minimumRootCauseGroups;
+  assert.ok(Number.isInteger(minimum)&&minimum>=1&&minimum<=1000,'invalid promotion policy minimumRootCauseGroups');
+  const groups=new Map();
+  for(const item of corpus.cases){
+    assert.match(String(item.rootCauseGroup||''),/^[a-z0-9][a-z0-9._-]{2,119}$/,'invalid root-cause group');
+    assert.ok(['dev','holdout'].includes(item.partition),`invalid partition for ${item.id}`);
+    assert.equal(item.exposure,'reviewed-retrospective',`reviewed historical case ${item.id} must not claim unseen evidence`);
+    if(groups.has(item.rootCauseGroup))assert.equal(groups.get(item.rootCauseGroup),item.partition,`root-cause group crosses dev/holdout: ${item.rootCauseGroup}`);
+    groups.set(item.rootCauseGroup,item.partition);
+  }
+  assert.ok([...groups.values()].includes('dev')&&[...groups.values()].includes('holdout'),'both dev and holdout groups are required');
+}
 function validateExpected(expected,id){assert.ok(ASSESSMENTS.has(expected.assessment),`invalid expected assessment for ${id}`);assert.ok(PATCH_POLICIES.has(expected.patchPolicy),`invalid patch policy for ${id}`);assert.ok(Array.isArray(expected.rootCauseTerms),`rootCauseTerms must be an array for ${id}`);}
 function validateInsufficientVariant(item,ids){
   const variant=item.insufficientVariant;
@@ -44,6 +59,7 @@ function validatePromotionCorpus(corpus){
   assert.ok(String(corpus?.provenance||''),'promotion corpus provenance is required');
   validatePolicy(corpus.policy||{});
   assert.ok(Array.isArray(corpus?.cases)&&corpus.cases.length>0,'promotion corpus requires at least one reviewed case');
+  validatePartitions(corpus);
   const ids=new Set(),transitions=new Set(),badCommits=new Set(),fixedCommits=new Set();
   for(const item of corpus.cases){
     assert.match(String(item.id||''),/^[a-z0-9][a-z0-9._-]{2,119}$/,'invalid promotion case id');
@@ -67,6 +83,11 @@ function validatePromotionCorpus(corpus){
     assert.ok(!command.includes('`')&&!command.includes('${')&&!command.includes('$('),`reproduction command for ${item.id} must not contain shell interpolation metacharacters`);
     assert.ok(Number.isInteger(repro.runs)&&repro.runs>=1&&repro.runs<=5,`invalid reproduction runs for ${item.id}`);
     assert.ok(Number.isInteger(repro.timeoutMs)&&repro.timeoutMs>=1000&&repro.timeoutMs<=600000,`invalid reproduction timeout for ${item.id}`);
+    if(repro.positiveControls!==undefined){
+      assert.ok(Array.isArray(repro.positiveControls)&&repro.positiveControls.length>=1&&repro.positiveControls.length<=10,`invalid positive controls for ${item.id}`);
+      assert.ok(repro.positiveControls.every(value=>typeof value==='string'&&value.length>=20&&value.length<=500),`invalid positive control description for ${item.id}`);
+      assert.ok(command.includes('POSITIVE_CONTROLS_PASS'),`positive controls must have an observable marker for ${item.id}`);
+    }
     const expected=item.expected||{};validateExpected(expected,item.id);
     assert.notEqual(expected.assessment,'insufficient',`reviewed transition ${item.id} cannot use insufficient as its full-evidence expectation`);
     assert.equal(item.expectationDigest,stableDigest(expected),`expectation digest mismatch for ${item.id}`);
@@ -89,12 +110,15 @@ function promotionReadiness(corpus){
   const repositories=new Set(cases.map(x=>x.repository));
   const kinds=new Set(cases.map(x=>x.failureKind));
   const insufficient=cases.filter(x=>x.insufficientVariant).length;
+  const grouped=policy.minimumRootCauseGroups!==undefined;
+  const rootCauseGroups=new Set(cases.map(x=>x.rootCauseGroup).filter(Boolean)).size;
   const gaps=[];
   if(cases.length<policy.minimumCases)gaps.push(`cases ${cases.length}/${policy.minimumCases}`);
   if(repositories.size<policy.minimumRepositories)gaps.push(`repositories ${repositories.size}/${policy.minimumRepositories}`);
   if(kinds.size<policy.minimumFailureKinds)gaps.push(`failureKinds ${kinds.size}/${policy.minimumFailureKinds}`);
   if(insufficient<policy.minimumInsufficientCases)gaps.push(`insufficientCases ${insufficient}/${policy.minimumInsufficientCases}`);
-  return Object.freeze({ready:gaps.length===0,cases:cases.length,repositories:repositories.size,failureKinds:kinds.size,insufficientCases:insufficient,gaps});
+  if(grouped&&rootCauseGroups<policy.minimumRootCauseGroups)gaps.push(`rootCauseGroups ${rootCauseGroups}/${policy.minimumRootCauseGroups}`);
+  return Object.freeze({ready:gaps.length===0,cases:cases.length,repositories:repositories.size,failureKinds:kinds.size,insufficientCases:insufficient,...(grouped?{rootCauseGroups}:{}),gaps});
 }
 function evaluationSpecs(corpus){
   validatePromotionCorpus(corpus);
@@ -105,4 +129,4 @@ function evaluationSpecs(corpus){
 function toEvaluationCorpus(corpus){const readiness=promotionReadiness(corpus);return Object.freeze({schemaVersion:1,kind:'codex-debug-model-eval-corpus',promotionEligible:Boolean(corpus.promotionEligible&&readiness.ready),provenance:`promotion:${corpus.provenance}`,cases:evaluationSpecs(corpus)});}
 function main(){const file=process.argv[2]||path.join(__dirname,'..','quality','promotion-corpus.json'),corpus=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'));validatePromotionCorpus(corpus);const readiness=promotionReadiness(corpus);process.stdout.write(`${JSON.stringify({schemaVersion:VERSION,promotionEligible:corpus.promotionEligible,readyForPromotion:readiness.ready,...readiness,evaluationCases:evaluationSpecs(corpus).length,corpusDigest:stableDigest(corpus)})}\n`);}
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=2;}}
-module.exports={VERSION,PROJECTION_VERSION,validateInsufficientVariant,validatePromotionCorpus,promotionReadiness,evaluationSpecs,toEvaluationCorpus};
+module.exports={VERSION,PROJECTION_VERSION,validateInsufficientVariant,validatePartitions,validatePromotionCorpus,promotionReadiness,evaluationSpecs,toEvaluationCorpus};
