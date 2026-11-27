@@ -58,3 +58,16 @@ test('Git roots bind native real paths for selected roots and nested workspaces'
  try{fs.mkdirSync(nested);const expected=fs.realpathSync.native(dir);assert.equal(collectGitContext(dir,{includeHistory:false}).root,expected);assert.equal(collectGitContext(nested,{includeHistory:false}).root,expected);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('index identity detects staging the same dirty bytes without inventing a separate source mutation',()=>{
+ const dir=repo();
+ try{
+  fs.writeFileSync(path.join(dir,'a.txt'),'two');
+  const before=collectGitContext(dir,{includeHistory:false});
+  execFileSync('git',['add','--','a.txt'],{cwd:dir});
+  const after=collectGitContext(dir,{includeHistory:false});
+  assert.equal(before.stateFingerprint,after.stateFingerprint);
+  assert.match(before.indexFingerprint,/^[0-9a-f]{64}$/);
+  assert.notEqual(before.indexFingerprint,after.indexFingerprint);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
