@@ -14,7 +14,7 @@ const {symbolizeCore}=require('./symbolizer');
 const {symbolizeEmbedded}=require('./embedded-symbols');
 const {symbolizePlatform}=require('./platform-symbols');
 const {runSafeBisect}=require('./bisect');
-const {makeSessionId,createDebugReceipt,freeze,stableDigest,validateStoredSession}=require('./contracts');
+const {makeSessionId,createDebugReceipt,freeze,stableDigest,validateStoredSession,verificationWorkspaceStable,verificationWorkspaceBound}=require('./contracts');
 const {writeSession,readSession,writeExecutionLedger}=require('./session-store');
 const {formatDebugReport}=require('./report');
 const {sessionOptions,assertActive}=require('./session-budget');
@@ -51,10 +51,10 @@ function determineFixStatus({investigation,patchResult,verification}){
   return 'unresolved';
 }
 
-function verificationStatus(beforeSummary,afterSummary,mutationObserved){
+function verificationStatus(beforeSummary,afterSummary,mutationObserved,workspaceStates){
   const baselineStrong=Boolean(beforeSummary?.reproducibleFailure);
   const postAllPass=Boolean(afterSummary&&afterSummary.runs>0&&afterSummary.failures===0);
-  if(postAllPass&&baselineStrong&&mutationObserved&&sameCommand(beforeSummary,afterSummary))return 'passed';
+  if(postAllPass&&baselineStrong&&mutationObserved&&sameCommand(beforeSummary,afterSummary)&&verificationWorkspaceBound(workspaceStates))return 'passed';
   if(postAllPass)return 'passed-unbound';
   return 'failed';
 }
@@ -68,12 +68,15 @@ function confirmSupported(ledger,beforeSummary,afterSummary,{patchResult,investi
 }
 
 function makeVerification(beforeSummary,afterSummary,mutationObserved,commandDigest='',extra={}){
+  const status=afterSummary?verificationStatus(beforeSummary,afterSummary,mutationObserved,extra.workspaceStates):'not-run';
+  const transition=afterSummary?compareFailureSignatures(beforeSummary,afterSummary):{status:'not-run',baseline:[],after:[]};
+  const workspaceUnbound=Boolean(afterSummary&&transition.status==='resolved'&&!verificationWorkspaceStable(extra.workspaceStates));
   return freeze({
-    status:afterSummary?verificationStatus(beforeSummary,afterSummary,mutationObserved):'not-run',
+    status,
     baselineObserved:Boolean(beforeSummary),
     baselineSummary:beforeSummary||null,
     afterSummary:afterSummary||null,
-    failureTransition:afterSummary?compareFailureSignatures(beforeSummary,afterSummary):{status:'not-run',baseline:[],after:[]},
+    failureTransition:workspaceUnbound?{...transition,status:'unbound',reason:'workspace-state-unbound'}:transition,
     commandDigest,
     mutationObserved:Boolean(mutationObserved),
     ...extra

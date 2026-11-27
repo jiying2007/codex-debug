@@ -1,5 +1,5 @@
 'use strict';const test=require('node:test');const assert=require('node:assert/strict');const {summarizeSeries,compareFailureSignatures}=require('../src/reproduction');const {verificationStatus}=require('../src/debug');function r(code,duration=10,text='fatal error: boom'){return {command:'x',exitCode:code,signal:'',timedOut:false,durationMs:duration,stdout:code?text:'ok',stderr:''};}
-test('reproduction separates signature stability from sufficient repeatability',()=>{const stable=summarizeSeries([r(1),r(1),r(1)]),weak=summarizeSeries([r(1),r(0),r(0)]);assert.equal(stable.stableFailure,true);assert.equal(stable.reproducibleFailure,true);assert.equal(weak.stableFailure,true);assert.equal(weak.reproducibleFailure,false);assert.equal(verificationStatus(weak,summarizeSeries([r(0),r(0),r(0)]),true),'passed-unbound');assert.equal(verificationStatus(stable,summarizeSeries([r(0),r(0),r(0)]),true),'passed');});
+test('reproduction separates signature stability from sufficient repeatability',()=>{const stable=summarizeSeries([r(1),r(1),r(1)]),weak=summarizeSeries([r(1),r(0),r(0)]);assert.equal(stable.stableFailure,true);assert.equal(stable.reproducibleFailure,true);assert.equal(weak.stableFailure,true);assert.equal(weak.reproducibleFailure,false);assert.equal(verificationStatus(weak,summarizeSeries([r(0),r(0),r(0)]),true),'passed-unbound');const states={afterReproduction:'a'.repeat(64),beforeVerification:'b'.repeat(64),afterVerification:'b'.repeat(64)};assert.equal(verificationStatus(stable,summarizeSeries([r(0),r(0),r(0)]),true,states),'passed');assert.equal(verificationStatus(stable,summarizeSeries([r(0),r(0),r(0)]),true),'passed-unbound');assert.equal(verificationStatus(stable,summarizeSeries([r(0),r(0),r(0)]),true,{...states,afterVerification:'c'.repeat(64)}),'passed-unbound');});
 test('different failure signatures are not stable and transitions are classified',()=>{const before=summarizeSeries([r(1,10,'fatal error: alpha'),r(1,10,'fatal error: alpha')]),same=summarizeSeries([r(1,10,'fatal error: alpha')]),different=summarizeSeries([r(1,10,'fatal error: beta')]),resolved=summarizeSeries([r(0),r(0)]);assert.equal(compareFailureSignatures(before,same).status,'same-failure');assert.equal(compareFailureSignatures(before,different).status,'different-failure');assert.equal(compareFailureSignatures(before,resolved).status,'resolved');});
 test('different, mixed or missing command identities cannot establish a bound transition',()=>{
   const before=summarizeSeries([r(1),r(1)]);
@@ -10,4 +10,10 @@ test('different, mixed or missing command identities cannot establish a bound tr
     assert.equal(confirmSupported(ledger,before,after),ledger);
   }
   assert.equal(verificationStatus({...before,commandDigest:''},summarizeSeries([r(0)]),true),'passed-unbound');
+});
+
+test('stable observed failure transition remains resolved without an independent repair',()=>{
+ const {makeVerification}=require('../src/debug');const before=summarizeSeries([r(1),r(1)]),after=summarizeSeries([r(0)]),same='a'.repeat(64);
+ const v=makeVerification(before,after,false,before.commandDigest,{workspaceStates:{afterReproduction:same,beforeVerification:same,afterVerification:same}});
+ assert.equal(v.status,'passed-unbound');assert.equal(v.failureTransition.status,'resolved');
 });

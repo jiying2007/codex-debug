@@ -7,10 +7,12 @@ test('session ids include entropy even for identical evidence and timestamp',()=
 test('persisted verified state independently validates the original command and baseline proof',()=>{
   const {stableDigest}=require('../src/contracts'),base=fixture(),commandDigest=stableDigest('node reproduce.js');
   const baseline={commandDigest,runs:2,failures:2,passes:0,reproducibleFailure:true},after={commandDigest,runs:2,failures:0,passes:2};
-  const evidence={...base.evidence,command:{commandDigest},reproduction:baseline};
-  const verification={status:'passed',baselineObserved:true,mutationObserved:true,commandDigest,baselineSummary:baseline,afterSummary:after,failureTransition:{status:'resolved'}};
+  const initial='d'.repeat(64),fixed='e'.repeat(64);
+  const evidence={...base.evidence,git:{...base.evidence.git,stateFingerprint:initial},command:{commandDigest},reproduction:baseline};
+  const verification={status:'passed',baselineObserved:true,mutationObserved:true,commandDigest,baselineSummary:baseline,afterSummary:after,failureTransition:{status:'resolved'},workspaceStates:{afterReproduction:initial,beforeVerification:fixed,afterVerification:fixed}};
   const materialize=(v,ev=evidence)=>({...base,evidence:ev,verification:v,fixStatus:'verified',receipt:createDebugReceipt({sessionId:base.sessionId,evidence:ev,investigation:base.investigation,ledger:base.ledger,verification:v,patchResult:base.patch,lineage:base.lineage,fixStatus:'verified'})});
   assert.equal(validateStoredSession(materialize(verification)).fixStatus,'verified');
   for(const mutation of [{commandDigest:stableDigest('unrelated')},{mutationObserved:false},{baselineSummary:{...baseline,failures:1}},{afterSummary:{...after,commandDigest:stableDigest('unrelated')}},{status:'passed-unbound'}])assert.throws(()=>validateStoredSession(materialize({...verification,...mutation})),error=>error.code==='EDEBUGVERIFICATIONBINDING');
   assert.throws(()=>validateStoredSession(materialize(verification,{...evidence,command:null})),error=>error.code==='EDEBUGVERIFICATIONBINDING');
+  for(const states of [undefined,{}, {...verification.workspaceStates,afterVerification:'f'.repeat(64)}, {...verification.workspaceStates,afterReproduction:'f'.repeat(64)}, {...verification.workspaceStates,beforeVerification:initial,afterVerification:initial}])assert.throws(()=>validateStoredSession(materialize({...verification,workspaceStates:states})),error=>error.code==='EDEBUGVERIFICATIONBINDING');
 });
