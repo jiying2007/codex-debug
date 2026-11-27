@@ -42,11 +42,13 @@ function validateRollbackBinding(session){
 // A passing verification must observe the same changed-source workspace before and
 // after the command. Ignored build outputs and internal Debug storage are excluded
 // by collectGitContext; unclassified workspace changes invalidate the binding.
+function validWorkspaceFingerprint(value){return typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);}
+function verificationWorkspaceStable(states){
+  return Boolean(states&&validWorkspaceFingerprint(states.beforeVerification)&&states.beforeVerification===states.afterVerification);
+}
 function verificationWorkspaceBound(states,baselineFingerprint=states?.afterReproduction){
-  const valid=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
-  return Boolean(states&&valid(baselineFingerprint)&&valid(states.afterReproduction)&&valid(states.beforeVerification)&&valid(states.afterVerification)&&
-    states.afterReproduction===baselineFingerprint&&states.beforeVerification!==states.afterReproduction&&
-    states.beforeVerification===states.afterVerification);
+  return Boolean(verificationWorkspaceStable(states)&&validWorkspaceFingerprint(baselineFingerprint)&&
+    states.afterReproduction===baselineFingerprint&&states.beforeVerification!==states.afterReproduction);
 }
 
 function validateStoredSession(session){
@@ -74,4 +76,4 @@ function createDebugReceipt({sessionId,evidence,investigation,ledger,verificatio
   return validateReceipt({...base,receiptDigest:stableDigest(base)});
 }
 
-module.exports=Object.freeze({DEBUG_CONTRACT_VERSION,DEBUG_EVIDENCE_VERSION,DEBUG_RECEIPT_VERSION,HYPOTHESIS_LEDGER_VERSION,FAILURE_KINDS,HYPOTHESIS_STATUSES,FIX_STATUSES,ISO_UTC_TIMESTAMP,freeze,stableDigest,makeSessionId,normalizeStrings,computeInvestigationDigest,hasAuthorizedPatch,createDebugReceipt,validateReceipt,validateRollbackBinding,verificationWorkspaceBound,validateStoredSession});
+module.exports=Object.freeze({DEBUG_CONTRACT_VERSION,DEBUG_EVIDENCE_VERSION,DEBUG_RECEIPT_VERSION,HYPOTHESIS_LEDGER_VERSION,FAILURE_KINDS,HYPOTHESIS_STATUSES,FIX_STATUSES,ISO_UTC_TIMESTAMP,freeze,stableDigest,makeSessionId,normalizeStrings,computeInvestigationDigest,hasAuthorizedPatch,createDebugReceipt,validateReceipt,validateRollbackBinding,verificationWorkspaceStable,verificationWorkspaceBound,validateStoredSession});

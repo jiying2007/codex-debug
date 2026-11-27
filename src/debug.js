@@ -14,7 +14,7 @@ const {symbolizeCore}=require('./symbolizer');
 const {symbolizeEmbedded}=require('./embedded-symbols');
 const {symbolizePlatform}=require('./platform-symbols');
 const {runSafeBisect}=require('./bisect');
-const {makeSessionId,createDebugReceipt,freeze,stableDigest,validateStoredSession,verificationWorkspaceBound}=require('./contracts');
+const {makeSessionId,createDebugReceipt,freeze,stableDigest,validateStoredSession,verificationWorkspaceStable,verificationWorkspaceBound}=require('./contracts');
 const {writeSession,readSession,writeExecutionLedger}=require('./session-store');
 const {formatDebugReport}=require('./report');
 const {sessionOptions,assertActive}=require('./session-budget');
@@ -70,7 +70,7 @@ function confirmSupported(ledger,beforeSummary,afterSummary,{patchResult,investi
 function makeVerification(beforeSummary,afterSummary,mutationObserved,commandDigest='',extra={}){
   const status=afterSummary?verificationStatus(beforeSummary,afterSummary,mutationObserved,extra.workspaceStates):'not-run';
   const transition=afterSummary?compareFailureSignatures(beforeSummary,afterSummary):{status:'not-run',baseline:[],after:[]};
-  const workspaceUnbound=Boolean(afterSummary&&transition.status==='resolved'&&!verificationWorkspaceBound(extra.workspaceStates));
+  const workspaceUnbound=Boolean(afterSummary&&transition.status==='resolved'&&!verificationWorkspaceStable(extra.workspaceStates));
   return freeze({
     status,
     baselineObserved:Boolean(beforeSummary),

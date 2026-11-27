@@ -11,3 +11,9 @@ test('different, mixed or missing command identities cannot establish a bound tr
   }
   assert.equal(verificationStatus({...before,commandDigest:''},summarizeSeries([r(0)]),true),'passed-unbound');
 });
+
+test('stable observed failure transition remains resolved without an independent repair',()=>{
+ const {makeVerification}=require('../src/debug');const before=summarizeSeries([r(1),r(1)]),after=summarizeSeries([r(0)]),same='a'.repeat(64);
+ const v=makeVerification(before,after,false,before.commandDigest,{workspaceStates:{afterReproduction:same,beforeVerification:same,afterVerification:same}});
+ assert.equal(v.status,'passed-unbound');assert.equal(v.failureTransition.status,'resolved');
+});
