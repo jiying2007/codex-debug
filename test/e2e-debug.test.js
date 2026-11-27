@@ -195,3 +195,39 @@ test('reproduction side effects are part of the failing baseline, never credited
     assert.equal(resumed.verification.status,'passed-unbound');
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('a green command that changes tracked source during verification cannot verify the earlier mutation',async()=>{
+ const dir=init();
+ try{
+  fs.writeFileSync(path.join(dir,'reproduce.js'),"const fs=require('node:fs');if(fs.existsSync('trigger.txt'))fs.writeFileSync('state.txt','good\\n');const bad=fs.readFileSync('state.txt','utf8').trim()==='bad';if(bad)console.error('fatal error: deterministic fixture');process.exit(bad?1:0);\n");
+  execFileSync('git',['add','.'],{cwd:dir});execFileSync('git',['commit','-qm','fixture verification can mutate tracked source'],{cwd:dir});
+  const first=await runDebugSession({workspace:dir,command:'node reproduce.js',reproRuns:2,deterministicOnly:true,persist:true});
+  assert.equal(first.evidence.reproduction.failures,2);
+  fs.writeFileSync(path.join(dir,'trigger.txt'),'manual change\n');
+  const resumed=await resumeDebugSession({workspace:dir,resume:first.sessionId,verifyCommand:'node reproduce.js',verifyRuns:2,persist:true});
+  assert.equal(resumed.verification.afterSummary.passes,2);
+  assert.equal(resumed.verification.mutationObserved,true);
+  assert.notEqual(resumed.verification.workspaceStates.beforeVerification,resumed.verification.workspaceStates.afterVerification);
+  assert.equal(resumed.verification.status,'passed-unbound');
+  assert.equal(resumed.verification.failureTransition.status,'unbound');
+  assert.notEqual(resumed.fixStatus,'verified');
+  assert.equal(resumed.ledger.entries.some(h=>h.status==='confirmed'),false);
+  assert.notEqual(validateStoredSession(readSession(dir,resumed.sessionId)).fixStatus,'verified');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('ignored build output does not invalidate a bound source-state verification',async()=>{
+ const dir=init();
+ try{
+  fs.writeFileSync(path.join(dir,'.gitignore'),'build/\n');
+  fs.writeFileSync(path.join(dir,'reproduce.js'),"const fs=require('node:fs');fs.mkdirSync('build',{recursive:true});fs.appendFileSync('build/trace.log','run\\n');const bad=fs.readFileSync('state.txt','utf8').trim()==='bad';if(bad)console.error('fatal error: deterministic fixture');process.exit(bad?1:0);\n");
+  execFileSync('git',['add','.'],{cwd:dir});execFileSync('git',['commit','-qm','fixture ignored build output'],{cwd:dir});
+  const first=await runDebugSession({workspace:dir,command:'node reproduce.js',reproRuns:2,deterministicOnly:true,persist:true});
+  assert.equal(first.evidence.reproduction.failures,2);
+  fs.writeFileSync(path.join(dir,'state.txt'),'good\n');
+  const resumed=await resumeDebugSession({workspace:dir,resume:first.sessionId,verifyCommand:'node reproduce.js',verifyRuns:2,persist:true});
+  assert.equal(resumed.verification.workspaceStates.beforeVerification,resumed.verification.workspaceStates.afterVerification);
+  assert.equal(resumed.fixStatus,'verified');
+  assert.equal(validateStoredSession(readSession(dir,resumed.sessionId)).fixStatus,'verified');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

@@ -67,7 +67,7 @@ A successful command alone is **not** a verified fix. `verified` requires:
 1. an observed explicit reproduction failure;
 2. a sufficiently reproducible baseline (`1/1` failure, or at least two repeated failures sharing one normalized failure signature);
 3. an independently observed workspace content-state mutation after that baseline, captured after reproduction has finished (reproduction side effects are not repairs);
-4. every bounded post-change verification run passes and its `commandDigest` exactly matches the original reproduction command;
+4. every bounded post-change verification run passes, its `commandDigest` and observed execution context match the original reproduction, and the observed pre-/post-verification workspace fingerprints are identical and distinct from the failing baseline (ignored build outputs and Debug's own internal records do not affect that fingerprint);
 5. the stored session still validates its evidence, investigation, ledger, verification, patch-state and lineage digests.
 
 A log plus an unrelated green test is `passed-unbound`, not `verified`. An unrelated command remains unbound even when an original failing baseline and a workspace mutation both exist; it cannot mark that original failure resolved or confirm a hypothesis. Persisted `verified` state independently rechecks this command and baseline binding. Older sessions that did not record the reproduction command identity cannot acquire verified status from a new green run; collect a new failing baseline first. Runtime verification also records whether the failure transition is `resolved`, `same-failure`, `different-failure`, `mixed-failure`, or unbound.

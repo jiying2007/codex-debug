@@ -39,6 +39,16 @@ function validateRollbackBinding(session){
   return true;
 }
 
+// A passing verification must observe the same changed-source workspace before and
+// after the command. Ignored build outputs and internal Debug storage are excluded
+// by collectGitContext; unclassified workspace changes invalidate the binding.
+function verificationWorkspaceBound(states,baselineFingerprint=states?.afterReproduction){
+  const valid=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
+  return Boolean(states&&valid(baselineFingerprint)&&valid(states.afterReproduction)&&valid(states.beforeVerification)&&valid(states.afterVerification)&&
+    states.afterReproduction===baselineFingerprint&&states.beforeVerification!==states.afterReproduction&&
+    states.beforeVerification===states.afterVerification);
+}
+
 function validateStoredSession(session){
   if(!session||typeof session!=='object'||Array.isArray(session))throw Object.assign(new Error('Stored Debug session is invalid.'),{code:'EDEBUGSESSION'});
   const receipt=validateReceipt(session.receipt);
@@ -50,7 +60,8 @@ function validateStoredSession(session){
     const bound=/^[0-9a-f]{64}$/.test(String(commandDigest||''))&&commandDigest===baseline?.commandDigest&&commandDigest===after?.commandDigest&&commandDigest===verification.commandDigest;
     const contextBound=!(baseline?.executionContextDigest||after?.executionContextDigest)||Boolean(baseline?.executionContextDigest&&baseline.executionContextDigest===after?.executionContextDigest);
     const baselineMatches=baseline&&stableDigest(baseline)===stableDigest(verification.baselineSummary);
-    if(session.fixStatus!=='verified'||verification.status!=='passed'||!bound||!contextBound||!baselineMatches||!baseline.reproducibleFailure||!baseline.failures||!verification.baselineObserved||!verification.mutationObserved||!(after.runs>0)||after.failures!==0||after.passes!==after.runs||verification.failureTransition?.status!=='resolved')throw Object.assign(new Error('Verified Debug state requires a bound reproduction command, observed mutation, and a resolved failing baseline.'),{code:'EDEBUGVERIFICATIONBINDING'});
+    const workspaceBound=Boolean(session.evidence?.git?.stateFingerprint)&&verificationWorkspaceBound(verification.workspaceStates,session.evidence.git.stateFingerprint);
+    if(session.fixStatus!=='verified'||verification.status!=='passed'||!bound||!contextBound||!workspaceBound||!baselineMatches||!baseline.reproducibleFailure||!baseline.failures||!verification.baselineObserved||!verification.mutationObserved||!(after.runs>0)||after.failures!==0||after.passes!==after.runs||verification.failureTransition?.status!=='resolved')throw Object.assign(new Error('Verified Debug state requires a bound reproduction command, observed mutation, stable verification workspace, and a resolved failing baseline.'),{code:'EDEBUGVERIFICATIONBINDING'});
   }
   validateRollbackBinding(session);
   return freeze(session);
@@ -63,4 +74,4 @@ function createDebugReceipt({sessionId,evidence,investigation,ledger,verificatio
   return validateReceipt({...base,receiptDigest:stableDigest(base)});
 }
 
-module.exports=Object.freeze({DEBUG_CONTRACT_VERSION,DEBUG_EVIDENCE_VERSION,DEBUG_RECEIPT_VERSION,HYPOTHESIS_LEDGER_VERSION,FAILURE_KINDS,HYPOTHESIS_STATUSES,FIX_STATUSES,ISO_UTC_TIMESTAMP,freeze,stableDigest,makeSessionId,normalizeStrings,computeInvestigationDigest,hasAuthorizedPatch,createDebugReceipt,validateReceipt,validateRollbackBinding,validateStoredSession});
+module.exports=Object.freeze({DEBUG_CONTRACT_VERSION,DEBUG_EVIDENCE_VERSION,DEBUG_RECEIPT_VERSION,HYPOTHESIS_LEDGER_VERSION,FAILURE_KINDS,HYPOTHESIS_STATUSES,FIX_STATUSES,ISO_UTC_TIMESTAMP,freeze,stableDigest,makeSessionId,normalizeStrings,computeInvestigationDigest,hasAuthorizedPatch,createDebugReceipt,validateReceipt,validateRollbackBinding,verificationWorkspaceBound,validateStoredSession});
