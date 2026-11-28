@@ -173,13 +173,15 @@ async function runDebugSession(options={}){
   const observation=patchResult?.applied?observeWorkspaceAfterMutation(workspace,root):{context:collectGitContext(workspace,{includeHistory:false,control:options}),interruption:null};
   const postMutationContext=observation.context;
   const mutationObserved=Boolean(gitContext.stateFingerprint&&postMutationContext.stateFingerprint&&gitContext.stateFingerprint!==postMutationContext.stateFingerprint);
-  const workspaceStates={beforeReproduction:initialGitContext.stateFingerprint,afterReproduction:gitContext.stateFingerprint,beforeVerification:postMutationContext.stateFingerprint,afterVerification:''};
+  const workspaceStates={beforeReproduction:initialGitContext.stateFingerprint,afterReproduction:gitContext.stateFingerprint,beforeVerification:postMutationContext.stateFingerprint,afterVerification:'',indexBeforeVerification:postMutationContext.indexFingerprint||'',indexAfterVerification:''};
   let verification=makeVerification(beforeSummary,null,mutationObserved,'',{workspaceStates:{...workspaceStates},...(observation.interruption?{status:'interrupted',interruption:observation.interruption}:{})});
   const verifyCommand=String(options.verifyCommand||(patchResult?.applied?options.command:'')||'').trim();
   if(verifyCommand&&!observation.interruption){
     try{
       const afterSeries=await runReproductionSeriesAsync(verifyCommand,{runs:Number(options.verifyRuns||options.reproRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),sessionBudget:options.sessionBudget,cancellationToken:options.cancellationToken});
-      workspaceStates.afterVerification=collectGitContext(workspace,{includeHistory:false,control:options}).stateFingerprint;
+      const afterContext=collectGitContext(workspace,{includeHistory:false,control:options});
+      workspaceStates.afterVerification=afterContext.stateFingerprint;
+      workspaceStates.indexAfterVerification=afterContext.indexFingerprint;
       verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{workspaceStates});
       if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult,investigation});
     }catch(error){
@@ -213,7 +215,8 @@ async function resumeDebugSession(options={}){
   const mutationObserved=Boolean(previous.evidence?.git?.stateFingerprint&&current.stateFingerprint&&previous.evidence.git.stateFingerprint!==current.stateFingerprint);
   const verifyCommand=String(options.verifyCommand||'').trim();
   const afterSeries=await runReproductionSeriesAsync(verifyCommand,{runs:Number(options.verifyRuns||1),cwd:workspace,timeoutMs:Number(options.commandTimeoutMs||300000),maxBuffer:Number(options.maxLogBytes||8*1024*1024),sessionBudget:options.sessionBudget,cancellationToken:options.cancellationToken});
-  const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true,workspaceStates:{beforeReproduction:previous.verification?.workspaceStates?.beforeReproduction||'',afterReproduction:previous.evidence?.git?.stateFingerprint||'',beforeVerification:current.stateFingerprint,afterVerification:collectGitContext(workspace,{includeHistory:false,control:options}).stateFingerprint}});
+  const afterContext=collectGitContext(workspace,{includeHistory:false,control:options});
+  const verification=makeVerification(beforeSummary,afterSeries.summary,mutationObserved,stableDigest(verifyCommand),{resumed:true,workspaceStates:{beforeReproduction:previous.verification?.workspaceStates?.beforeReproduction||'',afterReproduction:previous.evidence?.git?.stateFingerprint||'',beforeVerification:current.stateFingerprint,afterVerification:afterContext.stateFingerprint,indexBeforeVerification:current.indexFingerprint,indexAfterVerification:afterContext.indexFingerprint}});
   let ledger=previous.ledger;
   if(verification.status==='passed')ledger=confirmSupported(ledger,beforeSummary,afterSeries.summary,{patchResult:previous.patch,investigation:previous.investigation});
   const fixStatus=determineFixStatus({investigation:previous.investigation,patchResult:previous.patch,verification});

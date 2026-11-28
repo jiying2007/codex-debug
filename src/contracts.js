@@ -44,7 +44,7 @@ function validateRollbackBinding(session){
 // by collectGitContext; unclassified workspace changes invalidate the binding.
 function validWorkspaceFingerprint(value){return typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);}
 function verificationWorkspaceStable(states){
-  return Boolean(states&&validWorkspaceFingerprint(states.beforeVerification)&&states.beforeVerification===states.afterVerification);
+  return Boolean(states&&validWorkspaceFingerprint(states.beforeVerification)&&states.beforeVerification===states.afterVerification&&validWorkspaceFingerprint(states.indexBeforeVerification)&&states.indexBeforeVerification===states.indexAfterVerification);
 }
 function verificationWorkspaceBound(states,baselineFingerprint=states?.afterReproduction){
   return Boolean(verificationWorkspaceStable(states)&&validWorkspaceFingerprint(baselineFingerprint)&&

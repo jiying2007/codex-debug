@@ -231,3 +231,20 @@ test('ignored build output does not invalidate a bound source-state verification
   assert.equal(validateStoredSession(readSession(dir,resumed.sessionId)).fixStatus,'verified');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('a passing verification that changes the index without changing source bytes remains unbound',async()=>{
+ const dir=init();
+ try{
+  fs.writeFileSync(path.join(dir,'reproduce.js'),"const fs=require('node:fs');const bad=fs.readFileSync('state.txt','utf8').trim()==='bad';if(bad)console.error('fatal error: deterministic fixture');else require('node:child_process').execFileSync('git',['add','--','state.txt']);process.exit(bad?1:0);\n");
+  execFileSync('git',['add','.'],{cwd:dir});execFileSync('git',['commit','-qm','fixture verification stages the repair'],{cwd:dir});
+  const first=await runDebugSession({workspace:dir,command:'node reproduce.js',reproRuns:2,deterministicOnly:true,persist:true});
+  fs.writeFileSync(path.join(dir,'state.txt'),'good\n');
+  const resumed=await resumeDebugSession({workspace:dir,resume:first.sessionId,verifyCommand:'node reproduce.js',verifyRuns:2,persist:true});
+  assert.equal(resumed.verification.afterSummary.passes,2);
+  assert.equal(resumed.verification.workspaceStates.beforeVerification,resumed.verification.workspaceStates.afterVerification);
+  assert.notEqual(resumed.verification.workspaceStates.indexBeforeVerification,resumed.verification.workspaceStates.indexAfterVerification);
+  assert.equal(resumed.verification.status,'passed-unbound');
+  assert.notEqual(resumed.fixStatus,'verified');
+  assert.notEqual(validateStoredSession(readSession(dir,resumed.sessionId)).fixStatus,'verified');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
