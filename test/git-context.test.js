@@ -71,3 +71,26 @@ test('index identity detects staging the same dirty bytes without inventing a se
   assert.notEqual(before.indexFingerprint,after.indexFingerprint);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('real dirty submodule content and index bind independently despite ignore configuration',()=>{
+ const outer=repo(),source=repo();
+ try{
+  execFileSync('git',['-c','protocol.file.allow=always','submodule','add','--',source,'deps/lib'],{cwd:outer,stdio:'pipe'});
+  execFileSync('git',['commit','-qm','record submodule'],{cwd:outer});
+  const child=path.join(outer,'deps','lib'),file=path.join(child,'a.txt');
+  execFileSync('git',['config','submodule.deps/lib.ignore','all'],{cwd:outer});
+  fs.writeFileSync(file,'two');
+  const first=collectGitContext(outer,{includeHistory:false});
+  assert.deepEqual(first.changedPaths,['deps/lib']);
+  fs.writeFileSync(file,'three');
+  const second=collectGitContext(outer,{includeHistory:false});
+  assert.notEqual(first.stateFingerprint,second.stateFingerprint);
+  assert.equal(first.indexFingerprint,second.indexFingerprint);
+  execFileSync('git',['add','--','a.txt'],{cwd:child});
+  const staged=collectGitContext(outer,{includeHistory:false});
+  assert.equal(second.stateFingerprint,staged.stateFingerprint);
+  assert.notEqual(second.indexFingerprint,staged.indexFingerprint);
+  for(let n=0;n<200;n++)fs.writeFileSync(path.join(child,'untracked-'+n),'fixture');
+  assert.throws(()=>collectGitContext(outer,{includeHistory:false}),error=>error.code==='EGITINVENTORY'&&/200/.test(error.message));
+ }finally{fs.rmSync(outer,{recursive:true,force:true});fs.rmSync(source,{recursive:true,force:true});}
+});
